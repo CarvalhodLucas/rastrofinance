@@ -1,0 +1,1325 @@
+[
+  {
+    "ticker": "POMO4",
+    "name": "Marcopolo S.A.",
+    "type": "Ações",
+    "sector": "Bens Industriais",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "POMO3",
+    "name": "Marcopolo S.A. ON",
+    "type": "Ações",
+    "sector": "Bens Industriais",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MXRF11",
+    "name": "Maxi Renda FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ABEV3",
+    "name": "Ambev SA",
+    "type": "Ações",
+    "sector": "Consumo de Não Duráveis",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ALOS3",
+    "name": "Allos S.A.",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ALUP3",
+    "name": "Alupar Investimento SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ARND3",
+    "name": "Arandu Investimentos S.A",
+    "type": "Ações",
+    "sector": "Serviços Comerciais",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ASAI3",
+    "name": "Sendas Distribuidora SA",
+    "type": "Ações",
+    "sector": "Comércio de Varejo",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "AZUL53",
+    "name": "AZUL ON P N2",
+    "type": "Ações",
+    "sector": "Transporte e Logística",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "B3SA3",
+    "name": "B3 SA - Brasil, Bolsa, Balcao",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BBAS3",
+    "name": "Banco do Brasil S.A.",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BBDC3",
+    "name": "Banco Bradesco SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BBSE3",
+    "name": "BB Seguridade Participacoes SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BEEF3",
+    "name": "Minerva S.A.",
+    "type": "Ações",
+    "sector": "Serviços de Distribuição",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BPAC3",
+    "name": "Banco BTG Pactual SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BRBI11",
+    "name": "BR Partners Banco de Investimento S.A.",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MOTV3",
+    "name": "Motiva SA",
+    "type": "Ações",
+    "sector": "Serviços de Transporte",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CMIG3",
+    "name": "Cia Energetica de Minas Gerais - CEMIG",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CMIN3",
+    "name": "CSN Mineracao SA",
+    "type": "Ações",
+    "sector": "Minerais Não Energéticos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "COGN3",
+    "name": "Cogna Educacao",
+    "type": "Ações",
+    "sector": "Consumo de Serviços",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CPFE3",
+    "name": "CPFL Energia SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CPLE3",
+    "name": "Cia Paranaense de Energia - COPEL",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CSAN3",
+    "name": "Cosan SA",
+    "type": "Ações",
+    "sector": "Energia e Logística",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CSMG3",
+    "name": "Cia de Saneamento de Minas Gerais - COPASA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CSNA3",
+    "name": "Cia Siderurgica Nacional - CSN",
+    "type": "Ações",
+    "sector": "Minerais Não Energéticos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CURY3",
+    "name": "Cury Construtora e Incorporadora SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CXSE3",
+    "name": "Caixa Seguridade Participações S.A.",
+    "type": "Ações",
+    "sector": "Seguros",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CYRE3",
+    "name": "Cyrela Brazil Realty SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "DIRR3",
+    "name": "Direcional Engenharia SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ECOR3",
+    "name": "Ecorodovias Infraestrutura e Logistica SA",
+    "type": "Ações",
+    "sector": "Serviços de Transporte",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "EGIE3",
+    "name": "Engie Brasil Energia SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "AXIA3",
+    "name": "AXIA Energia SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "EMBJ3",
+    "name": "Embraer SA",
+    "type": "Ações",
+    "sector": "Transporte Eletrônico",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ENEV3",
+    "name": "Eneva SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ENGI3",
+    "name": "Energisa SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ENMT3",
+    "name": "Energisa Mato Grosso SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "EQPA3",
+    "name": "Equatorial Energia Para SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "EQTL3",
+    "name": "Equatorial Energia SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "EVEN3",
+    "name": "Even Construtora e Incorporadora SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "EZTC3",
+    "name": "EZTEC Empreendimentos e Participacoes SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "FLRY3",
+    "name": "Fleury SA",
+    "type": "Ações",
+    "sector": "Serviços de Saúde",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "GGBR3",
+    "name": "Gerdau SA",
+    "type": "Ações",
+    "sector": "Minerais Não Energéticos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "GOAU3",
+    "name": "Metalurgica Gerdau SA",
+    "type": "Ações",
+    "sector": "Minerais Não Energéticos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "HAPV3",
+    "name": "Hapvida Participacoes e Investimentos SA",
+    "type": "Ações",
+    "sector": "Serviços de Saúde",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "HYPE3",
+    "name": "Hypera SA",
+    "type": "Ações",
+    "sector": "Tecnologia em Saúde",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "IGTI3",
+    "name": "Iguatemi SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ITSA3",
+    "name": "Itausa SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ITUB3",
+    "name": "Itaú Unibanco Holding SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "JBSS32",
+    "name": "JBS SA",
+    "type": "Ações",
+    "sector": "Consumo de Não Duráveis",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "JHSF3",
+    "name": "JHSF Participacoes SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "KLBN3",
+    "name": "Klabin SA",
+    "type": "Ações",
+    "sector": "Indústrias de Processamento",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "LAVV3",
+    "name": "Lavvi Empreendimentos e Participacoes SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "LREN3",
+    "name": "Lojas Renner SA",
+    "type": "Ações",
+    "sector": "Comércio de Varejo",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MGLU3",
+    "name": "Magazine Luiza SA",
+    "type": "Ações",
+    "sector": "Comércio de Varejo",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MBRF3",
+    "name": "Marfrig Global Foods SA",
+    "type": "Ações",
+    "sector": "Consumo de Não Duráveis",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MRVE3",
+    "name": "MRV Engenharia e Participacoes SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MTRE3",
+    "name": "Mitre Engenharia e Participacoes SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MULT3",
+    "name": "Multiplan Empreendimentos Imobiliarios SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "NEOE3",
+    "name": "Neoenergia SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "NATU3",
+    "name": "Natura &Co Holding SA",
+    "type": "Ações",
+    "sector": "Consumo de Não Duráveis",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ODPV3",
+    "name": "Odontoprev SA",
+    "type": "Ações",
+    "sector": "Serviços de Saúde",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "PETR4",
+    "name": "Petroleo Brasileiro SA - PETROBRAS (PREF)",
+    "type": "Ações",
+    "sector": "Energia e Logística",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "PRIO3",
+    "name": "Petrio SA",
+    "type": "Ações",
+    "sector": "Energia e Logística",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "PSSA3",
+    "name": "Porto Seguro SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "RADL3",
+    "name": "Raia Drogasil SA",
+    "type": "Ações",
+    "sector": "Comércio de Varejo",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "RAIL3",
+    "name": "Rumo SA",
+    "type": "Ações",
+    "sector": "Serviços de Transporte",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "RDOR3",
+    "name": "Rede D",
+    "type": "Ações",
+    "sector": "Serviços de Saúde",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "RENT3",
+    "name": "Localiza Rent a Car SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "SANB3",
+    "name": "Banco Santander Brasil SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "SAPR3",
+    "name": "Cia de Saneamento do Parana - SANEPAR",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "SBSP3",
+    "name": "Cia de Saneamento Basico do Estado de Sao Paulo - SABESP",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "SUZB3",
+    "name": "Suzano SA",
+    "type": "Ações",
+    "sector": "Indústrias de Processamento",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "TAEE3",
+    "name": "Transmissora Alianca de Energia Eletrica SA - TAESA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "TIMS3",
+    "name": "TIM SA",
+    "type": "Ações",
+    "sector": "Comunicações",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "TOTS3",
+    "name": "Totvs SA",
+    "type": "Ações",
+    "sector": "Serviços de Tecnologia",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "TPIS3",
+    "name": "Triunfo Participacoes e Investimentos SA",
+    "type": "Ações",
+    "sector": "Serviços de Transporte",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "TRIS3",
+    "name": "Trisul SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "UGPA3",
+    "name": "Ultrapar Participacoes SA",
+    "type": "Ações",
+    "sector": "Energia e Logística",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "USIM3",
+    "name": "Usinas Siderurgicas de Minas Gerais SA - USIMINAS",
+    "type": "Ações",
+    "sector": "Minerais Não Energéticos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "VALE3",
+    "name": "Vale SA",
+    "type": "Ações",
+    "sector": "Minerais Não Energéticos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "VIVT3",
+    "name": "Telefonica Brasil SA",
+    "type": "Ações",
+    "sector": "Comunicações",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "WEGE3",
+    "name": "WEG SA",
+    "type": "Ações",
+    "sector": "Produtor Manufatureiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "YDUQ3",
+    "name": "YDUQS Participacoes SA",
+    "type": "Ações",
+    "sector": "Consumo de Serviços",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "AURO11",
+    "name": "BUENA VISTA NEOS GOLD HIGH INCOME INDEX FUNDO DE ÍNDICE DE RESPONSABILIDADE LIMITADA",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "AUVP11",
+    "name": "BTG Pactual TEVA AUVP Ações Fundamentos",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BBOI11",
+    "name": "BB ETF ÍNDICE FUTURO DE BOI GORDO B3",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BOVB11",
+    "name": "ETF BRADESCO IBOVESPA FDO DE INDICE",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CMDB11",
+    "name": "BTG Pactual Teva Ações Commodities Brasil FDI",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "DEBB11",
+    "name": "BTG PACTUAL TEVA DEBÊNTURES DI FUNDO DE ÍNDICE",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "DOLA11",
+    "name": "BB ETF Índice Futuro de Dólar S&P/B3 Fundo de Índice",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ESGB11",
+    "name": "BTG PACTUAL ESG FUNDO DE ÍNDICE S&P/B3 BRAZIL ES",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "FIXA11",
+    "name": "Renda Fixa Pré Índice Futuro de Taxas de Juros S&P/B3",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "JOGO11",
+    "name": "Investo ETF GL VI GA & ES Fundo Investimento De Índice IE",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "LVOL11",
+    "name": "NU IBOV SMART LOW VOLATILITY B3",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "NTNS11",
+    "name": "INVESTO TEVA TESOURO IPCA+ 0 A 4 ANOS ETF – FUNDO DE INVESTIMENTO DE ÍNDICE",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "PACB11",
+    "name": "BTG PACTUAL TEVA TESOURO IPCA ULTRA LONGO CE FUNDO DE ÍNDICE",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "SPXB11",
+    "name": "BTG PACTUAL S&P 500 FUNDO DE ÍNDICE",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "TIRB11",
+    "name": "BTG PACTUAL TEVA DIVIDENDOS ATIVOS REAIS LISTADOS FUNDO DE ÍNDICE",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "UTLL11",
+    "name": "INVESTO B3 UTILIDADE PÚBLICA FUNDO DE ÍNDICE",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BOVA11",
+    "name": "iShares Ibovespa Fundo de Índice",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "IVVB11",
+    "name": "iShares S&P 500 Fundo de Índice",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "SMAL11",
+    "name": "iShares BM&FBOVESPA Small Cap Fundo de Índice",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "HASH11",
+    "name": "Hashdex Nasdaq Crypto Index Fundo de Índice",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ECOO11",
+    "name": "iShares Carbono Eficiente ICO2 Fundo de Índice",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "COIN11",
+    "name": "Buena Vista Neos Bitcoin High Income Index ETF",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "NASD11",
+    "name": "Trend ETF Nasdaq 100",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BITH11",
+    "name": "Hashdex Nasdaq Bitcoin Reference Price",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MACI11",
+    "name": "Itaú ETF MSCI ACWI",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "DIVO11",
+    "name": "Itaú ETF Dividendos",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "XINA11",
+    "name": "Trend ETF MSCI China",
+    "type": "ETFs",
+    "sector": "ETF",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "IRDM11",
+    "name": "Iridium Recebíveis Imobiliários FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "XPML11",
+    "name": "XP Malls Fundo de Investimento Imobiliário - FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BTLG11",
+    "name": "BTG Pactual Logística",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BTAL11",
+    "name": "BTG Pactual Agro Logística",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "HGLG11",
+    "name": "CGHG Logística - FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "KNIP11",
+    "name": "Kinea Índices de Preços - FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "KNCR11",
+    "name": "Kinea Rendimentos Imobiliários - FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "HGRU11",
+    "name": "CSHG Renda Urbana - FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "XPLG11",
+    "name": "XP Log FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "VISC11",
+    "name": "Vinci Shopping Centers - FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "TRXF11",
+    "name": "TRX Real Estate - FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CPTS11",
+    "name": "Capitânia Securities II - FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "GARE11",
+    "name": "Guardian Logística e Renda - FII",
+    "type": "FIIs",
+    "sector": "Fundos Imobiliários",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "VBBR3",
+    "name": "Vibra Energia SA",
+    "type": "Ações",
+    "sector": "Energia",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CCRO3",
+    "name": "CCR SA",
+    "type": "Ações",
+    "sector": "Transporte e Logística",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BRFS3",
+    "name": "BRF SA",
+    "type": "Ações",
+    "sector": "Consumo de Não Duráveis",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "RAIZ4",
+    "name": "Raizen SA",
+    "type": "Ações",
+    "sector": "Energia e Logística",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CVCB3",
+    "name": "CVC Brasil Operadora e Agencia de Viagens SA",
+    "type": "Ações",
+    "sector": "Consumo de Serviços",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ISAE4",
+    "name": "ISA Energia Brasil SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CGAS5",
+    "name": "Cia de Gas de Sao Paulo - COMGAS",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "REDE3",
+    "name": "Rede Energia Participacoes SA",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ARZZ3",
+    "name": "Arezzo Industria e Comercio SA",
+    "type": "Ações",
+    "sector": "Consumo de Não Duráveis",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MRSA3B",
+    "name": "MRS Logística S.A.",
+    "type": "Ações",
+    "sector": "Transporte e Logística",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "CEGR3",
+    "name": "Cia Distribuidora de Gas do Rio de Janeiro - CEG",
+    "type": "Ações",
+    "sector": "Serviços Públicos",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MDIA3",
+    "name": "M. Dias Branco SA Indústria e Comércio de Alimentos",
+    "type": "Ações",
+    "sector": "Consumo de Não Duráveis",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "PLPL3",
+    "name": "Plano & Plano Desenvolvimento Imobiliario SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "TEND3",
+    "name": "Construtora Tenda SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MDNE3",
+    "name": "Moura Dubeux Engenharia SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "MELK3",
+    "name": "Melnick Desenvolvimento Imobiliario SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "GFSA3",
+    "name": "Gafisa SA",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "PRNR3",
+    "name": "Priner Serviços Industriais S.A.",
+    "type": "Ações",
+    "sector": "Bens Industriais / Engenharia",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "VULC3",
+    "name": "Vulcabras S.A.",
+    "type": "Ações",
+    "sector": "Consumo Cíclico / Calçados",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "ROXO34",
+    "name": "Nubank (Nu Holdings Ltd.)",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "KEPL3",
+    "name": "Kepler Weber SA",
+    "type": "Ações",
+    "sector": "Bens Industriais / Agronegócio",
+    "exchange": "B3"
+  },
+  {
+    "ticker": "BTC",
+    "name": "Bitcoin",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "ETH",
+    "name": "Ethereum",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "ONDO",
+    "name": "Ondo Finance",
+    "type": "Ações",
+    "sector": "Criptomoedas (RWA)",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "ROSE",
+    "name": "Oasis Network",
+    "type": "Ações",
+    "sector": "Criptomoedas (Privacidade)",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "LINK",
+    "name": "Chainlink",
+    "type": "Ações",
+    "sector": "Criptomoedas (Oráculos)",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "USDT",
+    "name": "Tether",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "BNB",
+    "name": "Binance Coin",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "SOL",
+    "name": "Solana",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "XRP",
+    "name": "XRP",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "USDC",
+    "name": "USDC",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "ADA",
+    "name": "Cardano",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "AVAX",
+    "name": "Avalanche",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "DOGE",
+    "name": "Dogecoin",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "DOT",
+    "name": "Polkadot",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "TRX",
+    "name": "TRON",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "MATIC",
+    "name": "Polygon",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "SHIB",
+    "name": "Shiba Inu",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "LTC",
+    "name": "Litecoin",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "DAI",
+    "name": "Dai",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "BCH",
+    "name": "Bitcoin Cash",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "UNI",
+    "name": "Uniswap",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "LEO",
+    "name": "LEO Token",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "NEAR",
+    "name": "NEAR Protocol",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "OP",
+    "name": "Optimism",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "ARB",
+    "name": "Arbitrum",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "APT",
+    "name": "Aptos",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "SUI",
+    "name": "Sui",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "KAS",
+    "name": "Kaspa",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "PEPE",
+    "name": "Pepe",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "WIF",
+    "name": "dogwifhat",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "BONK",
+    "name": "Bonk",
+    "type": "Ações",
+    "sector": "Criptomoedas",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "RENDER",
+    "name": "Render Network",
+    "type": "Ações",
+    "sector": "Criptomoedas (IA/DePIN)",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "TAO",
+    "name": "Bittensor",
+    "type": "Ações",
+    "sector": "Criptomoedas (IA)",
+    "exchange": "Crypto Market"
+  },
+  {
+    "ticker": "AAPL",
+    "name": "Apple Inc.",
+    "type": "Ações",
+    "sector": "Tecnologia",
+    "exchange": "NASDAQ"
+  },
+  {
+    "ticker": "AMZN",
+    "name": "Amazon.com Inc.",
+    "type": "Ações",
+    "sector": "Consumo",
+    "exchange": "NASDAQ"
+  },
+  {
+    "ticker": "MSFT",
+    "name": "Microsoft Corp.",
+    "type": "Ações",
+    "sector": "Tecnologia",
+    "exchange": "NASDAQ"
+  },
+  {
+    "ticker": "NVDA",
+    "name": "NVIDIA Corp.",
+    "type": "Ações",
+    "sector": "Semicondutores",
+    "exchange": "NASDAQ"
+  },
+  {
+    "ticker": "GOOGL",
+    "name": "Alphabet Inc.",
+    "type": "Ações",
+    "sector": "Tecnologia",
+    "exchange": "NASDAQ"
+  },
+  {
+    "ticker": "META",
+    "name": "Meta Platforms Inc.",
+    "type": "Ações",
+    "sector": "Tecnologia",
+    "exchange": "NASDAQ"
+  },
+  {
+    "ticker": "TSLA",
+    "name": "Tesla Inc.",
+    "type": "Ações",
+    "sector": "Automotivo",
+    "exchange": "NASDAQ"
+  },
+  {
+    "ticker": "KO",
+    "name": "Coca-Cola Co.",
+    "type": "Ações",
+    "sector": "Consumo",
+    "exchange": "NYSE"
+  },
+  {
+    "ticker": "WMT",
+    "name": "Walmart Inc.",
+    "type": "Ações",
+    "sector": "Consumo",
+    "exchange": "NYSE"
+  },
+  {
+    "ticker": "CVX",
+    "name": "Chevron Corp.",
+    "type": "Ações",
+    "sector": "Energia",
+    "exchange": "NYSE"
+  },
+  {
+    "ticker": "NKE",
+    "name": "Nike Inc.",
+    "type": "Ações",
+    "sector": "Consumo",
+    "exchange": "NYSE"
+  },
+  {
+    "ticker": "NU",
+    "name": "Nu Holdings Ltd.",
+    "type": "Ações",
+    "sector": "Financeiro",
+    "exchange": "NYSE"
+  }
+]

@@ -1,0 +1,930 @@
+User ID,Time,Account,Operation,Coin,Change,Remark
+1135727158,2025-07-25 17:29:05,Spot,Deposit,BRL,2000,
+1135727158,2025-07-25 17:30:04,Spot,Binance Convert,BRL,-1000,
+1135727158,2025-07-25 17:30:04,Spot,Binance Convert,ETH,0.04912265,
+1135727158,2025-07-25 17:30:38,Spot,Binance Convert,BTC,0.00154739,
+1135727158,2025-07-25 17:30:39,Spot,Binance Convert,BRL,-1000,
+1135727158,2025-07-29 18:32:31,Spot,Deposit,BRL,170,
+1135727158,2025-07-29 18:33:40,Spot,Binance Convert,BTC,0.0002587,
+1135727158,2025-07-29 18:33:40,Spot,Binance Convert,BRL,-170,
+1135727158,2025-09-06 14:52:35,Spot,Deposit,EUR,245,
+1135727158,2025-09-06 14:57:47,Spot,Deposit,EUR,-200,
+1135727158,2025-09-06 14:57:52,Spot,Buy Crypto With Fiat,SOL,1.15547583,Via CashBalance - Wallet/N01660811413506192384090658
+1135727158,2025-09-06 14:58:28,Spot,Deposit,EUR,-45,
+1135727158,2025-09-06 14:58:33,Spot,Buy Crypto With Fiat,ETH,0.01223606,Via CashBalance - Wallet/N01660811585959206912090658
+1135727158,2025-09-18 01:07:01,Spot,Deposit,EUR,200.9,
+1135727158,2025-09-18 01:10:16,Spot,Deposit,EUR,-100,
+1135727158,2025-09-18 01:10:21,Spot,Buy Crypto With Fiat,ETH,0.02559873,Via CashBalance - Wallet/N01664951817091684352091758
+1135727158,2025-09-18 01:11:03,Spot,Deposit,EUR,-100.9,
+1135727158,2025-09-18 01:11:08,Spot,Buy Crypto With Fiat,SOL,0.48338149,Via CashBalance - Wallet/N01664952009992950784091758
+1135727158,2025-09-25 04:49:01,Spot,Buy Crypto With Fiat,BTC,0.00201068,Ref
+1135727158,2025-09-25 04:49:01,Spot,Simple Earn Flexible Subscription,BTC,-0.00201068,Binance Earn
+1135727158,2025-09-27 07:23:41,Spot,Simple Earn Flexible Interest,BTC,0.00000001,Binance Earn
+1135727158,2025-09-28 07:13:04,Spot,Simple Earn Flexible Interest,BTC,0.00000001,Binance Earn
+1135727158,2025-09-29 07:18:21,Spot,Simple Earn Flexible Interest,BTC,0.00000001,Binance Earn
+1135727158,2025-09-30 07:52:31,Spot,Simple Earn Flexible Interest,BTC,0.00000001,Binance Earn
+1135727158,2025-10-01 07:06:48,Spot,Simple Earn Flexible Interest,BTC,0.00000001,Binance Earn
+1135727158,2025-10-02 06:12:30,Spot,Simple Earn Flexible Interest,BTC,0.00000001,Binance Earn
+1135727158,2025-10-03 05:37:03,Spot,Simple Earn Flexible Interest,BTC,0.00000001,Binance Earn
+1135727158,2025-10-04 06:12:25,Spot,Simple Earn Flexible Interest,BTC,0.00000001,Binance Earn
+1135727158,2025-10-04 20:52:37,Spot,Buy Crypto With Fiat,BTC,0.00466308,Ref
+1135727158,2025-10-04 20:52:38,Spot,Simple Earn Flexible Subscription,BTC,-0.00466308,Binance Earn
+1135727158,2025-10-05 06:06:45,Spot,Simple Earn Flexible Interest,BTC,0.00000001,Binance Earn
+1135727158,2025-10-06 07:18:09,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-07 06:13:00,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-08 06:23:04,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-09 06:12:54,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-10 06:21:08,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-11 06:07:01,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-12 06:53:21,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-13 05:59:25,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-14 07:28:11,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-15 06:25:55,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-16 07:13:00,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-17 06:13:21,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-18 07:06:58,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-19 07:23:54,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-20 07:58:38,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-21 07:13:25,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-22 07:43:30,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-23 07:24:03,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-24 07:18:47,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-25 07:28:58,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-26 07:07:00,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-27 07:22:08,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-28 07:17:59,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-29 07:54:20,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-30 07:54:23,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-31 02:20:44,Spot,Buy Crypto With Fiat,SOL,0.6049982,Ref
+1135727158,2025-10-31 02:20:44,Spot,Simple Earn Flexible Subscription,SOL,-0.6049982,Binance Earn
+1135727158,2025-10-31 04:28:21,Spot,Simple Earn Flexible Subscription,SOL,-0.60171286,Binance Earn
+1135727158,2025-10-31 04:28:21,Spot,Buy Crypto With Fiat,SOL,0.60171286,Ref
+1135727158,2025-10-31 07:37:02,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-10-31 21:09:43,Spot,Buy Crypto With Fiat,BTC,0.00101954,Ref
+1135727158,2025-11-01 07:58:28,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-11-02 06:13:17,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-11-03 06:23:28,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-11-03 18:00:37,Spot,Buy Crypto With Fiat,BTC,0.00210502,Ref
+1135727158,2025-11-03 18:00:38,Spot,Simple Earn Flexible Subscription,BTC,-0.00210502,Binance Earn
+1135727158,2025-11-04 06:23:27,Spot,Simple Earn Flexible Interest,BTC,0.00000004,Binance Earn
+1135727158,2025-11-04 23:32:08,Spot,Buy Crypto With Fiat,ETH,0.03529775,Ref
+1135727158,2025-11-04 23:32:09,Spot,Simple Earn Flexible Subscription,ETH,-0.03529775,Binance Earn
+1135727158,2025-11-05 06:13:47,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-06 06:14:02,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2026-11-06 06:30:31,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-07 06:14:19,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-07 06:30:53,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-08 06:13:50,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-08 06:26:04,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-09 06:31:28,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-09 06:31:49,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-10 06:23:49,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-10 06:24:34,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-11 06:21:29,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-11 06:21:43,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-12 06:49:54,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-12 06:50:20,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-13 06:07:36,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-13 06:27:54,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-13 21:31:02,Spot,Buy Crypto With Fiat,BTC,0.00113487,Ref
+1135727158,2025-11-14 07:20:01,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-14 07:25:33,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-15 06:07:26,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-15 06:20:39,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-16 07:37:28,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-16 07:50:13,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-17 06:07:44,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-17 06:19:50,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-18 05:20:41,Spot,Buy Crypto With Fiat,BTC,0.00123985,Ref
+1135727158,2025-11-18 07:37:29,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-18 07:59:12,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-19 07:45:28,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-19 07:58:38,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-19 20:29:50,Spot,Buy Crypto With Fiat,BTC,0.00125181,Ref
+1135727158,2025-11-20 07:28:37,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-20 07:33:42,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-21 07:06:37,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-21 07:21:41,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-21 13:53:42,Spot,Buy Crypto With Fiat,SOL,0.89722051,Ref
+1135727158,2025-11-21 13:53:42,Spot,Simple Earn Flexible Subscription,SOL,-0.89722051,Binance Earn
+1135727158,2025-11-22 07:16:03,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-22 07:16:25,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-23 07:06:58,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-23 07:11:21,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-23 21:09:20,Spot,Simple Earn Flexible Subscription,ONDO,-465.35879506,Binance Earn
+1135727158,2025-11-23 21:09:20,Spot,Buy Crypto With Fiat,ONDO,465.35879506,Ref
+1135727158,2025-11-24 07:06:55,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-24 07:15:57,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-25 05:21:09,Spot,Buy Crypto With Fiat,BTC,0.00126886,Ref
+1135727158,2025-11-25 05:27:01,Spot,Buy Crypto With Fiat,ONDO,223.01369547,Ref
+1135727158,2025-11-25 05:27:01,Spot,Simple Earn Flexible Subscription,ONDO,-223.01369547,Binance Earn
+1135727158,2025-11-25 07:20:45,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-25 07:25:40,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-25 21:30:46,Spot,Simple Earn Flexible Subscription,ONDO,-226.89124498,Binance Earn
+1135727158,2025-11-25 21:30:46,Spot,Buy Crypto With Fiat,ONDO,226.89124498,Ref
+1135727158,2025-11-26 07:16:03,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-26 07:21:15,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-27 07:41:48,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-27 07:51:26,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-28 02:38:02,Spot,Simple Earn Flexible Subscription,ONDO,-300.0748939,Binance Earn
+1135727158,2025-11-28 02:38:02,Spot,Buy Crypto With Fiat,ONDO,300.0748939,Ref
+1135727158,2025-11-28 07:11:31,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-28 07:24:12,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-29 07:41:30,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-11-29 07:45:37,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-30 07:36:34,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-11-30 07:37:09,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-12-01 03:09:45,Spot,Buy Crypto With Fiat,BTC,0.00122978,Ref
+1135727158,2025-12-01 03:38:41,Spot,Deposit,BRL,618,
+1135727158,2025-12-01 03:39:20,Spot,Buy Crypto With Fiat,BRL,-618,Via CashBalance - Wallet/N01691806034008123392120158
+1135727158,2025-12-01 03:39:26,Spot,Buy Crypto With Fiat,BTC,0.00130725,Via CashBalance - Wallet/N01691806034008123392120158
+1135727158,2025-12-01 07:36:48,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-12-01 07:45:22,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-01 14:31:19,Spot,Deposit,BRL,146,
+1135727158,2025-12-01 14:31:57,Spot,Buy Crypto With Fiat,BRL,-146,Via CashBalance - Wallet/N01691970268004296704120158
+1135727158,2025-12-01 14:32:02,Spot,Buy Crypto With Fiat,ONDO,59.15075282,Via CashBalance - Wallet/N01691970268004296704120158
+1135727158,2025-12-01 14:32:02,Spot,Simple Earn Flexible Subscription,ONDO,-59.15075282,Binance Earn
+1135727158,2025-12-01 21:10:07,Spot,Deposit,BRL,600,
+1135727158,2025-12-01 21:11:24,Spot,Binance Convert,ONDO,246.61748456,
+1135727158,2025-12-01 21:11:24,Spot,Binance Convert,BRL,-600,
+1135727158,2025-12-01 21:11:29,Spot,Simple Earn Flexible Subscription,ONDO,-246.61748456,Binance Earn
+1135727158,2025-12-02 06:20:20,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-12-02 06:24:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-03 06:11:16,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-03 06:16:13,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-12-04 06:10:51,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-12-04 06:23:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-05 02:48:39,Spot,Deposit,BRL,265,
+1135727158,2025-12-05 02:50:21,Spot,Buy Crypto With Fiat,BRL,-130,Via CashBalance - Wallet/N01693243258251730944120558
+1135727158,2025-12-05 02:50:27,Spot,Buy Crypto With Fiat,ETH,0.00770873,Via CashBalance - Wallet/N01693243258251730944120558
+1135727158,2025-12-05 02:50:27,Spot,Simple Earn Flexible Subscription,ETH,-0.00770873,Binance Earn
+1135727158,2025-12-05 02:51:29,Spot,Binance Convert,ONDO,51.42761596,
+1135727158,2025-12-05 02:51:30,Spot,Binance Convert,BRL,-135,
+1135727158,2025-12-05 02:51:34,Spot,Simple Earn Flexible Subscription,ONDO,-51.42761596,Binance Earn
+1135727158,2025-12-05 06:10:31,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-05 06:15:34,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-12-06 02:21:06,Spot,Buy Crypto With Fiat,ONDO,242.98809331,Ref
+1135727158,2025-12-06 02:21:06,Spot,Simple Earn Flexible Subscription,ONDO,-242.98809331,Binance Earn
+1135727158,2025-12-06 06:07:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-06 06:12:09,Spot,Simple Earn Flexible Interest,ETH,0.00000009,Binance Earn
+1135727158,2025-12-07 06:07:11,Spot,Simple Earn Flexible Interest,ETH,0.00000011,Binance Earn
+1135727158,2025-12-07 06:24:50,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-08 06:11:43,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-08 06:11:58,Spot,Simple Earn Flexible Interest,ETH,0.00000011,Binance Earn
+1135727158,2025-12-09 06:45:44,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-09 06:54:59,Spot,Simple Earn Flexible Interest,ETH,0.00000011,Binance Earn
+1135727158,2025-12-10 06:12:15,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-10 06:16:44,Spot,Simple Earn Flexible Interest,ETH,0.00000011,Binance Earn
+1135727158,2025-12-10 18:27:55,Spot,Deposit,EUR,196,
+1135727158,2025-12-11 06:37:27,Spot,Simple Earn Flexible Interest,ETH,0.00000011,Binance Earn
+1135727158,2025-12-11 06:41:29,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-11 22:05:47,Spot,Buy Crypto With Fiat,EUR,-120,Via CashBalance - Wallet/N01695708359928018944121158
+1135727158,2025-12-11 22:05:53,Spot,Buy Crypto With Fiat,ONDO,301.56238031,Via CashBalance - Wallet/N01695708359928018944121158
+1135727158,2025-12-11 22:05:53,Spot,Simple Earn Flexible Subscription,ONDO,-301.56238031,Binance Earn
+1135727158,2025-12-11 22:06:26,Spot,Buy Crypto With Fiat,EUR,-76,Via CashBalance - Wallet/N01695708520838306816121158
+1135727158,2025-12-11 22:06:31,Spot,Buy Crypto With Fiat,ETH,0.02778336,Via CashBalance - Wallet/N01695708520838306816121158
+1135727158,2025-12-11 22:06:31,Spot,Simple Earn Flexible Subscription,ETH,-0.02778336,Binance Earn
+1135727158,2025-12-12 06:07:14,Spot,Simple Earn Flexible Interest,ETH,0.00000011,Binance Earn
+1135727158,2025-12-12 06:21:09,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-13 07:15:53,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-13 07:16:25,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-14 06:37:27,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-14 06:50:21,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-15 07:16:13,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-15 07:25:11,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-15 19:25:08,Spot,Simple Earn Flexible Subscription,ONDO,-275.47473902,Binance Earn
+1135727158,2025-12-15 19:25:08,Spot,Buy Crypto With Fiat,ONDO,275.47473902,Ref
+1135727158,2025-12-16 06:16:21,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-16 06:20:56,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-17 07:41:56,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-17 07:51:12,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-18 07:20:24,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-18 07:25:16,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-19 07:41:24,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-19 07:41:38,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-20 07:37:05,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-20 07:50:55,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-21 07:11:30,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-21 07:12:19,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-22 07:46:53,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-22 07:50:51,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-23 07:36:59,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-23 07:51:28,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-24 07:41:42,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-24 07:51:41,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-25 08:07:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-25 08:20:55,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-26 07:20:42,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-26 07:25:31,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-27 07:37:05,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-27 07:51:13,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-28 07:41:42,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-28 07:46:23,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-29 08:07:03,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-29 08:07:28,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-30 07:55:13,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-30 07:55:34,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-31 07:36:56,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2025-12-31 07:50:57,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2025-12-31 22:03:32,Spot,Simple Earn Flexible Subscription,XLM,-209.41444594,Binance Earn
+1135727158,2025-12-31 22:03:32,Spot,Buy Crypto With Fiat,XLM,209.41444594,Ref
+1135727158,2026-01-01 07:36:58,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-01 07:51:03,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-02 04:52:33,Spot,Buy Crypto With Fiat,XLM,167.97233846,Ref
+1135727158,2026-01-02 04:52:33,Spot,Simple Earn Flexible Subscription,XLM,-167.97233846,Binance Earn
+1135727158,2026-01-02 06:14:25,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-02 06:15:44,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-02 15:52:40,Spot,Buy Crypto With Fiat,XLM,713.82171086,Ref
+1135727158,2026-01-02 15:52:40,Spot,Simple Earn Flexible Subscription,XLM,-713.82171086,Binance Earn
+1135727158,2026-01-02 21:29:41,Spot,Buy Crypto With Fiat,XLM,590.09888016,Ref
+1135727158,2026-01-02 21:29:41,Spot,Simple Earn Flexible Subscription,XLM,-590.09888016,Binance Earn
+1135727158,2026-01-03 06:06:27,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-03 06:11:42,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-04 06:06:31,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-04 06:16:14,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-05 06:18:55,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-05 06:19:24,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-05 19:23:56,Spot,Simple Earn Flexible Subscription,XLM,-543.95434768,Binance Earn
+1135727158,2026-01-05 19:23:56,Spot,Buy Crypto With Fiat,XLM,543.95434768,Ref
+1135727158,2026-01-06 03:45:44,Spot,Buy Crypto With Fiat,SOL,0.92482778,Ref
+1135727158,2026-01-06 03:45:44,Spot,Simple Earn Flexible Subscription,SOL,-0.92482778,Binance Earn
+1135727158,2026-01-06 06:40:57,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-06 06:52:32,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-07 06:19:41,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-07 06:20:00,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-08 06:40:41,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-08 06:49:38,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-09 06:36:39,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-09 06:48:47,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-10 06:45:05,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-10 06:49:38,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-11 06:41:10,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-11 06:50:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-12 07:23:23,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-12 07:24:17,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-13 06:06:45,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-13 06:20:07,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-14 07:37:15,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-14 07:46:14,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-15 06:14:44,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-15 06:19:22,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-15 20:48:53,Spot,Simple Earn Flexible Subscription,XLM,-1084.26808017,Binance Earn
+1135727158,2026-01-15 20:48:53,Spot,Buy Crypto With Fiat,XLM,1084.26808017,Ref
+1135727158,2026-01-16 07:40:50,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-16 07:44:44,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-17 06:07:29,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-17 06:20:33,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-18 07:50:21,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-18 07:54:16,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-19 07:46:40,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-19 07:52:12,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-20 07:40:35,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-20 07:50:32,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-21 07:45:55,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-21 07:54:50,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-22 07:42:37,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-22 07:50:19,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-23 07:41:42,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-23 07:54:29,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-23 10:54:10,Spot,Deposit,BRL,1225,
+1135727158,2026-01-23 10:56:07,Spot,Binance Convert,XLM,1096.52878191,
+1135727158,2026-01-23 10:56:08,Spot,Binance Convert,BRL,-1225,
+1135727158,2026-01-24 07:37:08,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-24 07:46:34,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-25 07:50:37,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-25 07:57:06,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-26 01:37:09,Spot,Simple Earn Flexible Subscription,VIRTUAL,-310.92855259,Binance Earn
+1135727158,2026-01-26 01:37:09,Spot,Buy Crypto With Fiat,VIRTUAL,310.92855259,Ref
+1135727158,2026-01-26 07:51:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-26 07:51:36,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-27 07:36:59,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-27 07:59:13,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-28 08:07:48,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-28 08:12:48,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-29 07:53:59,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-29 07:54:02,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-29 08:54:10,Spot,Buy Crypto With Fiat,ROSE,5896.98161282,Ref
+1135727158,2026-01-29 08:54:11,Spot,Simple Earn Flexible Subscription,ROSE,-5896.98161282,Binance Earn
+1135727158,2026-01-29 20:07:46,Spot,Buy Crypto With Fiat,USDT,158.39711964,Ref
+1135727158,2026-01-29 20:07:47,Spot,Simple Earn Flexible Subscription,USDT,-158.39711964,Binance Earn
+1135727158,2026-01-29 20:49:07,Spot,Simple Earn Flexible Redemption,USDT,158.39737287,Binance Earn
+1135727158,2026-01-29 20:50:01,Spot,Binance Convert,ONDO,192.06046006,
+1135727158,2026-01-29 20:50:01,Spot,Binance Convert,USDT,-60,
+1135727158,2026-01-29 20:51:02,Spot,Binance Convert,USDT,-98.39737287,
+1135727158,2026-01-29 20:51:02,Spot,Binance Convert,ROSE,4957.05104107,
+1135727158,2026-01-29 20:51:04,Spot,Simple Earn Flexible Subscription,ROSE,-4957.05104107,Binance Earn
+1135727158,2026-01-30 07:48:46,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-30 07:53:34,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-30 12:20:54,Spot,Deposit,BRL,1221.89,
+1135727158,2026-01-30 12:23:05,Spot,Binance Convert,BRL,-600,
+1135727158,2026-01-30 12:23:05,Spot,Binance Convert,XLM,595.53840207,
+1135727158,2026-01-30 12:23:07,Spot,Simple Earn Flexible Subscription,XLM,-595.53840207,Binance Earn
+1135727158,2026-01-30 12:23:52,Spot,Binance Convert,BRL,-621.89,
+1135727158,2026-01-30 12:23:52,Spot,Binance Convert,VIRTUAL,162.31791055,
+1135727158,2026-01-30 12:23:54,Spot,Simple Earn Flexible Subscription,VIRTUAL,-162.31791055,Binance Earn
+1135727158,2026-01-31 07:42:58,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-01-31 07:58:38,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-01-31 18:43:04,Spot,Deposit,BRL,1230.54,
+1135727158,2026-01-31 18:44:21,Spot,Binance Convert,BRL,-630,
+1135727158,2026-01-31 18:44:21,Spot,Binance Convert,ROSE,6555.81081071,
+1135727158,2026-01-31 18:44:25,Spot,Simple Earn Flexible Subscription,ROSE,-6555.81081071,Binance Earn
+1135727158,2026-01-31 18:44:54,Spot,Binance Convert,VIRTUAL,171.34267311,
+1135727158,2026-01-31 18:44:54,Spot,Binance Convert,BRL,-600.34,
+1135727158,2026-01-31 18:44:59,Spot,Simple Earn Flexible Subscription,VIRTUAL,-171.34267311,Binance Earn
+1135727158,2026-02-01 07:53:54,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-01 08:02:48,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-01 12:34:57,Spot,Buy Crypto With Fiat,VIRTUAL,274.87102994,Ref
+1135727158,2026-02-01 12:34:57,Spot,Simple Earn Flexible Subscription,VIRTUAL,-274.87102994,Binance Earn
+1135727158,2026-02-02 06:13:04,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-02 06:23:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-02 18:53:35,Spot,Simple Earn Flexible Subscription,ROSE,-12896.97946244,Binance Earn
+1135727158,2026-02-02 18:53:35,Spot,Buy Crypto With Fiat,ROSE,12896.97946244,Ref
+1135727158,2026-02-03 06:07:47,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-03 06:18:25,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-03 11:32:28,Spot,Binance Convert,ROSE,2.14541603,
+1135727158,2026-02-03 11:32:28,Spot,Binance Convert,BRL,-0.2,
+1135727158,2026-02-03 11:32:31,Spot,Simple Earn Flexible Subscription,ROSE,-2.14541603,Binance Earn
+1135727158,2026-02-04 06:24:22,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-04 06:38:26,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-04 11:56:00,Spot,Buy Crypto With Fiat,SOL,1.17056738,via Paymonade - Ref - BUY20260204095860095721975470
+1135727158,2026-02-05 06:48:45,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-05 07:06:24,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-05 16:25:53,Spot,Deposit,BRL,1300,
+1135727158,2026-02-05 17:05:28,Spot,Binance Convert,ROSE,13079.10107225,
+1135727158,2026-02-05 17:05:28,Spot,Binance Convert,BRL,-1000,
+1135727158,2026-02-05 17:05:33,Spot,Simple Earn Flexible Subscription,ROSE,-13079.10107225,Binance Earn
+1135727158,2026-02-05 17:06:51,Spot,Binance Convert,BTC,0.0008266,
+1135727158,2026-02-05 17:06:52,Spot,Binance Convert,BRL,-300,
+1135727158,2026-02-05 23:22:36,Spot,Deposit,BRL,1362.43,
+1135727158,2026-02-05 23:38:41,Spot,Binance Convert,ROSE,11491.81523419,
+1135727158,2026-02-05 23:38:42,Spot,Binance Convert,BRL,-800,
+1135727158,2026-02-05 23:38:46,Spot,Simple Earn Flexible Subscription,ROSE,-11491.81523419,Binance Earn
+1135727158,2026-02-05 23:41:30,Spot,Binance Convert,SOL,1.33173488,
+1135727158,2026-02-05 23:41:31,Spot,Binance Convert,BRL,-562.43,
+1135727158,2026-02-05 23:41:35,Spot,Simple Earn Flexible Subscription,SOL,-1.33173488,Binance Earn
+1135727158,2026-02-06 06:48:26,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-06 06:57:02,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-07 06:37:25,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-07 06:56:53,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-07 14:42:29,Spot,Deposit,BRL,1500,
+1135727158,2026-02-07 15:09:02,Spot,Binance Convert,ROSE,10570.6530811,
+1135727158,2026-02-07 15:09:03,Spot,Binance Convert,BRL,-750,
+1135727158,2026-02-07 15:09:07,Spot,Simple Earn Flexible Subscription,ROSE,-10570.6530811,Binance Earn
+1135727158,2026-02-07 15:14:11,Spot,Buy Crypto With Fiat,BRL,-500,Via CashBalance - Wallet/N01716623271021966336020758
+1135727158,2026-02-07 15:14:16,Spot,Buy Crypto With Fiat,BTC,0.00137295,Via CashBalance - Wallet/N01716623271021966336020758
+1135727158,2026-02-08 02:14:55,Spot,Binance Convert,ROSE,3674.09095072,
+1135727158,2026-02-08 02:14:56,Spot,Binance Convert,BRL,-250,
+1135727158,2026-02-08 02:15:00,Spot,Simple Earn Flexible Subscription,ROSE,-3674.09095072,Binance Earn
+1135727158,2026-02-08 06:55:37,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-08 07:04:25,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-09 06:22:35,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-09 06:31:43,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-09 18:03:03,Spot,Deposit,BRL,2000,
+1135727158,2026-02-09 22:18:59,Spot,Binance Convert,ROSE,10111.51469405,
+1135727158,2026-02-09 22:19:00,Spot,Binance Convert,BRL,-700,
+1135727158,2026-02-09 22:19:04,Spot,Simple Earn Flexible Subscription,ROSE,-10111.51469405,Binance Earn
+1135727158,2026-02-10 06:46:21,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-10 07:00:47,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-10 09:06:19,Spot,Binance Convert,SOL,2.24630054,
+1135727158,2026-02-10 09:06:19,Spot,Binance Convert,BRL,-1000,
+1135727158,2026-02-10 09:06:24,Spot,Simple Earn Flexible Subscription,SOL,-2.24630054,Binance Earn
+1135727158,2026-02-10 09:06:48,Spot,Binance Convert,BTC,0.00083029,
+1135727158,2026-02-10 09:06:48,Spot,Binance Convert,BRL,-300,
+1135727158,2026-02-11 06:53:59,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-11 07:01:14,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-12 06:15:24,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-12 06:31:43,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-13 00:07:03,Spot,Simple Earn Flexible Redemption,XLM,3906.87092738,Binance Earn
+1135727158,2026-02-13 00:11:12,Spot,Binance Convert,SOL,3.1,
+1135727158,2026-02-13 00:11:13,Spot,Binance Convert,XLM,-1557.73994341,
+1135727158,2026-02-13 00:11:14,Spot,Simple Earn Flexible Subscription,SOL,-3.1,Binance Earn
+1135727158,2026-02-13 00:12:09,Spot,Binance Convert,ONDO,1042,
+1135727158,2026-02-13 00:12:10,Spot,Binance Convert,XLM,-1675.15851531,
+1135727158,2026-02-13 00:12:11,Spot,Simple Earn Flexible Subscription,ONDO,-1042,Binance Earn
+1135727158,2026-02-13 00:12:47,Spot,Binance Convert,ROSE,21498.08239985,
+1135727158,2026-02-13 00:12:48,Spot,Binance Convert,XLM,-1770.50125057,
+1135727158,2026-02-13 00:12:49,Spot,Simple Earn Flexible Subscription,ROSE,-21498.08239985,Binance Earn
+1135727158,2026-02-13 07:17:22,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-13 07:38:00,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-14 07:01:22,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-14 07:03:07,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-15 07:45:44,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-15 07:46:50,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-15 17:42:15,Spot,Deposit,BRL,610.56,
+1135727158,2026-02-15 17:53:58,Spot,Buy Crypto With Fiat,BRL,-610.56,Via CashBalance - Wallet/N01719562585431312384021558
+1135727158,2026-02-15 17:54:03,Spot,Simple Earn Flexible Subscription,BTC,-0.00168164,Binance Earn
+1135727158,2026-02-15 17:54:03,Spot,Buy Crypto With Fiat,BTC,0.00168164,Via CashBalance - Wallet/N01719562585431312384021558
+1135727158,2026-02-16 06:08:06,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-16 06:15:20,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-17 08:01:42,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-17 08:11:41,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-18 08:02:29,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-18 08:09:54,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-19 07:38:47,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-19 07:45:13,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-20 07:37:22,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-20 08:01:41,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-21 07:54:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-21 08:09:43,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-22 07:38:30,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-22 08:09:39,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-22 22:35:24,Spot,Deposit,BRL,601,
+1135727158,2026-02-22 22:36:42,Spot,Buy Crypto With Fiat,BRL,-601,Via CashBalance - Wallet/N01722170452365765632022258
+1135727158,2026-02-22 22:36:47,Spot,Buy Crypto With Fiat,BTC,0.00171071,Via CashBalance - Wallet/N01722170452365765632022258
+1135727158,2026-02-22 22:36:47,Spot,Simple Earn Flexible Subscription,BTC,-0.00171071,Binance Earn
+1135727158,2026-02-23 07:08:00,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-23 07:23:13,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-24 07:44:37,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-24 07:44:47,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-25 07:37:28,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-25 07:46:28,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-26 04:49:02,Spot,Airdrop Assets,SXT,16.02178963,
+1135727158,2026-02-26 07:38:53,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-26 07:45:13,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-27 08:29:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-02-27 08:31:43,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-28 07:38:28,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-02-28 08:07:34,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-01 07:37:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-01 07:56:19,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-02 06:07:26,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-02 06:43:05,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-03 06:34:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-03 06:43:22,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-04 06:26:20,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-04 06:26:58,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-05 06:08:57,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-05 06:17:05,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-06 06:35:35,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-06 06:44:01,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-07 06:26:10,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-07 06:43:02,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-08 06:56:53,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-08 06:58:12,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-09 06:17:40,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-09 06:35:28,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-10 06:47:19,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-10 07:12:03,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-11 06:38:25,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-11 06:54:29,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-12 07:25:41,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-12 07:32:56,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-13 06:17:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-13 06:43:19,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-14 07:15:39,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-14 07:34:42,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-15 06:07:34,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-15 06:08:32,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-16 07:38:59,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-16 07:47:39,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-17 06:15:29,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-17 06:18:08,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-18 07:39:02,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-18 08:03:23,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-18 19:45:19,Spot,Deposit,BRL,1000,
+1135727158,2026-03-18 19:46:06,Spot,Buy Crypto With Fiat,BRL,-500,Via CashBalance - Wallet/N01730824831117679616031858
+1135727158,2026-03-18 19:46:12,Spot,Buy Crypto With Fiat,BTC,0.00133234,Via CashBalance - Wallet/N01730824831117679616031858
+1135727158,2026-03-18 19:46:33,Spot,Binance Convert,ONDO,360.32455509,
+1135727158,2026-03-18 19:46:34,Spot,Binance Convert,BRL,-500,
+1135727158,2026-03-18 19:46:38,Spot,Simple Earn Flexible Subscription,ONDO,-360.32455509,Binance Earn
+1135727158,2026-03-19 07:38:43,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-19 08:11:42,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-20 07:46:55,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-20 08:02:34,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-21 07:08:19,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-21 07:24:32,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-22 08:08:28,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-22 08:36:58,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-23 07:38:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-23 08:05:43,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-24 08:18:44,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-24 08:28:28,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-25 07:37:53,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-25 08:05:54,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-26 07:37:31,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-26 08:06:54,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-27 07:48:57,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-27 07:58:09,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-28 07:37:55,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-28 08:07:00,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-29 07:37:40,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-29 07:48:32,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-30 08:18:55,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-30 08:47:33,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-03-31 08:17:26,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-03-31 08:33:31,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-01 08:16:53,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-01 08:33:23,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-02 06:18:17,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-02 06:27:29,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-03 06:18:44,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-03 06:26:00,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-04 06:38:22,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-04 06:48:07,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-05 06:19:07,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-05 06:47:19,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-06 06:17:48,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-06 06:18:52,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-07 07:38:48,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-07 07:39:12,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-08 06:57:20,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-08 06:58:32,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-09 07:05:32,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-09 07:06:10,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-10 06:38:11,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-10 06:47:16,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-10 13:48:04,Spot,Deposit,BRL,2000,
+1135727158,2026-04-10 14:22:06,Spot,Binance Convert,TAO,1.51138426,
+1135727158,2026-04-10 14:22:06,Spot,Binance Convert,BRL,-2000,
+1135727158,2026-04-10 14:22:11,Spot,Simple Earn Flexible Subscription,TAO,-1.51138426,Binance Earn
+1135727158,2026-04-11 06:37:34,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-11 07:07:32,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-12 07:18:16,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-12 07:45:57,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-13 06:07:52,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-13 06:27:33,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-14 07:56:55,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-14 07:58:48,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-15 06:18:17,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-15 06:47:44,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-16 08:08:16,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-16 08:08:57,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-17 06:38:11,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-17 06:59:42,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-18 07:58:07,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-18 08:07:02,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-19 07:38:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-19 07:48:26,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-20 07:08:56,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-20 07:38:16,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-21 07:07:59,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-21 07:26:29,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-22 07:56:39,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-22 07:57:44,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-23 07:47:53,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-23 08:06:56,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-24 07:25:57,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-24 07:35:38,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-25 07:47:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-25 08:03:40,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-26 07:38:39,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-26 07:47:07,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-27 07:37:34,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-27 08:05:03,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-28 07:57:02,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-28 08:11:25,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-29 07:58:02,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-04-29 08:16:32,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-29 11:20:43,Spot,Simple Earn Flexible Redemption,TAO,1.51190541,Binance Earn
+1135727158,2026-04-29 11:21:24,Spot,Binance Convert,LINK,27.9376636,
+1135727158,2026-04-29 11:21:25,Spot,Binance Convert,TAO,-1,
+1135727158,2026-04-29 11:21:26,Spot,Simple Earn Flexible Subscription,LINK,-27.9376636,Binance Earn
+1135727158,2026-04-29 11:22:11,Spot,Binance Convert,RENDER,74.97857196,
+1135727158,2026-04-29 11:22:11,Spot,Binance Convert,TAO,-0.51190541,
+1135727158,2026-04-29 11:22:13,Spot,Simple Earn Flexible Subscription,RENDER,-74.97857196,Binance Earn
+1135727158,2026-04-30 07:38:32,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-04-30 07:47:43,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-01 08:19:03,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-01 08:28:07,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-02 06:17:03,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-02 06:27:36,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-03 06:16:18,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-03 06:18:26,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-04 06:08:44,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-04 06:27:30,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-05 06:25:50,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-05 06:35:25,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-06 06:17:37,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-06 06:36:10,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-07 06:57:58,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-07 07:06:46,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-08 06:37:26,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-08 07:06:53,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-09 06:56:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-09 06:57:21,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-10 06:07:21,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-10 06:46:01,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-11 06:38:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-11 06:58:15,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-12 06:42:24,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-12 06:43:51,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-13 07:39:43,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-13 08:00:44,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-14 13:16:37,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-14 13:35:00,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-15 07:07:49,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-15 07:46:16,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-16 06:07:59,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-16 06:08:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-17 07:38:02,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-17 07:48:59,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-18 07:37:07,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-18 07:37:34,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-19 07:19:02,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-19 07:27:15,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-20 07:48:34,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-20 07:56:44,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-21 07:59:29,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-21 08:08:48,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-22 07:48:12,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-22 07:56:29,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-23 07:38:49,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-23 08:16:16,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-24 07:18:02,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-24 07:26:42,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-25 07:38:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-25 07:57:36,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-26 07:48:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-26 07:49:06,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-27 07:47:19,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-27 07:55:46,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-28 07:48:20,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-28 08:06:57,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-29 08:07:39,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-29 08:08:31,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-30 08:19:08,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-05-30 08:38:08,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-31 08:07:59,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-05-31 08:28:31,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-01 08:17:43,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-01 08:37:25,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-02 07:21:25,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-02 07:21:35,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-03 06:12:55,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-03 06:26:23,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-04 06:12:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-04 06:13:08,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-05 06:48:18,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-05 06:49:00,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-06 06:07:30,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-06 06:08:12,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-07 06:38:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-07 06:57:44,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-08 07:07:26,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-08 07:15:01,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-09 06:56:29,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-09 07:05:53,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-10 06:47:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-10 06:47:32,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-11 07:08:44,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-11 07:48:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-12 06:08:15,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-12 06:17:22,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-13 07:08:18,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-13 07:36:33,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-14 06:18:08,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-14 06:45:48,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-15 07:58:10,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-15 08:05:43,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-16 07:17:16,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-16 07:17:52,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-17 08:17:59,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-17 08:37:10,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-18 08:45:55,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-18 08:46:52,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-19 07:08:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-19 07:36:01,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-20 06:48:24,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-20 06:48:31,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-21 06:29:37,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-21 06:37:09,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-22 06:38:05,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-22 06:51:28,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-23 06:06:56,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-23 06:19:42,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-24 06:34:57,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-24 06:55:09,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-25 06:21:28,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-25 06:31:02,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-26 07:10:54,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-26 07:11:41,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-27 06:08:33,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-27 06:08:37,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-28 06:08:14,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-28 06:09:00,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-29 06:17:51,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-29 06:18:45,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-06-30 06:37:36,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-06-30 06:37:58,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-01 06:18:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-01 06:18:54,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-02 06:07:33,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-02 06:35:33,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-03 05:37:42,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-03 05:45:09,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-04 06:08:22,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-04 06:27:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-05 06:25:58,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-05 06:33:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-06 06:07:33,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-06 06:07:46,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-07 06:25:25,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-07 06:43:23,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-08 06:16:05,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-08 06:26:06,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-09 06:16:45,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-09 06:17:27,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-10 06:50:37,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-10 07:00:12,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-11 06:07:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-11 06:25:21,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-12 06:16:26,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-12 06:25:02,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-13 06:07:25,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-13 06:25:13,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-14 06:16:13,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-14 06:44:10,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-15 06:16:58,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-15 06:35:06,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-16 06:17:26,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-16 06:43:39,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-16 20:15:11,Spot,Deposit,BRL,600,
+1135727158,2026-07-16 20:16:44,Spot,Binance Convert,BTC,0.00090412,
+1135727158,2026-07-16 20:16:45,Spot,Binance Convert,BRL,-300,
+1135727158,2026-07-16 20:17:06,Spot,Binance Convert,ETH,0.03100881,
+1135727158,2026-07-16 20:17:07,Spot,Binance Convert,BRL,-300,
+1135727158,2026-07-17 06:16:57,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-17 06:35:06,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-18 06:27:32,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-18 06:37:26,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-19 06:34:15,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-19 06:34:59,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-20 06:25:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-20 06:36:06,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-21 06:16:55,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-21 06:17:45,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-22 06:17:05,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-22 06:43:53,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-23 06:26:52,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-23 06:27:05,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-24 06:27:13,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-24 06:36:40,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-25 06:07:35,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-25 06:27:16,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-26 06:27:15,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-26 06:45:04,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-27 06:27:30,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-27 06:45:42,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-28 06:26:34,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-28 06:32:26,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-29 06:24:00,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-29 06:24:52,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-30 06:35:51,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-07-30 06:44:26,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-31 06:07:05,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-07-31 06:27:55,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-01 06:07:54,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-01 06:17:23,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-02 05:37:29,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-02 05:50:14,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-03 06:14:04,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-03 06:15:00,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-04 06:27:54,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-04 06:29:10,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-05 06:22:48,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-05 06:28:57,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-06 06:14:38,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-06 06:15:25,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-07 06:15:28,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-07 06:22:00,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-08 06:21:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-08 06:28:09,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-09 06:14:15,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-09 06:22:09,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-10 06:14:05,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-10 06:27:43,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-11 06:30:33,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-11 06:31:13,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-12 06:13:59,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-12 06:22:04,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-13 06:07:41,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-13 06:13:58,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-14 06:08:07,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-14 06:29:21,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-15 06:06:51,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-15 06:35:29,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-16 06:08:08,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-16 06:24:59,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-17 06:07:40,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-17 06:34:52,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-18 06:08:09,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-18 06:34:22,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-19 06:07:23,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-19 06:35:38,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-20 06:16:39,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-20 06:17:07,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-21 06:26:53,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-21 06:33:34,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-22 06:07:10,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-22 06:44:07,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-23 06:26:46,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-23 06:33:58,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-24 06:17:00,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-24 06:35:43,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-25 06:34:21,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-25 06:35:01,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-26 07:16:42,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-26 07:26:29,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-27 06:45:42,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-27 06:56:28,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-28 06:47:29,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-28 07:06:57,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-29 06:46:51,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-29 06:55:28,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-30 07:13:59,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-30 07:35:48,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-08-31 07:52:42,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-08-31 08:06:27,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-01 07:51:49,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-01 07:52:00,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-02 06:21:02,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-02 06:35:08,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-03 06:24:26,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-03 06:25:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-04 06:07:59,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-04 06:17:18,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-05 06:17:00,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-05 06:36:05,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-06 06:06:50,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-06 06:16:26,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-07 06:15:48,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-07 06:25:27,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-08 06:34:33,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-08 06:42:45,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-09 06:37:31,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-09 07:03:35,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-10 06:38:05,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-10 06:47:33,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-11 06:36:23,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-11 07:14:36,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-12 07:04:09,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-12 07:04:22,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-13 06:26:54,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-13 06:44:13,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-14 07:17:41,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-14 07:35:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-15 07:16:45,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-15 07:26:49,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-16 07:56:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-16 08:06:19,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-17 03:23:48,Spot,Simple Earn Flexible Redemption,ROSE,31347,Binance Earn
+1135727158,2026-09-17 03:24:19,Spot,Binance Convert,XRP,153.37156008,
+1135727158,2026-09-17 03:24:20,Spot,Binance Convert,ROSE,-31347,
+1135727158,2026-09-17 06:07:25,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-17 06:16:55,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-18 07:56:26,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-18 08:15:10,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-19 06:15:57,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-19 06:37:05,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-20 07:37:45,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-20 07:57:07,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-21 07:11:05,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-21 07:28:47,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-22 07:57:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-22 07:57:52,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-23 07:37:38,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-23 07:58:33,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-24 07:48:05,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-24 07:58:41,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-25 07:58:23,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-25 07:58:36,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-26 08:07:19,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-26 08:15:17,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-27 08:16:54,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-27 08:27:39,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-28 08:07:23,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-28 08:27:21,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-29 08:34:38,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-29 08:44:48,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-09-30 08:25:13,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-09-30 08:36:26,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-01 08:17:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-01 08:17:32,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-02 06:21:51,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-02 06:36:31,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-03 06:15:15,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-03 06:29:36,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-04 06:07:30,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-04 06:14:53,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-05 06:23:08,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-05 06:30:13,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-06 06:07:32,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-06 06:39:21,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-07 06:37:11,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-07 06:44:38,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-08 07:00:14,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-08 07:00:27,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-09 06:44:24,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-09 07:07:25,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-10 06:41:01,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-10 06:49:17,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-11 06:07:20,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-11 06:14:41,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-12 06:10:34,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-12 06:18:30,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-13 05:40:39,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-13 05:44:30,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-14 07:37:51,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-14 08:08:43,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn
+1135727158,2026-10-15 06:26:45,Spot,Simple Earn Flexible Interest,ETH,0.00000019,Binance Earn
+1135727158,2026-10-15 06:35:09,Spot,Simple Earn Flexible Interest,BTC,0.00000006,Binance Earn

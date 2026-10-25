@@ -511,6 +511,12 @@ export const api = {
   getWatchlist: (refresh = false) =>
     request<WatchlistResponse>(`/api/investments/watchlist${refresh ? '?refresh=true' : ''}`),
 
+  getBatchQuotes: (items: WatchlistItem[]) =>
+    request<WatchlistResponse>('/api/investments/quotes/batch', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    }),
+
   saveWatchlist: (items: WatchlistItem[]) =>
     request<{ ok: boolean; data: WatchlistResponse }>('/api/investments/watchlist', {
       method: 'POST',

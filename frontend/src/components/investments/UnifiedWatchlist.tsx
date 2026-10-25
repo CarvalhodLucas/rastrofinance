@@ -19,15 +19,25 @@ import {
   BellRing,
   Check,
   GripVertical,
+  Star,
+  Wallet,
 } from 'lucide-react';
 import { AssetLogo } from '@/components/investments/AssetLogo';
 import { WatchlistSparkline } from '@/components/investments/WatchlistSparkline';
 import { api } from '@/services/api';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
-import type { PriceAlert, WatchlistPeriod, WatchlistQuoteResult, WatchlistResponse } from '@/types/finance';
+import type {
+  PriceAlert,
+  WatchlistPeriod,
+  WatchlistQuoteResult,
+  WatchlistResponse,
+  Investment,
+  WatchlistItem,
+} from '@/types/finance';
 import rastroAssets from '@/data/assetsDatabase.json';
 
+export type WatchlistListTab = 'CUSTOM' | 'MY_B3' | 'MY_CRYPTO';
 type FilterType = 'ALL' | 'STOCK' | 'CRYPTO' | 'GAINERS' | 'LOSERS';
 type PillMode = 'percent' | 'amount' | 'cap';
 type ViewMode = 'list' | 'grid';
@@ -94,10 +104,43 @@ const SUGGESTED_CRYPTO = [
   { ticker: 'ONDO', name: 'Ondo', type: 'CRYPTO' as const },
 ];
 
+export interface EnrichedWatchlistItem extends WatchlistQuoteResult {
+  uniqueId: string;
+  inWatchlist: boolean;
+  portfolio?: {
+    id?: string;
+    quantity: number;
+    averagePrice: number;
+    totalInvested: number;
+    currentValue: number;
+    profitLoss: number;
+    profitLossPct: number;
+    institution: string;
+  };
+}
+
 export function UnifiedWatchlist() {
   const { notify } = useToast();
   const { user } = useAuth();
   const cacheKey = user?.id ? `rastro_watchlist_cache_${user.id}` : 'rastro_watchlist_cache_anon';
+
+  const [listTab, setListTab] = useState<WatchlistListTab>(() => {
+    try {
+      const saved = localStorage.getItem('rastro_watchlist_list_tab');
+      if (saved === 'CUSTOM' || saved === 'MY_B3' || saved === 'MY_CRYPTO') return saved;
+    } catch {}
+    return 'CUSTOM';
+  });
+
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [portfolioQuotes, setPortfolioQuotes] = useState<Map<string, WatchlistQuoteResult>>(new Map());
+  const [portfolioLoading, setPortfolioLoading] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rastro_watchlist_list_tab', listTab);
+    } catch {}
+  }, [listTab]);
 
   const [data, setData] = useState<WatchlistResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,8 +174,33 @@ export function UnifiedWatchlist() {
   // Modais e Estados de Remoção e Drag & Drop
   const [tickerToDelete, setTickerToDelete] = useState<string | null>(null);
   const [deletingTicker, setDeletingTicker] = useState(false);
-  const [draggedTicker, setDraggedTicker] = useState<string | null>(null);
-  const [dragOverTicker, setDragOverTicker] = useState<string | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  // Ordem personalizada de ativos por aba (salva no localStorage do usuário)
+  const [b3Order, setB3Order] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(`rastro_order_b3_${user?.id || 'default'}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [cryptoOrder, setCryptoOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(`rastro_order_crypto_${user?.id || 'default'}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Sempre reseta o filtro para ALL e limpa a busca ao alternar entre as 3 abas
+  useEffect(() => {
+    setFilter('ALL');
+    setSearchQuery('');
+  }, [listTab]);
 
   // Modais de Alerta de Preço
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
@@ -143,6 +211,71 @@ export function UnifiedWatchlist() {
   const [alertNote, setAlertNote] = useState('');
   const [savingAlert, setSavingAlert] = useState(false);
   const [alertsList, setAlertsList] = useState<PriceAlert[]>([]);
+
+  // Filtra e remove ativos Wise ou saldo em moeda fiat que não possuem cotação de bolsa
+  const isWiseOrCashAsset = (inv: Investment): boolean => {
+    const inst = (inv.institution || '').toUpperCase();
+    const ticker = (inv.code_ticker || '').toUpperCase();
+    const name = (inv.name || '').toUpperCase();
+    const assetType = (inv.asset_type || '').toUpperCase();
+
+    return (
+      inst.includes('WISE') ||
+      ticker.includes('WISE') ||
+      ticker.startsWith('WISE_') ||
+      name.includes('WISE') ||
+      assetType === 'CURRENCY' ||
+      assetType === 'CASH' ||
+      assetType === 'CHECKING_ACCOUNT'
+    );
+  };
+
+  // Carrega os investimentos do usuário e busca cotações em tempo real para eles
+  const loadPortfolio = async () => {
+    try {
+      setPortfolioLoading(true);
+      const res = await api.getInvestments();
+      const active = (res?.investments || []).filter(
+        (i) =>
+          (i.quantity || 0) > 0 &&
+          i.sync_source !== 'GORILA_CLOSED' &&
+          !isWiseOrCashAsset(i),
+      );
+      setInvestments(active);
+
+      const itemsToQuote: WatchlistItem[] = [];
+      for (const inv of active) {
+        const isCrypto = inv.asset_type === 'CRYPTO' || inv.institution?.toUpperCase() === 'BINANCE';
+        const cleanTicker = inv.code_ticker?.trim().toUpperCase();
+        if (!cleanTicker) continue;
+        if (isCrypto) {
+          itemsToQuote.push({ ticker: cleanTicker, type: 'CRYPTO', name: inv.name });
+        } else {
+          const formatted =
+            !cleanTicker.includes('.') && !cleanTicker.includes('-')
+              ? `${cleanTicker}.SA`
+              : cleanTicker;
+          itemsToQuote.push({ ticker: formatted, type: 'STOCK', name: inv.name });
+        }
+      }
+
+      if (itemsToQuote.length > 0) {
+        const quotesRes = await api.getBatchQuotes(itemsToQuote);
+        if (quotesRes?.items) {
+          const qMap = new Map<string, WatchlistQuoteResult>();
+          for (const q of quotesRes.items) {
+            qMap.set(q.ticker.toUpperCase(), q);
+            qMap.set(q.ticker.replace(/\.SA$/, '').toUpperCase(), q);
+          }
+          setPortfolioQuotes(qMap);
+        }
+      }
+    } catch (err) {
+      console.warn('[Watchlist] Erro ao carregar carteira:', err);
+    } finally {
+      setPortfolioLoading(false);
+    }
+  };
 
   // Carrega os dados da watchlist
   const loadWatchlist = async (bypassCache = false) => {
@@ -181,6 +314,11 @@ export function UnifiedWatchlist() {
     }
   };
 
+  const handleRefreshAll = async () => {
+    await Promise.all([loadWatchlist(true), loadPortfolio()]);
+    notify('Cotações e carteira atualizadas!', 'success');
+  };
+
   useEffect(() => {
     setData(null);
     const local = localStorage.getItem(cacheKey);
@@ -195,12 +333,14 @@ export function UnifiedWatchlist() {
       setLoading(true);
     }
     void loadWatchlist(false);
+    void loadPortfolio();
   }, [user?.id, cacheKey]);
 
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
       void loadWatchlist(false);
+      void loadPortfolio();
     }, 30000);
     return () => clearInterval(interval);
   }, [autoRefresh]);
@@ -265,69 +405,108 @@ export function UnifiedWatchlist() {
   };
 
   // Drag and Drop: Início do arrasto
-  const handleDragStart = (ticker: string, e: React.DragEvent) => {
-    setDraggedTicker(ticker);
+  const handleDragStart = (id: string, e: React.DragEvent) => {
+    setDraggedId(id);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', ticker);
+    e.dataTransfer.setData('text/plain', id);
   };
 
   // Drag and Drop: Passando por cima de outro ativo
-  const handleDragOver = (ticker: string, e: React.DragEvent) => {
+  const handleDragOver = (id: string, e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (dragOverTicker !== ticker) {
-      setDragOverTicker(ticker);
+    if (dragOverId !== id) {
+      setDragOverId(id);
     }
   };
 
   // Drag and Drop: Fim do arrasto
   const handleDragEnd = () => {
-    setDraggedTicker(null);
-    setDragOverTicker(null);
+    setDraggedId(null);
+    setDragOverId(null);
   };
 
   // Drag and Drop: Soltar para aplicar a nova ordem
-  const handleDrop = async (targetTicker: string, e: React.DragEvent) => {
+  const handleDrop = async (targetId: string, e: React.DragEvent) => {
     e.preventDefault();
-    if (!draggedTicker || draggedTicker === targetTicker || !data?.items) {
-      setDraggedTicker(null);
-      setDragOverTicker(null);
+    const sourceId = draggedId || e.dataTransfer.getData('text/plain');
+    if (!sourceId || sourceId === targetId) {
+      setDraggedId(null);
+      setDragOverId(null);
       return;
     }
 
-    const items = [...data.items];
-    const sourceIndex = items.findIndex((it) => it.ticker === draggedTicker);
-    const targetIndex = items.findIndex((it) => it.ticker === targetTicker);
+    if (listTab === 'CUSTOM') {
+      if (!data?.items) {
+        setDraggedId(null);
+        setDragOverId(null);
+        return;
+      }
 
-    if (sourceIndex === -1 || targetIndex === -1) {
-      setDraggedTicker(null);
-      setDragOverTicker(null);
-      return;
-    }
+      const items = [...data.items];
+      const sourceIndex = items.findIndex((it) => it.ticker === sourceId);
+      const targetIndex = items.findIndex((it) => it.ticker === targetId);
 
-    // Move o item de sourceIndex para targetIndex
-    const [moved] = items.splice(sourceIndex, 1);
-    items.splice(targetIndex, 0, moved);
+      if (sourceIndex === -1 || targetIndex === -1) {
+        setDraggedId(null);
+        setDragOverId(null);
+        return;
+      }
 
-    // Atualização otimista imediata na interface
-    const updatedData: WatchlistResponse = { ...data, items };
-    setData(updatedData);
-    localStorage.setItem(cacheKey, JSON.stringify(updatedData));
-    setDraggedTicker(null);
-    setDragOverTicker(null);
+      // Move o item de sourceIndex para targetIndex
+      const [moved] = items.splice(sourceIndex, 1);
+      items.splice(targetIndex, 0, moved);
 
-    // Persiste no backend
-    try {
-      const minimalPayload = items.map((it) => ({
-        ticker: it.ticker,
-        type: it.type,
-        name: it.name,
-      }));
-      await api.saveWatchlist(minimalPayload);
-      notify('Ordem dos ativos atualizada!', 'success');
-    } catch (err: any) {
-      console.error('Erro ao salvar nova ordem:', err);
-      notify('Não foi possível salvar a nova ordem no servidor.', 'error');
+      // Atualização otimista imediata na interface
+      const updatedData: WatchlistResponse = { ...data, items };
+      setData(updatedData);
+      localStorage.setItem(cacheKey, JSON.stringify(updatedData));
+      setDraggedId(null);
+      setDragOverId(null);
+
+      // Persiste no backend
+      try {
+        const minimalPayload = items.map((it) => ({
+          ticker: it.ticker,
+          type: it.type,
+          name: it.name,
+        }));
+        await api.saveWatchlist(minimalPayload);
+        notify('Ordem dos ativos atualizada!', 'success');
+      } catch (err: any) {
+        console.error('Erro ao salvar nova ordem:', err);
+        notify('Não foi possível salvar a nova ordem no servidor.', 'error');
+      }
+    } else if (listTab === 'MY_B3') {
+      const currentIds = currentBaseItems.map((i) => i.uniqueId);
+      const sourceIndex = currentIds.indexOf(sourceId);
+      const targetIndex = currentIds.indexOf(targetId);
+
+      if (sourceIndex !== -1 && targetIndex !== -1) {
+        const newOrder = [...currentIds];
+        const [moved] = newOrder.splice(sourceIndex, 1);
+        newOrder.splice(targetIndex, 0, moved);
+        setB3Order(newOrder);
+        localStorage.setItem(`rastro_order_b3_${user?.id || 'default'}`, JSON.stringify(newOrder));
+        notify('Ordem dos ativos B3 atualizada!', 'success');
+      }
+      setDraggedId(null);
+      setDragOverId(null);
+    } else if (listTab === 'MY_CRYPTO') {
+      const currentIds = currentBaseItems.map((i) => i.uniqueId);
+      const sourceIndex = currentIds.indexOf(sourceId);
+      const targetIndex = currentIds.indexOf(targetId);
+
+      if (sourceIndex !== -1 && targetIndex !== -1) {
+        const newOrder = [...currentIds];
+        const [moved] = newOrder.splice(sourceIndex, 1);
+        newOrder.splice(targetIndex, 0, moved);
+        setCryptoOrder(newOrder);
+        localStorage.setItem(`rastro_order_crypto_${user?.id || 'default'}`, JSON.stringify(newOrder));
+        notify('Ordem das criptos atualizada!', 'success');
+      }
+      setDraggedId(null);
+      setDragOverId(null);
     }
   };
 
@@ -515,11 +694,159 @@ export function UnifiedWatchlist() {
     return item.sparkline || [];
   };
 
-  // Itens filtrados
-  const filteredItems = useMemo(() => {
-    if (!data?.items) return [];
+  // Ativos B3 possuídos na carteira (quantidade > 0, não cripto e não Wise/moeda)
+  const myB3Investments = useMemo(() => {
+    return investments.filter((i) => {
+      if (isWiseOrCashAsset(i)) return false;
+      const isCrypto = i.asset_type === 'CRYPTO' || i.institution?.toUpperCase() === 'BINANCE';
+      return !isCrypto && (i.quantity || 0) > 0;
+    });
+  }, [investments]);
 
-    let list = [...data.items];
+  // Criptomoedas possuídas na carteira (não Wise/moeda)
+  const myCryptoInvestments = useMemo(() => {
+    return investments.filter((i) => {
+      if (isWiseOrCashAsset(i)) return false;
+      const isCrypto = i.asset_type === 'CRYPTO' || i.institution?.toUpperCase() === 'BINANCE';
+      return isCrypto && (i.quantity || 0) > 0;
+    });
+  }, [investments]);
+
+  const fallbackQuoteFromInvestment = (inv: Investment): WatchlistQuoteResult => {
+    const isCrypto = inv.asset_type === 'CRYPTO' || inv.institution?.toUpperCase() === 'BINANCE';
+    const cleanTicker = (inv.code_ticker || '').trim().toUpperCase();
+    const formattedTicker =
+      !isCrypto && !cleanTicker.includes('.') && !cleanTicker.includes('-')
+        ? `${cleanTicker}.SA`
+        : cleanTicker;
+
+    const price = inv.current_price || inv.average_price || 0;
+    return {
+      ticker: formattedTicker,
+      name: inv.name || cleanTicker,
+      type: isCrypto ? 'CRYPTO' : 'STOCK',
+      price,
+      currency: isCrypto ? 'USD' : 'BRL',
+      variation: '0.00',
+      changeAmount: 0,
+      high24h: price,
+      low24h: price,
+      volume: 0,
+      marketCap: '--',
+      sparkline: [],
+      category: isCrypto ? 'Criptomoedas' : 'Ações B3',
+    };
+  };
+
+  // Itens base de acordo com a aba selecionada (CUSTOM, MY_B3 ou MY_CRYPTO)
+  const currentBaseItems = useMemo<EnrichedWatchlistItem[]>(() => {
+    if (listTab === 'CUSTOM') {
+      return (data?.items || []).map((it) => {
+        const clean = it.ticker.replace(/\.SA$/, '').toUpperCase();
+        const invMatch = investments.find(
+          (inv) => (inv.code_ticker || '').replace(/\.SA$/, '').toUpperCase() === clean,
+        );
+        let portfolioData: EnrichedWatchlistItem['portfolio'] | undefined;
+        if (invMatch && (invMatch.quantity || 0) > 0) {
+          const price = it.price || invMatch.current_price || invMatch.average_price || 0;
+          const qty = invMatch.quantity || 0;
+          const avgPrice = invMatch.average_price || 0;
+          const totalInvested = qty * avgPrice;
+          const currentValue = qty * price;
+          const profitLoss = currentValue - totalInvested;
+          const profitLossPct = totalInvested > 0 ? (profitLoss / totalInvested) * 100 : 0;
+          portfolioData = {
+            quantity: qty,
+            averagePrice: avgPrice,
+            totalInvested,
+            currentValue,
+            profitLoss,
+            profitLossPct,
+            institution: invMatch.institution || 'Carteira',
+          };
+        }
+
+        return {
+          ...it,
+          uniqueId: it.ticker,
+          inWatchlist: true,
+          portfolio: portfolioData,
+        };
+      });
+    }
+
+    const sourceInvs = listTab === 'MY_B3' ? myB3Investments : myCryptoInvestments;
+
+    const mappedItems: EnrichedWatchlistItem[] = sourceInvs.map((inv) => {
+      const isCrypto = inv.asset_type === 'CRYPTO' || inv.institution?.toUpperCase() === 'BINANCE';
+      const clean = (inv.code_ticker || '').trim().toUpperCase();
+      const quote =
+        portfolioQuotes.get(clean) ||
+        data?.items.find((it) => it.ticker.replace(/\.SA$/, '').toUpperCase() === clean) ||
+        fallbackQuoteFromInvestment(inv);
+
+      const price = quote.price || inv.current_price || inv.average_price || 0;
+      const quantity = inv.quantity || 0;
+      const avgPrice = inv.average_price || 0;
+      const totalInvested = quantity * avgPrice;
+      const currentValue = quantity * price;
+      const profitLoss = currentValue - totalInvested;
+      const profitLossPct = totalInvested > 0 ? (profitLoss / totalInvested) * 100 : 0;
+
+      const inWatchlist =
+        existingTickersSet.has(clean) ||
+        existingTickersSet.has(quote.ticker.toUpperCase()) ||
+        existingTickersSet.has(quote.ticker.replace(/\.SA$/, '').toUpperCase());
+
+      const uniqueId = String(inv.id || `${clean}_${inv.quantity}_${inv.average_price}`);
+
+      return {
+        ...quote,
+        uniqueId,
+        inWatchlist,
+        portfolio: {
+          id: inv.id,
+          quantity,
+          averagePrice: avgPrice,
+          totalInvested,
+          currentValue,
+          profitLoss,
+          profitLossPct,
+          institution: inv.institution || (isCrypto ? 'Binance' : 'B3'),
+        },
+      };
+    });
+
+    const currentOrder = listTab === 'MY_B3' ? b3Order : cryptoOrder;
+    if (currentOrder && currentOrder.length > 0) {
+      mappedItems.sort((a, b) => {
+        let idxA = currentOrder.indexOf(a.uniqueId);
+        if (idxA === -1) idxA = currentOrder.indexOf(a.ticker);
+        let idxB = currentOrder.indexOf(b.uniqueId);
+        if (idxB === -1) idxB = currentOrder.indexOf(b.ticker);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return 0;
+      });
+    }
+
+    return mappedItems;
+  }, [
+    listTab,
+    data?.items,
+    investments,
+    myB3Investments,
+    myCryptoInvestments,
+    portfolioQuotes,
+    existingTickersSet,
+    b3Order,
+    cryptoOrder,
+  ]);
+
+  // Itens filtrados por busca e tipo
+  const filteredItems = useMemo(() => {
+    let list = [...currentBaseItems];
 
     if (filter === 'STOCK') {
       list = list.filter((i) => i.type === 'STOCK');
@@ -542,37 +869,83 @@ export function UnifiedWatchlist() {
     }
 
     return list;
-  }, [data?.items, filter, searchQuery, selectedPeriod]);
+  }, [currentBaseItems, filter, searchQuery, selectedPeriod]);
 
   const counts = useMemo(() => {
-    if (!data?.items) return { all: 0, stock: 0, crypto: 0, gainers: 0, losers: 0 };
     return {
-      all: data.items.length,
-      stock: data.items.filter((i) => i.type === 'STOCK').length,
-      crypto: data.items.filter((i) => i.type === 'CRYPTO').length,
-      gainers: data.items.filter((i) => parseFloat(getItemVariation(i)) > 0).length,
-      losers: data.items.filter((i) => parseFloat(getItemVariation(i)) < 0).length,
+      all: currentBaseItems.length,
+      stock: currentBaseItems.filter((i) => i.type === 'STOCK').length,
+      crypto: currentBaseItems.filter((i) => i.type === 'CRYPTO').length,
+      gainers: currentBaseItems.filter((i) => parseFloat(getItemVariation(i)) > 0).length,
+      losers: currentBaseItems.filter((i) => parseFloat(getItemVariation(i)) < 0).length,
     };
-  }, [data?.items, selectedPeriod]);
+  }, [currentBaseItems, selectedPeriod]);
+
+  // Estatísticas consolidadas para as abas de carteira (MY_B3 e MY_CRYPTO)
+  const portfolioStats = useMemo(() => {
+    const isB3 = listTab === 'MY_B3';
+    const items = isB3 ? myB3Investments : myCryptoInvestments;
+    let totalInvested = 0;
+    let totalCurrent = 0;
+
+    for (const inv of items) {
+      const clean = (inv.code_ticker || '').trim().toUpperCase();
+      const quote =
+        portfolioQuotes.get(clean) ||
+        data?.items.find((it) => it.ticker.replace(/\.SA$/, '').toUpperCase() === clean);
+      const price = quote?.price || inv.current_price || inv.average_price || 0;
+      const invst = (inv.quantity || 0) * (inv.average_price || 0);
+      const curr = (inv.quantity || 0) * price;
+      totalInvested += invst;
+      totalCurrent += curr;
+    }
+
+    const profitLoss = totalCurrent - totalInvested;
+    const profitLossPct = totalInvested > 0 ? (profitLoss / totalInvested) * 100 : 0;
+
+    return {
+      totalInvested,
+      totalCurrent,
+      profitLoss,
+      profitLossPct,
+      count: items.length,
+    };
+  }, [listTab, myB3Investments, myCryptoInvestments, portfolioQuotes, data?.items]);
+
+  // Alternar ativo na lista Minha Escolha (favorito com estrela)
+  const handleToggleFavorite = async (item: EnrichedWatchlistItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const cleanTicker = item.ticker.replace(/\.SA$/, '').toUpperCase();
+    const isAlready =
+      existingTickersSet.has(cleanTicker) || existingTickersSet.has(item.ticker.toUpperCase());
+
+    if (isAlready) {
+      await handleRemoveTicker(item.ticker, e);
+      notify(`${cleanTicker} removido do radar de escolha.`, 'info');
+    } else {
+      await handleAddTicker(item.ticker, item.type);
+      notify(`${cleanTicker} adicionado ao radar de escolha!`, 'success');
+    }
+  };
 
   // Destaques de maior alta e queda dinâmicos por período
   const periodTopGainer = useMemo(() => {
-    if (!data?.items || data.items.length === 0) return null;
-    const sorted = [...data.items].sort(
+    if (currentBaseItems.length === 0) return null;
+    const sorted = [...currentBaseItems].sort(
       (a, b) => parseFloat(getItemVariation(b)) - parseFloat(getItemVariation(a)),
     );
     const top = sorted[0];
     return top && parseFloat(getItemVariation(top)) > 0 ? top : null;
-  }, [data?.items, selectedPeriod]);
+  }, [currentBaseItems, selectedPeriod]);
 
   const periodTopLoser = useMemo(() => {
-    if (!data?.items || data.items.length === 0) return null;
-    const sorted = [...data.items].sort(
+    if (currentBaseItems.length === 0) return null;
+    const sorted = [...currentBaseItems].sort(
       (a, b) => parseFloat(getItemVariation(a)) - parseFloat(getItemVariation(b)),
     );
     const worst = sorted[0];
     return worst && parseFloat(getItemVariation(worst)) < 0 ? worst : null;
-  }, [data?.items, selectedPeriod]);
+  }, [currentBaseItems, selectedPeriod]);
 
   const formatPrice = (item: WatchlistQuoteResult) => {
     const isUsd = item.currency === 'USD';
@@ -619,14 +992,23 @@ export function UnifiedWatchlist() {
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-bold tracking-tight text-text-primary flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-accent-gold" />
-              Lista de Acompanhamento
+              Radar de Cotações
             </h2>
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent-gold/15 text-accent-gold border border-accent-gold/30">
-              Personalizada
+              {listTab === 'CUSTOM'
+                ? 'Minha Escolha'
+                : listTab === 'MY_B3'
+                ? 'Meus Ativos B3'
+                : 'Minhas Criptos'}
             </span>
           </div>
           <p className="text-xs text-text-muted mt-0.5">
-            Acompanhe suas ações e criptos em tempo real com alertas de preço. Segure e arraste o ícone lateral para reordenar a sua lista.
+            {listTab === 'CUSTOM' &&
+              'Acompanhe seus ativos favoritos com cotações em tempo real e alertas de preço customizados.'}
+            {listTab === 'MY_B3' &&
+              'Acompanhamento ao vivo de todas as ações, FIIs e ETFs da B3 que você tem na carteira.'}
+            {listTab === 'MY_CRYPTO' &&
+              'Acompanhamento 24/7 de todas as criptomoedas e tokens que você possui em carteira.'}
           </p>
         </div>
 
@@ -676,55 +1058,255 @@ export function UnifiedWatchlist() {
 
           {/* Botão Atualizar */}
           <button
-            onClick={() => void loadWatchlist(true)}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-primary bg-bg-elevated hover:bg-bg-elevated/80 border border-border-default/80 transition-all active:scale-95 disabled:opacity-50"
-            title="Atualizar cotações agora"
+            onClick={() => void handleRefreshAll()}
+            disabled={refreshing || portfolioLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-text-primary bg-bg-elevated hover:bg-bg-elevated/80 border border-border-default/80 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+            title="Atualizar cotações e carteira agora"
           >
-            <RefreshCw className={`h-3.5 w-3.5 text-accent-gold ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-3.5 w-3.5 text-accent-gold ${
+                refreshing || portfolioLoading ? 'animate-spin' : ''
+              }`}
+            />
             <span className="hidden sm:inline">Atualizar</span>
           </button>
 
           {/* Toggle Auto-Refresh */}
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
               autoRefresh
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                 : 'bg-bg-elevated text-text-muted border-border-default/80'
             }`}
             title="Auto-atualização a cada 30 segundos"
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${autoRefresh ? 'bg-emerald-400 animate-pulse' : 'bg-text-muted'}`} />
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                autoRefresh ? 'bg-emerald-400 animate-pulse' : 'bg-text-muted'
+              }`}
+            />
             <span className="hidden sm:inline">Auto-Sync</span>
           </button>
 
-          {/* Botão Adicionar Ativo */}
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-black bg-accent-gold hover:bg-accent-gold/90 transition-all shadow-xs active:scale-95"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Adicionar Ativo</span>
-          </button>
+          {/* Botão Adicionar Ativo (Visível na lista de escolha) */}
+          {listTab === 'CUSTOM' && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-black bg-accent-gold hover:bg-accent-gold/90 transition-all shadow-xs active:scale-95 cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Adicionar Ativo</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 2. Destaques Top Alta e Queda (Apenas se houver ativos) */}
-      {data && data.items.length > 0 && (
+      {/* 2. Seletor das 3 Listas do Radar (Minha Escolha, Ativos B3, Criptos) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-bg-surface/90 backdrop-blur-md p-2 rounded-2xl border border-border-default/80 shadow-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none p-0.5">
+          <button
+            type="button"
+            onClick={() => setListTab('CUSTOM')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap select-none ${
+              listTab === 'CUSTOM'
+                ? 'bg-accent-gold text-gray-950 shadow-md shadow-accent-gold/25'
+                : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated'
+            }`}
+          >
+            <Sparkles className="h-4 w-4" />
+            <span>Minha Escolha</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[11px] font-mono font-bold ${
+                listTab === 'CUSTOM'
+                  ? 'bg-black/25 text-gray-950'
+                  : 'bg-bg-elevated text-text-muted'
+              }`}
+            >
+              {data?.items?.length || 0}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setListTab('MY_B3')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap select-none ${
+              listTab === 'MY_B3'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated'
+            }`}
+          >
+            <Building2 className="h-4 w-4" />
+            <span>Meus Ativos B3</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[11px] font-mono font-bold ${
+                listTab === 'MY_B3'
+                  ? 'bg-white/25 text-white'
+                  : 'bg-bg-elevated text-text-muted'
+              }`}
+            >
+              {myB3Investments.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setListTab('MY_CRYPTO')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap select-none ${
+              listTab === 'MY_CRYPTO'
+                ? 'bg-amber-500 text-gray-950 shadow-md shadow-amber-500/25'
+                : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated'
+            }`}
+          >
+            <Coins className="h-4 w-4" />
+            <span>Minhas Criptos</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[11px] font-mono font-bold ${
+                listTab === 'MY_CRYPTO'
+                  ? 'bg-black/25 text-gray-950'
+                  : 'bg-bg-elevated text-text-muted'
+              }`}
+            >
+              {myCryptoInvestments.length}
+            </span>
+          </button>
+        </div>
+
+        {/* Informação rápida sobre a lista */}
+        <div className="text-[11px] text-text-muted px-2 hidden md:block">
+          {listTab === 'CUSTOM' && 'Ativos personalizados que você escolheu monitorar'}
+          {listTab === 'MY_B3' && 'Cotações ao vivo de todas as ações e FIIs da sua carteira'}
+          {listTab === 'MY_CRYPTO' && 'Cotações em tempo real das suas criptos (Binance & Carteira)'}
+        </div>
+      </div>
+
+      {/* 3. Destaques Top Alta e Queda ou Métricas da Carteira */}
+      {listTab === 'CUSTOM' ? (
+        data && data.items.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-bg-surface p-3.5 rounded-xl border border-border-default/50 flex items-center justify-between">
+              <div>
+                <span className="text-xs text-text-muted font-medium">Ativos no Radar</span>
+                <p className="text-lg font-bold text-text-primary mt-0.5">
+                  {counts.all}{' '}
+                  <span className="text-xs font-normal text-text-muted">
+                    ({counts.stock} ações, {counts.crypto} criptos)
+                  </span>
+                </p>
+              </div>
+              <div className="h-9 w-9 rounded-lg bg-accent-gold/10 flex items-center justify-center text-accent-gold">
+                <Sparkles className="h-5 w-5" />
+              </div>
+            </div>
+
+            <div className="bg-bg-surface p-3.5 rounded-xl border border-border-default/50 flex items-center justify-between">
+              <div>
+                <span className="text-xs text-text-muted font-medium flex items-center gap-1">
+                  <ArrowUpRight className="h-3.5 w-3.5 text-emerald-400" />
+                  Maior Alta ({selectedPeriod})
+                </span>
+                <p className="text-base font-bold text-text-primary mt-0.5 flex items-center gap-1.5">
+                  {periodTopGainer ? (
+                    <>
+                      <span>{periodTopGainer.ticker.replace(/\.SA$/, '')}</span>
+                      <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                        +{parseFloat(getItemVariation(periodTopGainer)).toFixed(2)}%
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-text-muted">Nenhuma alta</span>
+                  )}
+                </p>
+              </div>
+              <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+            </div>
+
+            <div className="bg-bg-surface p-3.5 rounded-xl border border-border-default/50 flex items-center justify-between">
+              <div>
+                <span className="text-xs text-text-muted font-medium flex items-center gap-1">
+                  <ArrowDownRight className="h-3.5 w-3.5 text-rose-400" />
+                  Maior Queda ({selectedPeriod})
+                </span>
+                <p className="text-base font-bold text-text-primary mt-0.5 flex items-center gap-1.5">
+                  {periodTopLoser ? (
+                    <>
+                      <span>{periodTopLoser.ticker.replace(/\.SA$/, '')}</span>
+                      <span className="text-xs font-semibold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">
+                        {parseFloat(getItemVariation(periodTopLoser)).toFixed(2)}%
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-text-muted">Nenhuma queda</span>
+                  )}
+                </p>
+              </div>
+              <div className="h-9 w-9 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400">
+                <TrendingDown className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+        )
+      ) : (
+        /* Cards de Métricas de Carteira (B3 ou Cripto) */
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-bg-surface p-3.5 rounded-xl border border-border-default/50 flex items-center justify-between">
             <div>
-              <span className="text-xs text-text-muted font-medium">Ativos no Radar</span>
+              <span className="text-xs text-text-muted font-medium">
+                {listTab === 'MY_B3' ? 'Patrimônio em Ativos B3' : 'Patrimônio em Criptos'}
+              </span>
+              <p className="text-lg font-bold text-text-primary mt-0.5 flex items-baseline gap-2">
+                <span>
+                  {listTab === 'MY_B3'
+                    ? `R$ ${portfolioStats.totalCurrent.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}`
+                    : `$ ${portfolioStats.totalCurrent.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}`}
+                </span>
+                {portfolioStats.totalInvested > 0 && (
+                  <span
+                    className={`text-xs font-semibold px-1.5 py-0.2 rounded ${
+                      portfolioStats.profitLoss >= 0
+                        ? 'text-emerald-400 bg-emerald-500/10'
+                        : 'text-rose-400 bg-rose-500/10'
+                    }`}
+                  >
+                    {portfolioStats.profitLoss >= 0 ? '+' : ''}
+                    {portfolioStats.profitLossPct.toFixed(1)}%
+                  </span>
+                )}
+              </p>
+            </div>
+            <div
+              className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+                listTab === 'MY_B3'
+                  ? 'bg-blue-500/10 text-blue-400'
+                  : 'bg-amber-500/10 text-amber-400'
+              }`}
+            >
+              <Wallet className="h-5 w-5" />
+            </div>
+          </div>
+
+          <div className="bg-bg-surface p-3.5 rounded-xl border border-border-default/50 flex items-center justify-between">
+            <div>
+              <span className="text-xs text-text-muted font-medium">
+                {listTab === 'MY_B3' ? 'Posições em Carteira B3' : 'Criptomoedas Ativas'}
+              </span>
               <p className="text-lg font-bold text-text-primary mt-0.5">
-                {counts.all}{' '}
+                {portfolioStats.count}{' '}
                 <span className="text-xs font-normal text-text-muted">
-                  ({counts.stock} ações, {counts.crypto} criptos)
+                  {listTab === 'MY_B3' ? 'ativos custodiados' : 'criptoativos'}
                 </span>
               </p>
             </div>
-            <div className="h-9 w-9 rounded-lg bg-accent-gold/10 flex items-center justify-center text-accent-gold">
-              <Sparkles className="h-5 w-5" />
+            <div className="h-9 w-9 rounded-lg bg-bg-elevated flex items-center justify-center text-text-secondary">
+              {listTab === 'MY_B3' ? <Building2 className="h-5 w-5" /> : <Coins className="h-5 w-5" />}
             </div>
           </div>
 
@@ -732,7 +1314,7 @@ export function UnifiedWatchlist() {
             <div>
               <span className="text-xs text-text-muted font-medium flex items-center gap-1">
                 <ArrowUpRight className="h-3.5 w-3.5 text-emerald-400" />
-                Maior Alta ({selectedPeriod})
+                Destaque do Período ({selectedPeriod})
               </span>
               <p className="text-base font-bold text-text-primary mt-0.5 flex items-center gap-1.5">
                 {periodTopGainer ? (
@@ -743,7 +1325,7 @@ export function UnifiedWatchlist() {
                     </span>
                   </>
                 ) : (
-                  <span className="text-sm text-text-muted">Nenhuma alta</span>
+                  <span className="text-sm text-text-muted">Sem destaques no período</span>
                 )}
               </p>
             </div>
@@ -751,40 +1333,16 @@ export function UnifiedWatchlist() {
               <TrendingUp className="h-5 w-5" />
             </div>
           </div>
-
-          <div className="bg-bg-surface p-3.5 rounded-xl border border-border-default/50 flex items-center justify-between">
-            <div>
-              <span className="text-xs text-text-muted font-medium flex items-center gap-1">
-                <ArrowDownRight className="h-3.5 w-3.5 text-rose-400" />
-                Maior Queda ({selectedPeriod})
-              </span>
-              <p className="text-base font-bold text-text-primary mt-0.5 flex items-center gap-1.5">
-                {periodTopLoser ? (
-                  <>
-                    <span>{periodTopLoser.ticker.replace(/\.SA$/, '')}</span>
-                    <span className="text-xs font-semibold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">
-                      {parseFloat(getItemVariation(periodTopLoser)).toFixed(2)}%
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-sm text-text-muted">Nenhuma queda</span>
-                )}
-              </p>
-            </div>
-            <div className="h-9 w-9 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400">
-              <TrendingDown className="h-5 w-5" />
-            </div>
-          </div>
         </div>
       )}
 
       {/* 3. Barra de Ferramentas (Filtros, Busca, Modo de Visualização) */}
-      {data && data.items.length > 0 && (
+      {currentBaseItems.length > 0 && (
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
             <button
               onClick={() => setFilter('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 filter === 'ALL'
                   ? 'bg-accent-gold text-black shadow-xs'
                   : 'bg-bg-surface text-text-muted hover:text-text-primary border border-border-default/60'
@@ -793,31 +1351,36 @@ export function UnifiedWatchlist() {
               Todos ({counts.all})
             </button>
 
-            <button
-              onClick={() => setFilter('STOCK')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                filter === 'STOCK'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-bg-surface text-text-muted hover:text-text-primary border border-border-default/60'
-              }`}
-            >
-              <span>🇧🇷 Bolsa B3 ({counts.stock})</span>
-            </button>
+            {/* Apenas na aba Minha Escolha mostramos os filtros específicos de B3 e Cripto se existirem */}
+            {listTab === 'CUSTOM' && counts.stock > 0 && (
+              <button
+                onClick={() => setFilter('STOCK')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  filter === 'STOCK'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-bg-surface text-text-muted hover:text-text-primary border border-border-default/60'
+                }`}
+              >
+                <span>🇧🇷 Bolsa B3 ({counts.stock})</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => setFilter('CRYPTO')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                filter === 'CRYPTO'
-                  ? 'bg-amber-500 text-black shadow-xs'
-                  : 'bg-bg-surface text-text-muted hover:text-text-primary border border-border-default/60'
-              }`}
-            >
-              <span>🟡 Binance Cripto ({counts.crypto})</span>
-            </button>
+            {listTab === 'CUSTOM' && counts.crypto > 0 && (
+              <button
+                onClick={() => setFilter('CRYPTO')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  filter === 'CRYPTO'
+                    ? 'bg-amber-500 text-black shadow-xs'
+                    : 'bg-bg-surface text-text-muted hover:text-text-primary border border-border-default/60'
+                }`}
+              >
+                <span>🟡 Binance Cripto ({counts.crypto})</span>
+              </button>
+            )}
 
             <button
               onClick={() => setFilter('GAINERS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 filter === 'GAINERS'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-bg-surface text-text-muted hover:text-text-primary border border-border-default/60'
@@ -828,7 +1391,7 @@ export function UnifiedWatchlist() {
 
             <button
               onClick={() => setFilter('LOSERS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 filter === 'LOSERS'
                   ? 'bg-rose-600 text-white shadow-xs'
                   : 'bg-bg-surface text-text-muted hover:text-text-primary border border-border-default/60'
@@ -1055,67 +1618,130 @@ export function UnifiedWatchlist() {
       )}
 
       {/* 4. Lista ou Grade de Ativos */}
-      {loading && !data ? (
+      {(loading && !data) || (listTab !== 'CUSTOM' && portfolioLoading && investments.length === 0) ? (
         <div className="bg-bg-surface rounded-xl border border-border-default/60 p-12 text-center text-text-muted flex flex-col items-center justify-center gap-3">
           <RefreshCw className="h-7 w-7 animate-spin text-accent-gold" />
           <p className="text-sm font-medium">Carregando cotações em tempo real...</p>
         </div>
-      ) : !data || data.items.length === 0 ? (
-        /* ESTADO VAZIO LIMPO E CONVIDATIVO */
-        <div className="bg-bg-surface rounded-2xl border border-border-default/80 p-8 sm:p-12 text-center space-y-6">
-          <div className="max-w-md mx-auto space-y-3">
-            <div className="h-16 w-16 mx-auto rounded-2xl bg-accent-gold/10 border border-accent-gold/20 flex items-center justify-center text-accent-gold shadow-inner">
-              <Sparkles className="h-8 w-8" />
-            </div>
-            <h3 className="text-lg font-bold text-text-primary">Sua Lista de Acompanhamento está vazia</h3>
-            <p className="text-xs sm:text-sm text-text-muted leading-relaxed">
-              Adicione apenas as Ações da B3 e Criptomoedas que você quer monitorar diariamente. Você também pode definir <strong>Alertas de Preço</strong> para ser notificado quando atingirem seu alvo.
-            </p>
-
-            <div className="pt-2">
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-black bg-accent-gold hover:bg-accent-gold/90 transition-all shadow-md active:scale-95"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Adicionar Primeiro Ativo</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Sugestões de 1 clique para agilizar */}
-          <div className="max-w-lg mx-auto pt-4 border-t border-border-default/60 space-y-3">
-            <span className="text-xs font-semibold text-text-muted">Adicione com 1 clique se desejar:</span>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-bold text-blue-400 mr-1">B3:</span>
-                {SUGGESTED_B3.map((sug) => (
-                  <button
-                    key={sug.ticker}
-                    onClick={() => void handleAddTicker(sug.ticker, sug.type)}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-bg-elevated hover:bg-blue-500/20 hover:text-blue-400 border border-border-default text-text-secondary transition-all"
-                  >
-                    + {sug.ticker.replace(/\.SA$/, '')}
-                  </button>
-                ))}
+      ) : currentBaseItems.length === 0 ? (
+        /* ESTADOS VAZIOS ESPECÍFICOS POR ABA */
+        listTab === 'CUSTOM' ? (
+          /* ESTADO VAZIO MINHA ESCOLHA */
+          <div className="bg-bg-surface rounded-2xl border border-border-default/80 p-8 sm:p-12 text-center space-y-6">
+            <div className="max-w-md mx-auto space-y-3">
+              <div className="h-16 w-16 mx-auto rounded-2xl bg-accent-gold/10 border border-accent-gold/20 flex items-center justify-center text-accent-gold shadow-inner">
+                <Sparkles className="h-8 w-8" />
               </div>
+              <h3 className="text-lg font-bold text-text-primary">Sua Lista de Acompanhamento está vazia</h3>
+              <p className="text-xs sm:text-sm text-text-muted leading-relaxed">
+                Adicione apenas as Ações da B3 e Criptomoedas que você quer monitorar diariamente. Você também pode definir <strong>Alertas de Preço</strong> para ser notificado quando atingirem seu alvo.
+              </p>
 
-              <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-bold text-amber-400 mr-1">Cripto:</span>
-                {SUGGESTED_CRYPTO.map((sug) => (
-                  <button
-                    key={sug.ticker}
-                    onClick={() => void handleAddTicker(sug.ticker, sug.type)}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-bg-elevated hover:bg-amber-500/20 hover:text-amber-400 border border-border-default text-text-secondary transition-all"
-                  >
-                    + {sug.ticker}
-                  </button>
-                ))}
+              <div className="pt-2">
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-black bg-accent-gold hover:bg-accent-gold/90 transition-all shadow-md active:scale-95"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Adicionar Primeiro Ativo</span>
+                </button>
               </div>
             </div>
+
+            {/* Sugestões de 1 clique para agilizar */}
+            <div className="max-w-lg mx-auto pt-4 border-t border-border-default/60 space-y-3">
+              <span className="text-xs font-semibold text-text-muted">Adicione com 1 clique se desejar:</span>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] font-bold text-blue-400 mr-1">B3:</span>
+                  {SUGGESTED_B3.map((sug) => (
+                    <button
+                      key={sug.ticker}
+                      onClick={() => void handleAddTicker(sug.ticker, sug.type)}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-bg-elevated hover:bg-blue-500/20 hover:text-blue-400 border border-border-default text-text-secondary transition-all"
+                    >
+                      + {sug.ticker.replace(/\.SA$/, '')}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] font-bold text-amber-400 mr-1">Cripto:</span>
+                  {SUGGESTED_CRYPTO.map((sug) => (
+                    <button
+                      key={sug.ticker}
+                      onClick={() => void handleAddTicker(sug.ticker, sug.type)}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-bg-elevated hover:bg-amber-500/20 hover:text-amber-400 border border-border-default text-text-secondary transition-all"
+                    >
+                      + {sug.ticker}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        ) : listTab === 'MY_B3' ? (
+          /* ESTADO VAZIO MEUS ATIVOS B3 */
+          <div className="bg-bg-surface rounded-2xl border border-border-default/80 p-8 sm:p-12 text-center space-y-5">
+            <div className="max-w-md mx-auto space-y-3">
+              <div className="h-16 w-16 mx-auto rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-inner">
+                <Building2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-text-primary">Nenhum Ativo B3 na Carteira</h3>
+              <p className="text-xs sm:text-sm text-text-muted leading-relaxed">
+                Você ainda não possui ações, FIIs ou ETFs cadastrados em sua carteira. Cadastre suas posições ou importe seu extrato para ver as cotações em tempo real e rentabilidade aqui.
+              </p>
+
+              <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                <a
+                  href="/investments?action=add"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-md active:scale-95"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Cadastrar Investimento B3</span>
+                </a>
+                <button
+                  onClick={() => setListTab('CUSTOM')}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-text-secondary bg-bg-elevated hover:text-text-primary border border-border-default transition-all"
+                >
+                  <Sparkles className="h-4 w-4 text-accent-gold" />
+                  <span>Ir para Minha Escolha</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ESTADO VAZIO MINHAS CRIPTOS */
+          <div className="bg-bg-surface rounded-2xl border border-border-default/80 p-8 sm:p-12 text-center space-y-5">
+            <div className="max-w-md mx-auto space-y-3">
+              <div className="h-16 w-16 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-inner">
+                <Coins className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-text-primary">Nenhuma Criptomoeda na Carteira</h3>
+              <p className="text-xs sm:text-sm text-text-muted leading-relaxed">
+                Você ainda não possui criptomoedas registradas na sua carteira. Conecte sua conta da Binance ou adicione criptoativos manualmente para acompanhar cotações e saldo 24/7.
+              </p>
+
+              <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                <a
+                  href="/investments?tab=BINANCE"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-black bg-amber-400 hover:bg-amber-300 transition-all shadow-md active:scale-95"
+                >
+                  <Coins className="h-4 w-4" />
+                  <span>Sincronizar Binance</span>
+                </a>
+                <button
+                  onClick={() => setListTab('CUSTOM')}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-text-secondary bg-bg-elevated hover:text-text-primary border border-border-default transition-all"
+                >
+                  <Sparkles className="h-4 w-4 text-accent-gold" />
+                  <span>Ir para Minha Escolha</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )
       ) : filteredItems.length === 0 ? (
         <div className="bg-bg-surface rounded-2xl border border-border-default/80 p-6 sm:p-8 text-center space-y-4">
           <div className="h-12 w-12 mx-auto rounded-full bg-accent-gold/10 border border-accent-gold/20 flex items-center justify-center text-accent-gold">
@@ -1124,12 +1750,12 @@ export function UnifiedWatchlist() {
           <div className="space-y-1">
             <h4 className="font-bold text-base text-text-primary">
               {searchQuery.trim()
-                ? `"${searchQuery.trim().toUpperCase()}" não está no seu radar ainda`
+                ? `"${searchQuery.trim().toUpperCase()}" não foi encontrado nesta lista`
                 : 'Nenhum ativo corresponde aos filtros selecionados'}
             </h4>
             <p className="text-xs text-text-muted max-w-md mx-auto">
               {searchQuery.trim()
-                ? `Deseja adicionar ${searchQuery.trim().toUpperCase()} à sua lista de acompanhamento para ver cotações em tempo real e receber alertas?`
+                ? `Você pode adicionar ${searchQuery.trim().toUpperCase()} à sua lista de escolha personalizada ou verificar em outra aba.`
                 : 'Tente alterar os filtros ou pesquisar por outro ativo.'}
             </p>
           </div>
@@ -1142,16 +1768,7 @@ export function UnifiedWatchlist() {
                 className="px-4 py-2 rounded-xl text-xs font-bold text-black bg-accent-gold hover:bg-amber-300 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
               >
                 <Coins className="h-4 w-4" />
-                <span>Adicionar {searchQuery.trim().toUpperCase()} (Binance Cripto)</span>
-              </button>
-
-              <button
-                onClick={() => void handleAddTicker(searchQuery.trim().toUpperCase(), 'STOCK')}
-                disabled={addingTicker}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
-              >
-                <Building2 className="h-4 w-4" />
-                <span>Adicionar {searchQuery.trim().toUpperCase()} (B3 Bolsa)</span>
+                <span>Adicionar {searchQuery.trim().toUpperCase()} ao Radar</span>
               </button>
 
               <button
@@ -1160,52 +1777,6 @@ export function UnifiedWatchlist() {
               >
                 Limpar busca
               </button>
-            </div>
-          )}
-
-          {searchSuggestions.length > 0 && (
-            <div className="pt-4 border-t border-border-default/40 text-left max-w-xl mx-auto space-y-2">
-              <span className="text-xs font-semibold text-text-secondary">
-                Ativos correspondentes encontrados no mercado:
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {searchSuggestions.slice(0, 4).map((sug) => (
-                  <div
-                    key={sug.ticker}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-bg-elevated border border-border-default/60 hover:border-accent-gold/40 transition-all"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <AssetLogo
-                        ticker={sug.rawTicker}
-                        name={sug.name}
-                        assetType={sug.type}
-                        sizeClassName="h-7 w-7"
-                      />
-                      <div className="truncate">
-                        <span className="font-bold text-xs font-mono text-white block">
-                          {sug.rawTicker}
-                        </span>
-                        <span className="text-[10px] text-text-muted truncate block">
-                          {sug.name}
-                        </span>
-                      </div>
-                    </div>
-                    {sug.inWatchlist ? (
-                      <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md shrink-0">
-                        No Radar
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => void handleAddTicker(sug.ticker, sug.type)}
-                        disabled={addingTicker}
-                        className="text-[11px] font-bold text-black bg-accent-gold hover:bg-amber-300 px-2.5 py-1 rounded-md transition-all shrink-0 cursor-pointer active:scale-95 shadow-xs"
-                      >
-                        + Adicionar
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
@@ -1218,17 +1789,18 @@ export function UnifiedWatchlist() {
             const displayTicker = item.ticker.replace(/\.SA$/, '');
             const itemAlerts = activeAlertsByTicker.get(displayTicker) || [];
             const hasActiveAlert = itemAlerts.some((a) => !a.triggered);
-            const isDragging = draggedTicker === item.ticker;
-            const isDragOver = dragOverTicker === item.ticker;
+            const isDragging = draggedId === item.uniqueId;
+            const isDragOver = dragOverId === item.uniqueId;
+            const isCustomList = listTab === 'CUSTOM';
 
             return (
               <div
-                key={item.ticker}
+                key={item.uniqueId}
                 draggable={true}
-                onDragStart={(e) => handleDragStart(item.ticker, e)}
-                onDragOver={(e) => handleDragOver(item.ticker, e)}
+                onDragStart={(e) => handleDragStart(item.uniqueId, e)}
+                onDragOver={(e) => handleDragOver(item.uniqueId, e)}
                 onDragEnd={handleDragEnd}
-                onDrop={(e) => void handleDrop(item.ticker, e)}
+                onDrop={(e) => void handleDrop(item.uniqueId, e)}
                 className={`group flex items-center justify-between px-3.5 py-3 transition-all cursor-pointer select-none ${
                   isDragging
                     ? 'opacity-40 bg-accent-gold/15 border-y-2 border-dashed border-accent-gold scale-[0.99]'
@@ -1239,14 +1811,34 @@ export function UnifiedWatchlist() {
                 onClick={handleTogglePillMode}
               >
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-2">
-                  {/* Handle para Segurar e Arrastar com o Mouse */}
+                  {/* Handle para Segurar e Arrastar com o Mouse (Habilitado em Todas as Abas) */}
                   <div
                     className="cursor-grab active:cursor-grabbing text-text-muted hover:text-accent-gold p-1 -ml-1 transition-colors shrink-0"
-                    title="Segure com o mouse e arraste para mudar a ordem"
+                    title="Clique e arraste com o mouse para organizar a ordem deste ativo"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <GripVertical className="h-4 w-4" />
                   </div>
+
+                  {/* Botão de Estrela nas abas de Carteira para favoritar no radar personalizado */}
+                  {!isCustomList && (
+                    <button
+                      type="button"
+                      onClick={(e) => void handleToggleFavorite(item, e)}
+                      className={`p-1 -ml-1 transition-all rounded-md shrink-0 cursor-pointer ${
+                        item.inWatchlist
+                          ? 'text-accent-gold hover:text-accent-gold/80'
+                          : 'text-text-muted hover:text-accent-gold'
+                      }`}
+                      title={
+                        item.inWatchlist
+                          ? 'No radar de escolha (clique para remover)'
+                          : 'Fixar no radar de escolha'
+                      }
+                    >
+                      <Star className={`h-4 w-4 ${item.inWatchlist ? 'fill-accent-gold text-accent-gold' : ''}`} />
+                    </button>
+                  )}
 
                   <AssetLogo
                     ticker={displayTicker}
@@ -1279,12 +1871,52 @@ export function UnifiedWatchlist() {
                           <span>{itemAlerts.length}</span>
                         </span>
                       )}
+                      {!isCustomList && item.inWatchlist && (
+                        <span
+                          className="hidden md:inline-flex items-center gap-1 text-[9px] font-bold text-accent-gold bg-accent-gold/10 px-1.5 py-0.2 rounded border border-accent-gold/20"
+                          title="Presente no Radar Minha Escolha"
+                        >
+                          <Star className="h-2.5 w-2.5 fill-accent-gold" />
+                          <span>Radar</span>
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-text-muted truncate max-w-[150px] sm:max-w-[220px]">
+                    <p className="text-xs text-text-muted truncate max-w-[140px] sm:max-w-[200px]">
                       {item.name}
                     </p>
                   </div>
                 </div>
+
+                {/* Dados de Custódia da Carteira (quando disponível) */}
+                {item.portfolio && (
+                  <div className="hidden lg:flex flex-col text-right px-4 border-r border-border-default/40">
+                    <div className="text-xs text-text-primary font-medium flex items-center justify-end gap-1.5">
+                      <span className="text-text-muted text-[11px]">Qtd:</span>
+                      <span className="font-mono font-bold">
+                        {item.portfolio.quantity.toLocaleString(item.type === 'CRYPTO' ? 'en-US' : 'pt-BR', {
+                          maximumFractionDigits: item.type === 'CRYPTO' ? 4 : 0,
+                        })}
+                      </span>
+                      <span className="text-text-muted text-[11px] ml-1.5">PM:</span>
+                      <span className="font-mono text-text-secondary">
+                        {formatPrice({ ...item, price: item.portfolio.averagePrice })}
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-semibold flex items-center justify-end gap-1.5 mt-0.5">
+                      <span className="text-text-muted">Total: {formatPrice({ ...item, price: item.portfolio.currentValue })}</span>
+                      <span
+                        className={`px-1 py-0.2 rounded font-mono text-[10px] ${
+                          item.portfolio.profitLoss >= 0
+                            ? 'text-emerald-400 bg-emerald-500/10'
+                            : 'text-rose-400 bg-rose-500/10'
+                        }`}
+                      >
+                        {item.portfolio.profitLoss >= 0 ? '+' : ''}
+                        {item.portfolio.profitLossPct.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="hidden sm:flex items-center justify-center px-4">
                   <WatchlistSparkline
@@ -1332,18 +1964,37 @@ export function UnifiedWatchlist() {
                     <Bell className={`h-4 w-4 ${hasActiveAlert ? 'fill-accent-gold' : ''}`} />
                   </button>
 
-                  {/* Botão Excluir (Visível e acessível no mobile e desktop) */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTickerToDelete(item.ticker);
-                    }}
-                    className="p-1.5 text-text-muted hover:text-rose-400 hover:bg-rose-500/15 rounded-lg transition-all"
-                    title={`Remover ${item.ticker} da lista de acompanhamento`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {/* Ação primária (Excluir na customizada ou Estrela nas de carteira) */}
+                  {isCustomList ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTickerToDelete(item.ticker);
+                      }}
+                      className="p-1.5 text-text-muted hover:text-rose-400 hover:bg-rose-500/15 rounded-lg transition-all"
+                      title={`Remover ${item.ticker} da lista de acompanhamento`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => void handleToggleFavorite(item, e)}
+                      className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                        item.inWatchlist
+                          ? 'text-accent-gold bg-accent-gold/15 hover:bg-accent-gold/25'
+                          : 'text-text-muted hover:text-accent-gold hover:bg-accent-gold/10'
+                      }`}
+                      title={
+                        item.inWatchlist
+                          ? 'Remover do Radar de Escolha'
+                          : 'Adicionar ao Radar de Escolha'
+                      }
+                    >
+                      <Star className={`h-4 w-4 ${item.inWatchlist ? 'fill-accent-gold text-accent-gold' : ''}`} />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -1358,17 +2009,18 @@ export function UnifiedWatchlist() {
             const displayTicker = item.ticker.replace(/\.SA$/, '');
             const itemAlerts = activeAlertsByTicker.get(displayTicker) || [];
             const hasActiveAlert = itemAlerts.some((a) => !a.triggered);
-            const isDragging = draggedTicker === item.ticker;
-            const isDragOver = dragOverTicker === item.ticker;
+            const isDragging = draggedId === item.uniqueId;
+            const isDragOver = dragOverId === item.uniqueId;
+            const isCustomList = listTab === 'CUSTOM';
 
             return (
               <div
-                key={item.ticker}
+                key={item.uniqueId}
                 draggable={true}
-                onDragStart={(e) => handleDragStart(item.ticker, e)}
-                onDragOver={(e) => handleDragOver(item.ticker, e)}
+                onDragStart={(e) => handleDragStart(item.uniqueId, e)}
+                onDragOver={(e) => handleDragOver(item.uniqueId, e)}
                 onDragEnd={handleDragEnd}
-                onDrop={(e) => void handleDrop(item.ticker, e)}
+                onDrop={(e) => void handleDrop(item.uniqueId, e)}
                 className={`group relative bg-bg-surface p-4 rounded-xl border transition-all shadow-xs flex flex-col justify-between ${
                   isDragging
                     ? 'opacity-40 bg-accent-gold/10 border-dashed border-accent-gold scale-[0.98]'
@@ -1380,14 +2032,33 @@ export function UnifiedWatchlist() {
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      {/* Handle para Segurar e Arrastar com o Mouse */}
+                      {/* Handle para Arrastar com o Mouse (Em todas as abas) */}
                       <div
                         className="cursor-grab active:cursor-grabbing text-text-muted hover:text-accent-gold p-1 -ml-1 transition-colors shrink-0"
-                        title="Segure com o mouse e arraste para mudar a ordem"
+                        title="Clique e arraste com o mouse para organizar a ordem deste ativo"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <GripVertical className="h-4 w-4" />
                       </div>
+
+                      {!isCustomList && (
+                        <button
+                          type="button"
+                          onClick={(e) => void handleToggleFavorite(item, e)}
+                          className={`p-1 -ml-1 transition-all rounded-md shrink-0 cursor-pointer ${
+                            item.inWatchlist
+                              ? 'text-accent-gold'
+                              : 'text-text-muted hover:text-accent-gold'
+                          }`}
+                          title={
+                            item.inWatchlist
+                              ? 'No radar de escolha (clique para remover)'
+                              : 'Fixar no radar de escolha'
+                          }
+                        >
+                          <Star className={`h-4 w-4 ${item.inWatchlist ? 'fill-accent-gold text-accent-gold' : ''}`} />
+                        </button>
+                      )}
 
                       <AssetLogo
                         ticker={displayTicker}
@@ -1426,18 +2097,37 @@ export function UnifiedWatchlist() {
                         <Bell className={`h-3.5 w-3.5 ${hasActiveAlert ? 'fill-accent-gold' : ''}`} />
                       </button>
 
-                      {/* Botão Excluir (Visível) */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTickerToDelete(item.ticker);
-                        }}
-                        className="p-1.5 text-text-muted hover:text-rose-400 hover:bg-rose-500/15 rounded-md transition-all"
-                        title="Remover da lista"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {/* Botão Ação (Excluir na customizada ou Estrela nas de carteira) */}
+                      {isCustomList ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTickerToDelete(item.ticker);
+                          }}
+                          className="p-1.5 text-text-muted hover:text-rose-400 hover:bg-rose-500/15 rounded-md transition-all"
+                          title="Remover da lista"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => void handleToggleFavorite(item, e)}
+                          className={`p-1.5 rounded-md transition-all ${
+                            item.inWatchlist
+                              ? 'text-accent-gold bg-accent-gold/15'
+                              : 'text-text-muted hover:text-accent-gold hover:bg-accent-gold/10'
+                          }`}
+                          title={
+                            item.inWatchlist
+                              ? 'Remover do Radar de Escolha'
+                              : 'Fixar no Radar de Escolha'
+                          }
+                        >
+                          <Star className={`h-3.5 w-3.5 ${item.inWatchlist ? 'fill-accent-gold' : ''}`} />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -1469,6 +2159,40 @@ export function UnifiedWatchlist() {
                     className="w-full"
                   />
                 </div>
+
+                {/* Bloco de Custódia da Carteira (quando disponível) */}
+                {item.portfolio && (
+                  <div className="mb-2 p-2 rounded-lg bg-bg-elevated/80 border border-border-default/50 space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-text-muted">Em Carteira:</span>
+                      <span className="font-mono font-bold text-text-primary">
+                        {item.portfolio.quantity.toLocaleString(item.type === 'CRYPTO' ? 'en-US' : 'pt-BR', {
+                          maximumFractionDigits: item.type === 'CRYPTO' ? 4 : 0,
+                        })}{' '}
+                        unid.
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-text-muted">Preço Médio:</span>
+                      <span className="font-mono text-text-secondary">
+                        {formatPrice({ ...item, price: item.portfolio.averagePrice })}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border-default/40">
+                      <span className="text-text-muted">Resultado:</span>
+                      <span
+                        className={`font-mono font-bold ${
+                          item.portfolio.profitLoss >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        }`}
+                      >
+                        {item.portfolio.profitLoss >= 0 ? '+' : ''}
+                        {formatPrice({ ...item, price: item.portfolio.profitLoss })} (
+                        {item.portfolio.profitLoss >= 0 ? '+' : ''}
+                        {item.portfolio.profitLossPct.toFixed(1)}%)
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="pt-2 border-t border-border-default/40 grid grid-cols-2 gap-2 text-[11px] text-text-muted">
                   <div>

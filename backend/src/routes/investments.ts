@@ -533,6 +533,25 @@ investmentsRouter.post('/watchlist', async (req, res) => {
 });
 
 /**
+ * POST /api/investments/quotes/batch — Retorna cotações completas com sparklines para uma lista de ativos
+ */
+investmentsRouter.post('/quotes/batch', async (req, res) => {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const { items } = req.body as { items: WatchlistItem[] };
+    if (!Array.isArray(items) || items.length === 0) {
+      res.json({ items: [] });
+      return;
+    }
+    const data = await getWatchlistData(items, false, user);
+    res.json(data);
+  } catch (err: any) {
+    console.error('[investments] POST quotes/batch error:', err);
+    res.status(500).json({ error: err.message || 'Falha ao buscar cotações dos ativos.' });
+  }
+});
+
+/**
  * POST /api/investments/watchlist/add — Adiciona um novo ativo na lista de acompanhamento.
  */
 investmentsRouter.post('/watchlist/add', async (req, res) => {

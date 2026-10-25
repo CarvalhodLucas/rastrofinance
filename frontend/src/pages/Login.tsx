@@ -13,13 +13,21 @@ import {
   TrendingUp,
   Sparkles,
   CheckCircle2,
+  Check,
   AlertCircle,
   Loader2,
 } from 'lucide-react';
+import {
+  getRememberPreference,
+  setRememberPreference,
+  getRememberedUsername,
+  setRememberedUsername,
+} from '@/services/api';
 
 export function Login() {
   const [isRegister, setIsRegister] = useState(false);
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(() => getRememberedUsername());
+  const [rememberMe, setRememberMe] = useState(() => getRememberPreference());
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -68,10 +76,14 @@ export function Login() {
     setLoading(true);
     try {
       if (isRegister) {
-        await register(cleanUsername, password, name.trim() || undefined);
+        await register(cleanUsername, password, name.trim() || undefined, rememberMe);
+        setRememberPreference(rememberMe);
+        setRememberedUsername(cleanUsername, rememberMe);
         notify('Conta criada com sucesso! Bem-vindo ao Rastro Finance.', 'success');
       } else {
-        await login(cleanUsername, password);
+        await login(cleanUsername, password, rememberMe);
+        setRememberPreference(rememberMe);
+        setRememberedUsername(cleanUsername, rememberMe);
         notify(`Olá novamente, @${cleanUsername}!`, 'success');
       }
       navigate(from, { replace: true });
@@ -268,6 +280,47 @@ export function Login() {
               </div>
             )}
 
+            {/* Opção: Permanecer conectado */}
+            <div className="flex items-center justify-between pt-1 pb-0.5">
+              <label
+                htmlFor="remember-me"
+                className="group flex items-center gap-2.5 cursor-pointer select-none"
+              >
+                <div className="relative flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    id="remember-me"
+                    checked={rememberMe}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      setRememberMe(val);
+                      setRememberPreference(val);
+                    }}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`h-4 w-4 rounded border transition-all duration-200 flex items-center justify-center ${
+                      rememberMe
+                        ? 'bg-accent-gold border-accent-gold text-gray-950 shadow-sm shadow-accent-gold/25'
+                        : 'bg-bg-elevated/80 border-border group-hover:border-accent-gold/50'
+                    }`}
+                  >
+                    {rememberMe && <Check className="h-3 w-3 stroke-[3]" />}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-text-primary group-hover:text-accent-gold transition-colors">
+                    Permanecer conectado
+                  </span>
+                  <span className="text-[10px] text-text-muted">
+                    {rememberMe
+                      ? 'Sessão persistente por 6 meses neste navegador'
+                      : 'Encerrar sessão ao fechar o navegador'}
+                  </span>
+                </div>
+              </label>
+            </div>
+
             {/* Botão de Ação */}
             <button
               type="submit"
@@ -296,7 +349,7 @@ export function Login() {
             </div>
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-3.5 w-3.5 text-accent-gold" />
-              <span>Sessão segura de 7 dias</span>
+              <span>{rememberMe ? 'Sessão persistente (180 dias)' : 'Sessão temporária'}</span>
             </div>
           </div>
         </div>

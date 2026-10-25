@@ -83,9 +83,9 @@ export function WatchlistQuickWidget() {
 
         <Link
           to="/investments?tab=WATCHLIST"
-          className="flex items-center gap-1 text-xs font-semibold text-accent-gold hover:text-accent-gold/80 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-bold text-accent-gold bg-accent-gold/10 hover:bg-accent-gold hover:text-gray-950 px-3 py-1.5 rounded-xl border border-accent-gold/30 transition-all shadow-xs shrink-0 cursor-pointer"
         >
-          <span>Abrir Radar</span>
+          <span>Ver Lista do Radar</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -148,6 +148,23 @@ export function WatchlistQuickWidget() {
               </Link>
             );
           })
+        )}
+
+        {items.length > 0 && (
+          <Link
+            to="/investments?tab=WATCHLIST"
+            className="group flex flex-col items-center justify-center gap-1.5 bg-bg-elevated/40 hover:bg-bg-elevated p-3 rounded-xl border border-dashed border-border hover:border-accent-gold/60 transition-all shrink-0 min-w-[130px] text-center"
+          >
+            <div className="h-7 w-7 rounded-lg bg-accent-gold/15 flex items-center justify-center text-accent-gold group-hover:scale-110 transition-transform">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-bold text-text-primary group-hover:text-accent-gold transition-colors">
+              Ver Todos ({items.length})
+            </span>
+            <span className="text-[10px] text-text-muted flex items-center gap-1">
+              Lista Completa <ArrowRight className="h-2.5 w-2.5" />
+            </span>
+          </Link>
         )}
       </div>
     </div>

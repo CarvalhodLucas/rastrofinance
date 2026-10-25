@@ -25,15 +25,88 @@ const getApiBaseUrl = (): string => {
 const BASE_URL = getApiBaseUrl();
 
 export function getStoredToken(): string | null {
-  return localStorage.getItem('rastro_token');
+  try {
+    return localStorage.getItem('rastro_token') || sessionStorage.getItem('rastro_token');
+  } catch {
+    return null;
+  }
 }
 
-export function setStoredToken(token: string | null): void {
-  if (token) {
-    localStorage.setItem('rastro_token', token);
-  } else {
-    localStorage.removeItem('rastro_token');
+export function setStoredToken(token: string | null, rememberMe: boolean = true): void {
+  try {
+    if (token) {
+      if (rememberMe) {
+        localStorage.setItem('rastro_token', token);
+        sessionStorage.removeItem('rastro_token');
+      } else {
+        sessionStorage.setItem('rastro_token', token);
+        localStorage.removeItem('rastro_token');
+      }
+    } else {
+      localStorage.removeItem('rastro_token');
+      sessionStorage.removeItem('rastro_token');
+    }
+  } catch {}
+}
+
+export function getStoredUser(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem('rastro_user') || sessionStorage.getItem('rastro_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
   }
+}
+
+export function setStoredUser(user: AuthUser | null, rememberMe: boolean = true): void {
+  try {
+    if (user) {
+      const serialized = JSON.stringify(user);
+      if (rememberMe) {
+        localStorage.setItem('rastro_user', serialized);
+        sessionStorage.removeItem('rastro_user');
+      } else {
+        sessionStorage.setItem('rastro_user', serialized);
+        localStorage.removeItem('rastro_user');
+      }
+    } else {
+      localStorage.removeItem('rastro_user');
+      sessionStorage.removeItem('rastro_user');
+    }
+  } catch {}
+}
+
+export function getRememberPreference(): boolean {
+  try {
+    const pref = localStorage.getItem('rastro_remember_me');
+    return pref === null ? true : pref === 'true';
+  } catch {
+    return true;
+  }
+}
+
+export function setRememberPreference(remember: boolean): void {
+  try {
+    localStorage.setItem('rastro_remember_me', String(remember));
+  } catch {}
+}
+
+export function getRememberedUsername(): string {
+  try {
+    return localStorage.getItem('rastro_remembered_username') || '';
+  } catch {
+    return '';
+  }
+}
+
+export function setRememberedUsername(username: string, remember: boolean): void {
+  try {
+    if (remember && username.trim()) {
+      localStorage.setItem('rastro_remembered_username', username.trim().toLowerCase());
+    } else {
+      localStorage.removeItem('rastro_remembered_username');
+    }
+  } catch {}
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -62,6 +135,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (res.status === 401 && !path.startsWith('/api/auth/login') && !path.startsWith('/api/auth/register')) {
     setStoredToken(null);
+    setStoredUser(null);
     window.dispatchEvent(new Event('auth:unauthorized'));
   }
 
@@ -76,16 +150,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   // --- Autenticação ---
-  login: (username: string, password: string) =>
+  login: (username: string, password: string, rememberMe: boolean = true) =>
     request<{ message: string; user: AuthUser; token: string }>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, rememberMe }),
     }),
 
-  register: (username: string, password: string, name?: string) =>
+  register: (username: string, password: string, name?: string, rememberMe: boolean = true) =>
     request<{ message: string; user: AuthUser; token: string }>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ username, password, name }),
+      body: JSON.stringify({ username, password, name, rememberMe }),
     }),
 
   getMe: () =>

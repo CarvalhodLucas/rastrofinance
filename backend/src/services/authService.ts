@@ -51,10 +51,11 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 }
 
 /**
- * Gera um token JWT com validade de 7 dias.
+ * Gera um token JWT com validade de 180 dias (se rememberMe) ou 1 dia (sessão temporária).
  */
-export function generateToken(payload: UserSessionPayload): string {
-  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: '7d' });
+export function generateToken(payload: UserSessionPayload, rememberMe: boolean = true): string {
+  const expiresIn = rememberMe ? '180d' : '1d';
+  return jwt.sign(payload, env.JWT_SECRET, { expiresIn });
 }
 
 /**
@@ -192,6 +193,7 @@ export async function registerUser(params: {
 export async function authenticateUser(
   username: string,
   password: string,
+  rememberMe: boolean = true,
 ): Promise<{ user: UserSessionPayload; token: string }> {
   const cleanUsername = username.trim().toLowerCase();
   const user = await findUserByUsername(cleanUsername);
@@ -226,6 +228,6 @@ export async function authenticateUser(
     name: user.name,
   };
 
-  const token = generateToken(sessionPayload);
+  const token = generateToken(sessionPayload, rememberMe);
   return { user: sessionPayload, token };
 }

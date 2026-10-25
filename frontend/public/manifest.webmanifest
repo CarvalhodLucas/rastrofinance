@@ -1,0 +1,40 @@
+{
+  "name": "Rastro Finance",
+  "short_name": "Rastro",
+  "description": "Controle financeiro pessoal, inteligência artificial e radar de cotações",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0E1A",
+  "theme_color": "#0A0E1A",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Radar de Cotações",
+      "short_name": "Radar",
+      "description": "Acesso direto à lista de cotações B3 e Cripto",
+      "url": "/investments?tab=WATCHLIST",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Investimentos",
+      "short_name": "Carteira",
+      "description": "Minha carteira de ativos",
+      "url": "/investments",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Transações",
+      "short_name": "Transações",
+      "description": "Histórico financeiro",
+      "url": "/transactions",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    }
+  ]
+}

@@ -124,7 +124,7 @@ enableBankingRouter.post('/sync/:accountId', async (req, res) => {
     }
 
     if (account.session_expires_at && new Date(account.session_expires_at) < new Date()) {
-      return res.status(401).json({ error: 'Sessão expirada. Reautorização necessária.' });
+      return res.status(403).json({ error: 'Sessão bancária expirada. Reautorização necessária.' });
     }
 
     if (!account.enable_banking_account_id) {

@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { api, getStoredToken, setStoredToken } from '@/services/api';
+import {
+  api,
+  getStoredToken,
+  setStoredToken,
+  getStoredUser,
+  setStoredUser,
+} from '@/services/api';
 import type { AuthUser } from '@/types/finance';
 
 interface AuthContextType {
@@ -7,8 +13,8 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string, name?: string) => Promise<void>;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<void>;
+  register: (username: string, password: string, name?: string, rememberMe?: boolean) => Promise<void>;
   logout: () => void;
 }
 
@@ -16,23 +22,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => getStoredToken());
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    const cachedUser = localStorage.getItem('rastro_user');
-    if (cachedUser) {
-      try {
-        return JSON.parse(cachedUser);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  });
+  const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
   const [loading, setLoading] = useState(true);
 
   const clearLocalUserData = () => {
     try {
       localStorage.removeItem('rastro_user');
+      sessionStorage.removeItem('rastro_user');
       localStorage.removeItem('rastro_watchlist_cache');
+      sessionStorage.removeItem('rastro_watchlist_cache');
+
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -40,13 +39,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           keysToRemove.push(key);
         }
       }
-      keysToRemove.forEach((k) => localStorage.removeItem(k));
+      keysToRemove.forEach((k) => {
+        try {
+          localStorage.removeItem(k);
+        } catch {}
+      });
     } catch {}
   };
 
   const logout = useCallback(() => {
     clearLocalUserData();
     setStoredToken(null);
+    setStoredUser(null);
     setToken(null);
     setUser(null);
     api.logout().catch(() => {});
@@ -65,8 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { user: remoteUser } = await api.getMe();
         if (isMounted) {
+          const isLocalStorage = Boolean(localStorage.getItem('rastro_token'));
           setUser(remoteUser);
-          localStorage.setItem('rastro_user', JSON.stringify(remoteUser));
+          setStoredUser(remoteUser, isLocalStorage);
           setToken(storedToken);
         }
       } catch (err) {
@@ -92,20 +97,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [logout]);
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string, rememberMe: boolean = true) => {
     clearLocalUserData();
-    const res = await api.login(username, password);
-    setStoredToken(res.token);
-    localStorage.setItem('rastro_user', JSON.stringify(res.user));
+    const res = await api.login(username, password, rememberMe);
+    setStoredToken(res.token, rememberMe);
+    setStoredUser(res.user, rememberMe);
     setToken(res.token);
     setUser(res.user);
   };
 
-  const register = async (username: string, password: string, name?: string) => {
+  const register = async (username: string, password: string, name?: string, rememberMe: boolean = true) => {
     clearLocalUserData();
-    const res = await api.register(username, password, name);
-    setStoredToken(res.token);
-    localStorage.setItem('rastro_user', JSON.stringify(res.user));
+    const res = await api.register(username, password, name, rememberMe);
+    setStoredToken(res.token, rememberMe);
+    setStoredUser(res.user, rememberMe);
     setToken(res.token);
     setUser(res.user);
   };

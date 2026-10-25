@@ -4,6 +4,7 @@ import { EmptyState, ErrorState } from '@/components/ui/States';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { SummaryCards } from '@/components/dashboard/SummaryCards';
+import { QuickShortcuts } from '@/components/dashboard/QuickShortcuts';
 import { WatchlistQuickWidget } from '@/components/dashboard/WatchlistQuickWidget';
 import { SpendingChart } from '@/components/dashboard/SpendingChart';
 import { CategoryBreakdown } from '@/components/dashboard/CategoryBreakdown';
@@ -74,6 +75,8 @@ export function Dashboard() {
         previousSpent={prevSpent}
         loading={summaryLoading}
       />
+
+      <QuickShortcuts />
 
       <WatchlistQuickWidget />
 

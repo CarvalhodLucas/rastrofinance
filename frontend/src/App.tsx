@@ -125,6 +125,8 @@ function Shell() {
             <Route path="/transactions" element={<div className="overflow-y-auto h-full"><Transactions /></div>} />
             <Route path="/investments" element={<div className="overflow-y-auto h-full"><Investments /></div>} />
             <Route path="/watchlist" element={<Navigate to="/investments?tab=WATCHLIST" replace />} />
+            <Route path="/radar" element={<Navigate to="/investments?tab=WATCHLIST" replace />} />
+            <Route path="/cotacoes" element={<Navigate to="/investments?tab=WATCHLIST" replace />} />
             <Route path="/insights" element={<div className="overflow-y-auto h-full"><Insights /></div>} />
             <Route path="/connect" element={<div className="overflow-y-auto h-full"><Connect /></div>} />
             <Route path="/settings" element={<div className="overflow-y-auto h-full"><Settings /></div>} />

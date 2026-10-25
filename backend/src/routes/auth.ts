@@ -13,10 +13,11 @@ export const authRouter = Router();
  */
 authRouter.post('/register', async (req, res) => {
   try {
-    const { username, password, name } = req.body as {
+    const { username, password, name, rememberMe } = req.body as {
       username?: string;
       password?: string;
       name?: string;
+      rememberMe?: boolean;
     };
 
     if (!username || !password) {
@@ -25,7 +26,7 @@ authRouter.post('/register', async (req, res) => {
     }
 
     const newUser = await registerUser({ username, password, name });
-    const { token } = await authenticateUser(newUser.username, password);
+    const { token } = await authenticateUser(newUser.username, password, rememberMe !== false);
 
     res.status(201).json({
       message: 'Usuário cadastrado com sucesso!',
@@ -48,9 +49,10 @@ authRouter.post('/register', async (req, res) => {
  */
 authRouter.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body as {
+    const { username, password, rememberMe } = req.body as {
       username?: string;
       password?: string;
+      rememberMe?: boolean;
     };
 
     if (!username || !password) {
@@ -58,7 +60,7 @@ authRouter.post('/login', async (req, res) => {
       return;
     }
 
-    const { user, token } = await authenticateUser(username, password);
+    const { user, token } = await authenticateUser(username, password, rememberMe !== false);
 
     res.json({
       message: 'Login realizado com sucesso!',

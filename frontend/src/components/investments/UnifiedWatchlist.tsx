@@ -18,13 +18,14 @@ import {
   Bell,
   BellRing,
   Check,
+  GripVertical,
 } from 'lucide-react';
 import { AssetLogo } from '@/components/investments/AssetLogo';
 import { WatchlistSparkline } from '@/components/investments/WatchlistSparkline';
 import { api } from '@/services/api';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
-import type { PriceAlert, WatchlistQuoteResult, WatchlistResponse } from '@/types/finance';
+import type { PriceAlert, WatchlistPeriod, WatchlistQuoteResult, WatchlistResponse } from '@/types/finance';
 import rastroAssets from '@/data/assetsDatabase.json';
 
 type FilterType = 'ALL' | 'STOCK' | 'CRYPTO' | 'GAINERS' | 'LOSERS';
@@ -107,6 +108,7 @@ export function UnifiedWatchlist() {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [pillMode, setPillMode] = useState<PillMode>('percent');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [selectedPeriod, setSelectedPeriod] = useState<WatchlistPeriod>('1D');
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   // Fecha dropdown de busca ao clicar fora
@@ -125,6 +127,12 @@ export function UnifiedWatchlist() {
   const [newTickerInput, setNewTickerInput] = useState('');
   const [newTickerType, setNewTickerType] = useState<'STOCK' | 'CRYPTO'>('STOCK');
   const [addingTicker, setAddingTicker] = useState(false);
+
+  // Modais e Estados de Remoção e Drag & Drop
+  const [tickerToDelete, setTickerToDelete] = useState<string | null>(null);
+  const [deletingTicker, setDeletingTicker] = useState(false);
+  const [draggedTicker, setDraggedTicker] = useState<string | null>(null);
+  const [dragOverTicker, setDragOverTicker] = useState<string | null>(null);
 
   // Modais de Alerta de Preço
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
@@ -237,10 +245,9 @@ export function UnifiedWatchlist() {
     }
   };
 
-  const handleRemoveTicker = async (tickerToRemove: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm(`Remover ${tickerToRemove} da lista de acompanhamento?`)) return;
-
+  const handleRemoveTicker = async (tickerToRemove: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setDeletingTicker(true);
     try {
       const res = await api.removeWatchlistItem(tickerToRemove);
       if (res.data) {
@@ -249,8 +256,78 @@ export function UnifiedWatchlist() {
         localStorage.setItem(cacheKey, JSON.stringify(res.data));
       }
       notify(`${tickerToRemove} removido da lista.`, 'info');
+      setTickerToDelete(null);
     } catch (err: any) {
       notify(err.message || 'Erro ao remover ativo.', 'error');
+    } finally {
+      setDeletingTicker(false);
+    }
+  };
+
+  // Drag and Drop: Início do arrasto
+  const handleDragStart = (ticker: string, e: React.DragEvent) => {
+    setDraggedTicker(ticker);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', ticker);
+  };
+
+  // Drag and Drop: Passando por cima de outro ativo
+  const handleDragOver = (ticker: string, e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverTicker !== ticker) {
+      setDragOverTicker(ticker);
+    }
+  };
+
+  // Drag and Drop: Fim do arrasto
+  const handleDragEnd = () => {
+    setDraggedTicker(null);
+    setDragOverTicker(null);
+  };
+
+  // Drag and Drop: Soltar para aplicar a nova ordem
+  const handleDrop = async (targetTicker: string, e: React.DragEvent) => {
+    e.preventDefault();
+    if (!draggedTicker || draggedTicker === targetTicker || !data?.items) {
+      setDraggedTicker(null);
+      setDragOverTicker(null);
+      return;
+    }
+
+    const items = [...data.items];
+    const sourceIndex = items.findIndex((it) => it.ticker === draggedTicker);
+    const targetIndex = items.findIndex((it) => it.ticker === targetTicker);
+
+    if (sourceIndex === -1 || targetIndex === -1) {
+      setDraggedTicker(null);
+      setDragOverTicker(null);
+      return;
+    }
+
+    // Move o item de sourceIndex para targetIndex
+    const [moved] = items.splice(sourceIndex, 1);
+    items.splice(targetIndex, 0, moved);
+
+    // Atualização otimista imediata na interface
+    const updatedData: WatchlistResponse = { ...data, items };
+    setData(updatedData);
+    localStorage.setItem(cacheKey, JSON.stringify(updatedData));
+    setDraggedTicker(null);
+    setDragOverTicker(null);
+
+    // Persiste no backend
+    try {
+      const minimalPayload = items.map((it) => ({
+        ticker: it.ticker,
+        type: it.type,
+        name: it.name,
+      }));
+      await api.saveWatchlist(minimalPayload);
+      notify('Ordem dos ativos atualizada!', 'success');
+    } catch (err: any) {
+      console.error('Erro ao salvar nova ordem:', err);
+      notify('Não foi possível salvar a nova ordem no servidor.', 'error');
     }
   };
 
@@ -417,6 +494,27 @@ export function UnifiedWatchlist() {
     }
   }, [newTickerInput, newTickerType]);
 
+  const getItemVariation = (item: WatchlistQuoteResult, period: WatchlistPeriod = selectedPeriod) => {
+    if (item.variations && item.variations[period] !== undefined) {
+      return item.variations[period]!;
+    }
+    return item.variation || '0.00';
+  };
+
+  const getItemChangeAmount = (item: WatchlistQuoteResult, period: WatchlistPeriod = selectedPeriod) => {
+    if (item.changeAmounts && item.changeAmounts[period] !== undefined) {
+      return item.changeAmounts[period]!;
+    }
+    return item.changeAmount || 0;
+  };
+
+  const getItemSparkline = (item: WatchlistQuoteResult, period: WatchlistPeriod = selectedPeriod) => {
+    if (item.sparklines && item.sparklines[period] && item.sparklines[period]!.length > 0) {
+      return item.sparklines[period]!;
+    }
+    return item.sparkline || [];
+  };
+
   // Itens filtrados
   const filteredItems = useMemo(() => {
     if (!data?.items) return [];
@@ -428,9 +526,9 @@ export function UnifiedWatchlist() {
     } else if (filter === 'CRYPTO') {
       list = list.filter((i) => i.type === 'CRYPTO');
     } else if (filter === 'GAINERS') {
-      list = list.filter((i) => parseFloat(i.variation) > 0);
+      list = list.filter((i) => parseFloat(getItemVariation(i)) > 0);
     } else if (filter === 'LOSERS') {
-      list = list.filter((i) => parseFloat(i.variation) < 0);
+      list = list.filter((i) => parseFloat(getItemVariation(i)) < 0);
     }
 
     if (searchQuery.trim()) {
@@ -444,7 +542,7 @@ export function UnifiedWatchlist() {
     }
 
     return list;
-  }, [data?.items, filter, searchQuery]);
+  }, [data?.items, filter, searchQuery, selectedPeriod]);
 
   const counts = useMemo(() => {
     if (!data?.items) return { all: 0, stock: 0, crypto: 0, gainers: 0, losers: 0 };
@@ -452,10 +550,29 @@ export function UnifiedWatchlist() {
       all: data.items.length,
       stock: data.items.filter((i) => i.type === 'STOCK').length,
       crypto: data.items.filter((i) => i.type === 'CRYPTO').length,
-      gainers: data.items.filter((i) => parseFloat(i.variation) > 0).length,
-      losers: data.items.filter((i) => parseFloat(i.variation) < 0).length,
+      gainers: data.items.filter((i) => parseFloat(getItemVariation(i)) > 0).length,
+      losers: data.items.filter((i) => parseFloat(getItemVariation(i)) < 0).length,
     };
-  }, [data?.items]);
+  }, [data?.items, selectedPeriod]);
+
+  // Destaques de maior alta e queda dinâmicos por período
+  const periodTopGainer = useMemo(() => {
+    if (!data?.items || data.items.length === 0) return null;
+    const sorted = [...data.items].sort(
+      (a, b) => parseFloat(getItemVariation(b)) - parseFloat(getItemVariation(a)),
+    );
+    const top = sorted[0];
+    return top && parseFloat(getItemVariation(top)) > 0 ? top : null;
+  }, [data?.items, selectedPeriod]);
+
+  const periodTopLoser = useMemo(() => {
+    if (!data?.items || data.items.length === 0) return null;
+    const sorted = [...data.items].sort(
+      (a, b) => parseFloat(getItemVariation(a)) - parseFloat(getItemVariation(b)),
+    );
+    const worst = sorted[0];
+    return worst && parseFloat(getItemVariation(worst)) < 0 ? worst : null;
+  }, [data?.items, selectedPeriod]);
 
   const formatPrice = (item: WatchlistQuoteResult) => {
     const isUsd = item.currency === 'USD';
@@ -471,7 +588,7 @@ export function UnifiedWatchlist() {
   };
 
   const renderPillContent = (item: WatchlistQuoteResult) => {
-    const varNum = parseFloat(item.variation);
+    const varNum = parseFloat(getItemVariation(item));
     const isPositive = varNum >= 0;
 
     if (pillMode === 'percent') {
@@ -481,7 +598,7 @@ export function UnifiedWatchlist() {
     if (pillMode === 'amount') {
       const isUsd = item.currency === 'USD';
       const prefix = isUsd ? '$' : 'R$';
-      const change = item.changeAmount || 0;
+      const change = getItemChangeAmount(item);
       const sign = change >= 0 ? '+' : '';
       if (Math.abs(change) < 0.01 && change !== 0) {
         return `${sign}${prefix} ${change.toFixed(4)}`;
@@ -509,7 +626,7 @@ export function UnifiedWatchlist() {
             </span>
           </div>
           <p className="text-xs text-text-muted mt-0.5">
-            Acompanhe suas ações e criptos em tempo real com alertas de preço automáticos.
+            Acompanhe suas ações e criptos em tempo real com alertas de preço. Segure e arraste o ícone lateral para reordenar a sua lista.
           </p>
         </div>
 
@@ -615,14 +732,14 @@ export function UnifiedWatchlist() {
             <div>
               <span className="text-xs text-text-muted font-medium flex items-center gap-1">
                 <ArrowUpRight className="h-3.5 w-3.5 text-emerald-400" />
-                Maior Alta do Dia
+                Maior Alta ({selectedPeriod})
               </span>
               <p className="text-base font-bold text-text-primary mt-0.5 flex items-center gap-1.5">
-                {data.topGainer ? (
+                {periodTopGainer ? (
                   <>
-                    <span>{data.topGainer.ticker.replace(/\.SA$/, '')}</span>
+                    <span>{periodTopGainer.ticker.replace(/\.SA$/, '')}</span>
                     <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                      +{parseFloat(data.topGainer.variation).toFixed(2)}%
+                      +{parseFloat(getItemVariation(periodTopGainer)).toFixed(2)}%
                     </span>
                   </>
                 ) : (
@@ -639,14 +756,14 @@ export function UnifiedWatchlist() {
             <div>
               <span className="text-xs text-text-muted font-medium flex items-center gap-1">
                 <ArrowDownRight className="h-3.5 w-3.5 text-rose-400" />
-                Maior Queda do Dia
+                Maior Queda ({selectedPeriod})
               </span>
               <p className="text-base font-bold text-text-primary mt-0.5 flex items-center gap-1.5">
-                {data.topLoser ? (
+                {periodTopLoser ? (
                   <>
-                    <span>{data.topLoser.ticker.replace(/\.SA$/, '')}</span>
+                    <span>{periodTopLoser.ticker.replace(/\.SA$/, '')}</span>
                     <span className="text-xs font-semibold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">
-                      {parseFloat(data.topLoser.variation).toFixed(2)}%
+                      {parseFloat(getItemVariation(periodTopLoser)).toFixed(2)}%
                     </span>
                   </>
                 ) : (
@@ -867,6 +984,32 @@ export function UnifiedWatchlist() {
               )}
             </div>
 
+            {/* Seletor de Período da Variação (1D, 7D, 30D, 1Y) */}
+            <div className="flex items-center bg-bg-surface border border-border-default/80 rounded-lg p-0.5 shrink-0" title="Escolha o período da variação">
+              {(['1D', '7D', '30D', '1Y'] as WatchlistPeriod[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setSelectedPeriod(p)}
+                  className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${
+                    selectedPeriod === p
+                      ? 'bg-accent-gold text-black shadow-xs'
+                      : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated'
+                  }`}
+                  title={`Variação de ${
+                    p === '1D'
+                      ? '24 Horas / Diária'
+                      : p === '7D'
+                      ? '7 Dias (1 Semana)'
+                      : p === '30D'
+                      ? '30 Dias (1 Mês)'
+                      : '1 Ano'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
             <button
               onClick={handleTogglePillMode}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-bg-surface border border-border-default/80 text-text-secondary hover:text-text-primary transition-all shrink-0"
@@ -875,7 +1018,11 @@ export function UnifiedWatchlist() {
               <SlidersHorizontal className="h-3.5 w-3.5 text-accent-gold" />
               <span className="hidden sm:inline">Exibir:</span>
               <span className="font-semibold text-accent-gold uppercase">
-                {pillMode === 'percent' ? '% Variação' : pillMode === 'amount' ? 'Valor R$/$' : 'Mercado'}
+                {pillMode === 'percent'
+                  ? `% Var (${selectedPeriod})`
+                  : pillMode === 'amount'
+                  ? `Valor (${selectedPeriod})`
+                  : 'Mercado'}
               </span>
             </button>
 
@@ -1066,19 +1213,41 @@ export function UnifiedWatchlist() {
         /* MODO LISTA COMPACTA */
         <div className="bg-bg-surface rounded-xl border border-border-default/60 overflow-hidden divide-y divide-border-default/40 shadow-xs">
           {filteredItems.map((item) => {
-            const varNum = parseFloat(item.variation);
+            const varNum = parseFloat(getItemVariation(item));
             const isPositive = varNum >= 0;
             const displayTicker = item.ticker.replace(/\.SA$/, '');
             const itemAlerts = activeAlertsByTicker.get(displayTicker) || [];
             const hasActiveAlert = itemAlerts.some((a) => !a.triggered);
+            const isDragging = draggedTicker === item.ticker;
+            const isDragOver = dragOverTicker === item.ticker;
 
             return (
               <div
                 key={item.ticker}
-                className="group flex items-center justify-between px-3.5 py-3 hover:bg-bg-elevated/60 transition-colors cursor-pointer select-none"
+                draggable={true}
+                onDragStart={(e) => handleDragStart(item.ticker, e)}
+                onDragOver={(e) => handleDragOver(item.ticker, e)}
+                onDragEnd={handleDragEnd}
+                onDrop={(e) => void handleDrop(item.ticker, e)}
+                className={`group flex items-center justify-between px-3.5 py-3 transition-all cursor-pointer select-none ${
+                  isDragging
+                    ? 'opacity-40 bg-accent-gold/15 border-y-2 border-dashed border-accent-gold scale-[0.99]'
+                    : isDragOver
+                    ? 'bg-accent-gold/10 border-t-2 border-t-accent-gold shadow-md'
+                    : 'hover:bg-bg-elevated/60'
+                }`}
                 onClick={handleTogglePillMode}
               >
-                <div className="flex items-center gap-3 min-w-0 pr-2">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-2">
+                  {/* Handle para Segurar e Arrastar com o Mouse */}
+                  <div
+                    className="cursor-grab active:cursor-grabbing text-text-muted hover:text-accent-gold p-1 -ml-1 transition-colors shrink-0"
+                    title="Segure com o mouse e arraste para mudar a ordem"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </div>
+
                   <AssetLogo
                     ticker={displayTicker}
                     name={item.name}
@@ -1119,14 +1288,14 @@ export function UnifiedWatchlist() {
 
                 <div className="hidden sm:flex items-center justify-center px-4">
                   <WatchlistSparkline
-                    data={item.sparkline}
+                    data={getItemSparkline(item)}
                     isPositive={isPositive}
                     width={100}
                     height={32}
                   />
                 </div>
 
-                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
                   <div className="text-right">
                     <div className="font-semibold text-sm text-text-primary tabular-nums">
                       {formatPrice(item)}
@@ -1153,7 +1322,7 @@ export function UnifiedWatchlist() {
                   {/* Botão de Alerta */}
                   <button
                     onClick={(e) => handleOpenCreateAlert(item, e)}
-                    className={`p-1.5 rounded-md transition-all ${
+                    className={`p-1.5 rounded-lg transition-all ${
                       hasActiveAlert
                         ? 'text-accent-gold hover:bg-accent-gold/20'
                         : 'text-text-muted hover:text-accent-gold hover:bg-accent-gold/10'
@@ -1163,13 +1332,17 @@ export function UnifiedWatchlist() {
                     <Bell className={`h-4 w-4 ${hasActiveAlert ? 'fill-accent-gold' : ''}`} />
                   </button>
 
-                  {/* Botão Excluir */}
+                  {/* Botão Excluir (Visível e acessível no mobile e desktop) */}
                   <button
-                    onClick={(e) => handleRemoveTicker(item.ticker, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 text-text-muted hover:text-rose-400 transition-opacity rounded-md hover:bg-rose-500/10"
-                    title="Remover da lista"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTickerToDelete(item.ticker);
+                    }}
+                    className="p-1.5 text-text-muted hover:text-rose-400 hover:bg-rose-500/15 rounded-lg transition-all"
+                    title={`Remover ${item.ticker} da lista de acompanhamento`}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -1180,26 +1353,48 @@ export function UnifiedWatchlist() {
         /* MODO GRADE DE CARDS */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
           {filteredItems.map((item) => {
-            const varNum = parseFloat(item.variation);
+            const varNum = parseFloat(getItemVariation(item));
             const isPositive = varNum >= 0;
             const displayTicker = item.ticker.replace(/\.SA$/, '');
             const itemAlerts = activeAlertsByTicker.get(displayTicker) || [];
             const hasActiveAlert = itemAlerts.some((a) => !a.triggered);
+            const isDragging = draggedTicker === item.ticker;
+            const isDragOver = dragOverTicker === item.ticker;
 
             return (
               <div
                 key={item.ticker}
-                className="group relative bg-bg-surface hover:bg-bg-elevated/70 p-4 rounded-xl border border-border-default/60 hover:border-accent-gold/40 transition-all shadow-xs flex flex-col justify-between"
+                draggable={true}
+                onDragStart={(e) => handleDragStart(item.ticker, e)}
+                onDragOver={(e) => handleDragOver(item.ticker, e)}
+                onDragEnd={handleDragEnd}
+                onDrop={(e) => void handleDrop(item.ticker, e)}
+                className={`group relative bg-bg-surface p-4 rounded-xl border transition-all shadow-xs flex flex-col justify-between ${
+                  isDragging
+                    ? 'opacity-40 bg-accent-gold/10 border-dashed border-accent-gold scale-[0.98]'
+                    : isDragOver
+                    ? 'ring-2 ring-accent-gold bg-accent-gold/10 border-accent-gold shadow-lg'
+                    : 'border-border-default/60 hover:border-accent-gold/40 hover:bg-bg-elevated/70'
+                }`}
               >
                 <div>
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {/* Handle para Segurar e Arrastar com o Mouse */}
+                      <div
+                        className="cursor-grab active:cursor-grabbing text-text-muted hover:text-accent-gold p-1 -ml-1 transition-colors shrink-0"
+                        title="Segure com o mouse e arraste para mudar a ordem"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <GripVertical className="h-4 w-4" />
+                      </div>
+
                       <AssetLogo
                         ticker={displayTicker}
                         name={item.name}
                         assetType={item.type}
                         institution={item.type === 'CRYPTO' ? 'Binance' : 'B3'}
-                        sizeClassName="h-9 w-9"
+                        sizeClassName="h-8 w-8"
                       />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
@@ -1231,10 +1426,15 @@ export function UnifiedWatchlist() {
                         <Bell className={`h-3.5 w-3.5 ${hasActiveAlert ? 'fill-accent-gold' : ''}`} />
                       </button>
 
+                      {/* Botão Excluir (Visível) */}
                       <button
-                        onClick={(e) => handleRemoveTicker(item.ticker, e)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-text-muted hover:text-rose-400 transition-opacity"
-                        title="Remover"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTickerToDelete(item.ticker);
+                        }}
+                        className="p-1.5 text-text-muted hover:text-rose-400 hover:bg-rose-500/15 rounded-md transition-all"
+                        title="Remover da lista"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -1262,7 +1462,7 @@ export function UnifiedWatchlist() {
 
                 <div className="my-3 py-1 flex items-center justify-center bg-bg-primary/40 rounded-lg p-2">
                   <WatchlistSparkline
-                    data={item.sparkline}
+                    data={getItemSparkline(item)}
                     isPositive={isPositive}
                     width={220}
                     height={46}
@@ -1644,6 +1844,62 @@ export function UnifiedWatchlist() {
                 className="px-4 py-2 rounded-lg text-xs font-bold text-black bg-accent-gold hover:bg-accent-gold/90 transition-all disabled:opacity-50"
               >
                 {addingTicker ? 'Adicionando...' : 'Adicionar ao Radar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Remoção de Ativo */}
+      {tickerToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => {
+            if (!deletingTicker) setTickerToDelete(null);
+          }}
+        >
+          <div
+            className="bg-[#0E1524] border border-border-default/80 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bold text-base text-text-primary">Remover do Radar?</h3>
+                <p className="text-xs text-text-muted mt-0.5">
+                  Deseja remover <strong className="text-text-primary">{tickerToDelete}</strong> da sua lista de acompanhamento?
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-default/60">
+              <button
+                type="button"
+                disabled={deletingTicker}
+                onClick={() => setTickerToDelete(null)}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deletingTicker}
+                onClick={() => void handleRemoveTicker(tickerToDelete)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 active:scale-95 transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {deletingTicker ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <span>Removendo...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Remover</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

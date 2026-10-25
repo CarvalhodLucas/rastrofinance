@@ -70,7 +70,12 @@ export function isRecordOwnedByUser(
   recordSyncSource: string | null | undefined,
   currentUser?: { id?: string; username?: string } | null,
 ): boolean {
-  if (!currentUser) return isLucasUser(null);
+  // Se for uma rotina de sistema sem escopo de usuário específico (ex: cron jobs),
+  // permite processar registros da conta principal do Lucas e registros legados
+  if (!currentUser) {
+    const taggedUserId = recordUserId || extractUserFromSyncSource(recordSyncSource);
+    return !taggedUserId || PRIMARY_LUCAS_IDS.includes(taggedUserId);
+  }
 
   const currentIsLucas = isLucasUser(currentUser);
   const taggedUserId = recordUserId || extractUserFromSyncSource(recordSyncSource);

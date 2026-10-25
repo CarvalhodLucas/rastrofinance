@@ -106,6 +106,8 @@ const KNOWN_STOCK_NAMES: Record<string, string> = {
   'RENT3.SA': 'Localiza',
   'MGLU3.SA': 'Magazine Luiza',
   'PRIO3.SA': 'PRIO',
+  'CEAB3.SA': 'C&A Modas (C&A Brasil)',
+  'CEAB3': 'C&A Modas (C&A Brasil)',
 };
 
 export const DEFAULT_WATCHLIST_ITEMS: WatchlistItem[] = [];
@@ -191,6 +193,212 @@ async function getStockSparkline(yahooSymbol: string): Promise<number[]> {
       .map((q: any) => Number(Number(q.close).toFixed(2)));
   } catch {
     return [];
+  }
+}
+
+/**
+ * Busca e calcula variações em múltiplos períodos (1D, 7D, 30D, 1Y) para Criptomoedas na Binance.
+ */
+async function getCryptoPeriodData(
+  cleanSymbol: string,
+  currentPrice: number,
+  var24h: string,
+  chg24h: number,
+  sparkline1d: number[],
+) {
+  const cacheKey = `CRYPTO_PERIODS_${cleanSymbol}`;
+  const cached = memoryCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < 15 * 60 * 1000) {
+    return {
+      ...cached.data,
+      variations: { ...cached.data.variations, '1D': var24h },
+      changeAmounts: { ...cached.data.changeAmounts, '1D': chg24h },
+      sparklines: { ...cached.data.sparklines, '1D': sparkline1d },
+    };
+  }
+
+  try {
+    const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${cleanSymbol}USDT&interval=1d&limit=365`);
+    if (!res.ok) throw new Error('Binance klines failed');
+    const arr = (await res.json()) as any[];
+    if (!Array.isArray(arr) || arr.length === 0) throw new Error('Empty klines');
+
+    const closes = arr.map((k) => parseFloat(k[4]));
+
+    // 7D
+    let var7d: string | undefined;
+    let chg7d: number | undefined;
+    let spark7d: number[] = [];
+    if (arr.length >= 8) {
+      const p7 = parseFloat(arr[arr.length - 8][4]);
+      if (p7 > 0 && currentPrice > 0) {
+        var7d = (((currentPrice - p7) / p7) * 100).toFixed(2);
+        chg7d = currentPrice - p7;
+      }
+      spark7d = closes.slice(-7);
+    }
+
+    // 30D
+    let var30d: string | undefined;
+    let chg30d: number | undefined;
+    let spark30d: number[] = [];
+    if (arr.length >= 31) {
+      const p30 = parseFloat(arr[arr.length - 31][4]);
+      if (p30 > 0 && currentPrice > 0) {
+        var30d = (((currentPrice - p30) / p30) * 100).toFixed(2);
+        chg30d = currentPrice - p30;
+      }
+      spark30d = closes.slice(-30).filter((_, idx) => idx % 2 === 0);
+    }
+
+    // 1Y
+    let var1y: string | undefined;
+    let chg1y: number | undefined;
+    let spark1y: number[] = [];
+    if (arr.length >= 50) {
+      const p1y = parseFloat(arr[0][4]);
+      if (p1y > 0 && currentPrice > 0) {
+        var1y = (((currentPrice - p1y) / p1y) * 100).toFixed(2);
+        chg1y = currentPrice - p1y;
+      }
+      const step = Math.max(1, Math.floor(arr.length / 20));
+      spark1y = closes.filter((_, idx) => idx % step === 0);
+    }
+
+    const periodData = {
+      variations: {
+        '1D': var24h,
+        ...(var7d ? { '7D': var7d } : {}),
+        ...(var30d ? { '30D': var30d } : {}),
+        ...(var1y ? { '1Y': var1y } : {}),
+      },
+      changeAmounts: {
+        '1D': chg24h,
+        ...(chg7d !== undefined ? { '7D': chg7d } : {}),
+        ...(chg30d !== undefined ? { '30D': chg30d } : {}),
+        ...(chg1y !== undefined ? { '1Y': chg1y } : {}),
+      },
+      sparklines: {
+        '1D': sparkline1d,
+        ...(spark7d.length > 0 ? { '7D': spark7d } : {}),
+        ...(spark30d.length > 0 ? { '30D': spark30d } : {}),
+        ...(spark1y.length > 0 ? { '1Y': spark1y } : {}),
+      },
+    };
+
+    memoryCache.set(cacheKey, { data: periodData, timestamp: Date.now() });
+    return periodData;
+  } catch {
+    return {
+      variations: { '1D': var24h },
+      changeAmounts: { '1D': chg24h },
+      sparklines: { '1D': sparkline1d },
+    };
+  }
+}
+
+/**
+ * Busca e calcula variações em múltiplos períodos (1D, 7D, 30D, 1Y) para Ações B3 no Yahoo Finance.
+ */
+async function getStockPeriodData(
+  yahooSymbol: string,
+  currentPrice: number,
+  var1d: string,
+  chg1d: number,
+  sparkline1d: number[],
+) {
+  const cacheKey = `STOCK_PERIODS_${yahooSymbol}`;
+  const cached = memoryCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < 15 * 60 * 1000) {
+    return {
+      ...cached.data,
+      variations: { ...cached.data.variations, '1D': var1d },
+      changeAmounts: { ...cached.data.changeAmounts, '1D': chg1d },
+      sparklines: { ...cached.data.sparklines, '1D': sparkline1d },
+    };
+  }
+
+  try {
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    const chartRes: any = await yf.chart(yahooSymbol, { period1: oneYearAgo, interval: '1d' });
+    const quotes = (chartRes?.quotes || []).filter((q: any) => q.close != null && q.close > 0);
+
+    if (quotes.length === 0) throw new Error('No historical quotes');
+
+    const closes = quotes.map((q: any) => Number(Number(q.close).toFixed(2)));
+
+    // 7D (~5 pregões)
+    let var7d: string | undefined;
+    let chg7d: number | undefined;
+    let spark7d: number[] = [];
+    if (quotes.length >= 6) {
+      const q7 = quotes[quotes.length - 6];
+      const p7 = q7.close;
+      if (p7 > 0 && currentPrice > 0) {
+        var7d = (((currentPrice - p7) / p7) * 100).toFixed(2);
+        chg7d = currentPrice - p7;
+      }
+      spark7d = closes.slice(-7);
+    }
+
+    // 30D (~22 pregões)
+    let var30d: string | undefined;
+    let chg30d: number | undefined;
+    let spark30d: number[] = [];
+    if (quotes.length >= 22) {
+      const q30 = quotes[quotes.length - 22];
+      const p30 = q30.close;
+      if (p30 > 0 && currentPrice > 0) {
+        var30d = (((currentPrice - p30) / p30) * 100).toFixed(2);
+        chg30d = currentPrice - p30;
+      }
+      spark30d = closes.slice(-25).filter((_: any, idx: number) => idx % 2 === 0);
+    }
+
+    // 1Y (~250 pregões)
+    let var1y: string | undefined;
+    let chg1y: number | undefined;
+    let spark1y: number[] = [];
+    if (quotes.length >= 40) {
+      const q1y = quotes[0];
+      const p1y = q1y.close;
+      if (p1y > 0 && currentPrice > 0) {
+        var1y = (((currentPrice - p1y) / p1y) * 100).toFixed(2);
+        chg1y = currentPrice - p1y;
+      }
+      const step = Math.max(1, Math.floor(quotes.length / 20));
+      spark1y = closes.filter((_: any, idx: number) => idx % step === 0);
+    }
+
+    const periodData = {
+      variations: {
+        '1D': var1d,
+        ...(var7d ? { '7D': var7d } : {}),
+        ...(var30d ? { '30D': var30d } : {}),
+        ...(var1y ? { '1Y': var1y } : {}),
+      },
+      changeAmounts: {
+        '1D': chg1d,
+        ...(chg7d !== undefined ? { '7D': chg7d } : {}),
+        ...(chg30d !== undefined ? { '30D': chg30d } : {}),
+        ...(chg1y !== undefined ? { '1Y': chg1y } : {}),
+      },
+      sparklines: {
+        '1D': sparkline1d,
+        ...(spark7d.length > 0 ? { '7D': spark7d } : {}),
+        ...(spark30d.length > 0 ? { '30D': spark30d } : {}),
+        ...(spark1y.length > 0 ? { '1Y': spark1y } : {}),
+      },
+    };
+
+    memoryCache.set(cacheKey, { data: periodData, timestamp: Date.now() });
+    return periodData;
+  } catch {
+    return {
+      variations: { '1D': var1d },
+      changeAmounts: { '1D': chg1d },
+      sparklines: { '1D': sparkline1d },
+    };
   }
 }
 
@@ -396,6 +604,8 @@ export interface WatchlistItem {
   name?: string;
 }
 
+export type WatchlistPeriod = '1D' | '7D' | '30D' | '1Y';
+
 export interface WatchlistQuoteResult {
   ticker: string;
   yahooSymbol?: string;
@@ -405,6 +615,9 @@ export interface WatchlistQuoteResult {
   currency: 'BRL' | 'USD';
   variation: string;
   changeAmount: number;
+  variations?: Partial<Record<WatchlistPeriod, string>>;
+  changeAmounts?: Partial<Record<WatchlistPeriod, number>>;
+  sparklines?: Partial<Record<WatchlistPeriod, number[]>>;
   high24h: number;
   low24h: number;
   volume: number;
@@ -623,6 +836,14 @@ export async function getWatchlistData(
         const low24h = cryptoQuote?.low24h || price;
         const volume = cryptoQuote?.volume || 0;
 
+        const periodData = await getCryptoPeriodData(
+          clean,
+          price,
+          variation,
+          changeAmount,
+          sparkline.length > 0 ? sparkline : [price * 0.98, price * 1.01, price],
+        );
+
         return {
           ticker: clean,
           name: item.name || KNOWN_CRYPTO_NAMES[clean] || clean,
@@ -631,6 +852,7 @@ export async function getWatchlistData(
           currency: 'USD',
           variation,
           changeAmount,
+          ...periodData,
           high24h,
           low24h,
           volume,
@@ -657,6 +879,14 @@ export async function getWatchlistData(
         const volume = q?.regularMarketVolume ?? 0;
         const rawCap = q?.marketCap || 0;
 
+        const periodData = await getStockPeriodData(
+          yahooSymbol,
+          price,
+          variation,
+          changeAmount,
+          sparkline.length > 0 ? sparkline : [price * 0.99, price * 1.005, price],
+        );
+
         return {
           ticker: rawTicker,
           yahooSymbol,
@@ -666,6 +896,7 @@ export async function getWatchlistData(
           currency: (q?.currency as 'BRL' | 'USD') || 'BRL',
           variation,
           changeAmount,
+          ...periodData,
           high24h,
           low24h,
           volume,

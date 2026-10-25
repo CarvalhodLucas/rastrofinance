@@ -1,5 +1,12 @@
 [
   {
+    "ticker": "CEAB3",
+    "name": "C&A Modas S.A. (C&A Brasil)",
+    "type": "Ações",
+    "sector": "Consumo Cíclico / Varejo e Vestuário",
+    "exchange": "B3"
+  },
+  {
     "ticker": "POMO4",
     "name": "Marcopolo S.A.",
     "type": "Ações",

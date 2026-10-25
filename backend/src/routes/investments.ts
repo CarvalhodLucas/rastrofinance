@@ -648,9 +648,10 @@ investmentsRouter.delete('/watchlist/alerts/:id', async (req, res) => {
 /**
  * POST /api/investments/update-quotes — Atualiza os preços atuais de todos os ativos no banco usando o Yahoo Finance2.
  */
-investmentsRouter.post('/update-quotes', async (_req, res) => {
+investmentsRouter.post('/update-quotes', async (req, res) => {
   try {
-    const updatedCount = await runUpdateQuotesJob();
+    const user = (req as AuthenticatedRequest).user;
+    const updatedCount = await runUpdateQuotesJob(user);
     res.json({ ok: true, updated_count: updatedCount });
   } catch (err: any) {
     console.error('[investments] POST update-quotes error:', err);

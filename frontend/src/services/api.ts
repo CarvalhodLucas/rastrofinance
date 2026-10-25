@@ -14,7 +14,15 @@ import type {
   PriceAlert,
 } from '@/types/finance';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+const getApiBaseUrl = (): string => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost') {
+    return `http://${window.location.hostname}:3001`;
+  }
+  return 'http://localhost:3001';
+};
+
+const BASE_URL = getApiBaseUrl();
 
 export function getStoredToken(): string | null {
   return localStorage.getItem('rastro_token');

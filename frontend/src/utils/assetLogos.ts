@@ -20,6 +20,8 @@ const SPECIAL_LOGOS: Record<string, string> = {
   BNB: 'https://bin.bnbstatic.com/static/images/common/favicon.ico',
 
   // Ações B3 complementares
+  CEAB3: 'https://www.google.com/s2/favicons?domain=cea.com.br&sz=128',
+  'CEAB3.SA': 'https://www.google.com/s2/favicons?domain=cea.com.br&sz=128',
   ITUB4: 'https://www.google.com/s2/favicons?domain=itau.com.br&sz=128',
   ITUB3: 'https://www.google.com/s2/favicons?domain=itau.com.br&sz=128',
   BPAN4: 'https://www.google.com/s2/favicons?domain=bancopan.com.br&sz=128',

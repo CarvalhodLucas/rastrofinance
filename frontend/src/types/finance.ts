@@ -233,6 +233,8 @@ export interface WatchlistItem {
   name?: string;
 }
 
+export type WatchlistPeriod = '1D' | '7D' | '30D' | '1Y';
+
 export interface WatchlistQuoteResult {
   ticker: string;
   yahooSymbol?: string;
@@ -242,6 +244,9 @@ export interface WatchlistQuoteResult {
   currency: 'BRL' | 'USD';
   variation: string;
   changeAmount: number;
+  variations?: Partial<Record<WatchlistPeriod, string>>;
+  changeAmounts?: Partial<Record<WatchlistPeriod, number>>;
+  sparklines?: Partial<Record<WatchlistPeriod, number[]>>;
   high24h: number;
   low24h: number;
   volume: number;

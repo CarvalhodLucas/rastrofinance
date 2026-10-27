@@ -62,13 +62,36 @@ function getLast12Months(): string[] {
   return months;
 }
 
+interface EvolutionCacheEntry {
+  data: MonthlyEvolution[];
+  timestamp: number;
+}
+
+const evolutionCache = new Map<string, EvolutionCacheEntry>();
+const EVOLUTION_CACHE_TTL = 30 * 60 * 1000; // 30 minutos
+
+export function clearEvolutionCache(): void {
+  evolutionCache.clear();
+}
+
 /**
  * Calcula a evolução do patrimônio mês a mês com:
  * 1. Conversão cambial USD -> BRL rigorosa para ativos em dólar (Cripto e Wise).
  * 2. Inclusão de ativos fechados no passado (PRIO3, EMBJ3, etc.) nos meses em que estiveram em custódia.
  * 3. Trocas de cripto (ex: 31.347 ROSE trocados para 153.37 XRP em 17/09/2026 com câmbio do dia).
  */
-export async function getPortfolioEvolution(user?: UserSessionPayload | null): Promise<MonthlyEvolution[]> {
+export async function getPortfolioEvolution(
+  user?: UserSessionPayload | null,
+  bypassCache = false,
+): Promise<MonthlyEvolution[]> {
+  const cacheKey = user?.id || user?.username || 'default';
+  if (!bypassCache) {
+    const cached = evolutionCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < EVOLUTION_CACHE_TTL) {
+      return cached.data;
+    }
+  }
+
   const [investments, trades] = await Promise.all([
     getAllInvestments(user),
     getAllInvestmentTrades(user),
@@ -242,5 +265,6 @@ export async function getPortfolioEvolution(user?: UserSessionPayload | null): P
     });
   }
 
+  evolutionCache.set(cacheKey, { data: evolution, timestamp: Date.now() });
   return evolution;
 }

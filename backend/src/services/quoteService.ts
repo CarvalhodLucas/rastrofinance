@@ -442,8 +442,13 @@ function normalizeSymbol(ticker: string): string {
 
   if (clean.includes('.') || clean.includes('-')) return clean;
 
-  const commonCryptos = ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL'];
-  if (commonCryptos.includes(clean)) {
+  const commonCryptos = new Set([
+    'BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL',
+    'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX', 'DOT', 'NEAR',
+    'SUI', 'SHIB', 'LTC', 'UNI', 'ATOM', 'APT', 'ARB', 'OP', 'FET', 'ICP', 'TRX',
+    ...Object.keys(KNOWN_CRYPTO_NAMES),
+  ]);
+  if (commonCryptos.has(clean)) {
     return `${clean}-USD`;
   }
 

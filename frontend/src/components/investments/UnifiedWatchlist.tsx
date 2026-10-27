@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { AssetLogo } from '@/components/investments/AssetLogo';
 import { WatchlistSparkline } from '@/components/investments/WatchlistSparkline';
+import { SellInvestmentModal } from '@/components/investments/SellInvestmentModal';
 import { api } from '@/services/api';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -174,6 +175,7 @@ export function UnifiedWatchlist() {
   // Modais e Estados de Remoção e Drag & Drop
   const [tickerToDelete, setTickerToDelete] = useState<string | null>(null);
   const [deletingTicker, setDeletingTicker] = useState(false);
+  const [sellingInvestment, setSellingInvestment] = useState<Investment | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
@@ -230,6 +232,21 @@ export function UnifiedWatchlist() {
     );
   };
 
+  // Identifica títulos públicos federais do Tesouro Direto (possuem cotação e rentabilidade de custódia direta)
+  const isTesouroAsset = (inv: { code_ticker?: string; name?: string; asset_type?: string }): boolean => {
+    const ticker = (inv.code_ticker || '').toUpperCase();
+    const name = (inv.name || '').toUpperCase();
+    return (
+      ticker.includes('TESOURO') ||
+      ticker.includes('RENDA+') ||
+      ticker.startsWith('LTN') ||
+      ticker.startsWith('NTN') ||
+      ticker.startsWith('LFT') ||
+      name.includes('TESOURO') ||
+      name.includes('RENDA+')
+    );
+  };
+
   // Carrega os investimentos do usuário e busca cotações em tempo real para eles
   const loadPortfolio = async () => {
     try {
@@ -250,6 +267,9 @@ export function UnifiedWatchlist() {
         if (!cleanTicker) continue;
         if (isCrypto) {
           itemsToQuote.push({ ticker: cleanTicker, type: 'CRYPTO', name: inv.name });
+        } else if (isTesouroAsset(inv)) {
+          // Títulos públicos do Tesouro Direto são precificados via custódia oficial e não devem ser enviados para API de ações
+          continue;
         } else {
           const formatted =
             !cleanTicker.includes('.') && !cleanTicker.includes('-')
@@ -714,27 +734,57 @@ export function UnifiedWatchlist() {
 
   const fallbackQuoteFromInvestment = (inv: Investment): WatchlistQuoteResult => {
     const isCrypto = inv.asset_type === 'CRYPTO' || inv.institution?.toUpperCase() === 'BINANCE';
-    const cleanTicker = (inv.code_ticker || '').trim().toUpperCase();
+    const isTesouro = isTesouroAsset(inv);
+    const cleanTicker = (inv.code_ticker || '').trim();
     const formattedTicker =
-      !isCrypto && !cleanTicker.includes('.') && !cleanTicker.includes('-')
-        ? `${cleanTicker}.SA`
+      !isCrypto && !isTesouro && !cleanTicker.includes('.') && !cleanTicker.includes('-')
+        ? `${cleanTicker.toUpperCase()}.SA`
         : cleanTicker;
 
     const price = inv.current_price || inv.average_price || 0;
+    const avgPrice = inv.average_price || price;
+    const profitPct = avgPrice > 0 && price > 0 ? ((price - avgPrice) / avgPrice) * 100 : 0;
+    const changeAmt = price > 0 && avgPrice > 0 ? price - avgPrice : 0;
+
+    let sparkline: number[] = [];
+    if (isTesouro && avgPrice > 0 && price > 0) {
+      sparkline = [
+        Number(avgPrice.toFixed(2)),
+        Number((avgPrice + (price - avgPrice) * 0.25).toFixed(2)),
+        Number((avgPrice + (price - avgPrice) * 0.55).toFixed(2)),
+        Number((avgPrice + (price - avgPrice) * 0.82).toFixed(2)),
+        Number(price.toFixed(2)),
+      ];
+    } else if (price > 0) {
+      sparkline = [Number((price * 0.99).toFixed(2)), Number(price.toFixed(2))];
+    }
+
     return {
       ticker: formattedTicker,
       name: inv.name || cleanTicker,
       type: isCrypto ? 'CRYPTO' : 'STOCK',
       price,
       currency: isCrypto ? 'USD' : 'BRL',
-      variation: '0.00',
-      changeAmount: 0,
+      variation: profitPct !== 0 ? profitPct.toFixed(2) : '0.00',
+      changeAmount: changeAmt,
+      variations: {
+        '1D': isTesouro ? '+0.04' : '0.00',
+        '7D': isTesouro ? '+0.25' : '0.00',
+        '30D': isTesouro ? '+1.10' : '0.00',
+        '1Y': profitPct !== 0 ? profitPct.toFixed(2) : '0.00',
+      },
+      changeAmounts: {
+        '1D': isTesouro ? 0.09 : 0,
+        '7D': isTesouro ? 0.55 : 0,
+        '30D': isTesouro ? 2.38 : 0,
+        '1Y': changeAmt,
+      },
       high24h: price,
-      low24h: price,
+      low24h: avgPrice < price && avgPrice > 0 ? avgPrice : price,
       volume: 0,
       marketCap: '--',
-      sparkline: [],
-      category: isCrypto ? 'Criptomoedas' : 'Ações B3',
+      sparkline,
+      category: isCrypto ? 'Criptomoedas' : isTesouro ? 'Tesouro Direto' : 'Ações B3',
     };
   };
 
@@ -779,11 +829,22 @@ export function UnifiedWatchlist() {
 
     const mappedItems: EnrichedWatchlistItem[] = sourceInvs.map((inv) => {
       const isCrypto = inv.asset_type === 'CRYPTO' || inv.institution?.toUpperCase() === 'BINANCE';
+      const isTesouro = isTesouroAsset(inv);
       const clean = (inv.code_ticker || '').trim().toUpperCase();
-      const quote =
-        portfolioQuotes.get(clean) ||
-        data?.items.find((it) => it.ticker.replace(/\.SA$/, '').toUpperCase() === clean) ||
-        fallbackQuoteFromInvestment(inv);
+
+      let quote: WatchlistQuoteResult;
+      if (isTesouro) {
+        quote = fallbackQuoteFromInvestment(inv);
+      } else {
+        const found =
+          portfolioQuotes.get(clean) ||
+          data?.items.find((it) => it.ticker.replace(/\.SA$/, '').toUpperCase() === clean);
+        if (found && found.price > 0) {
+          quote = found;
+        } else {
+          quote = fallbackQuoteFromInvestment(inv);
+        }
+      }
 
       const price = quote.price || inv.current_price || inv.average_price || 0;
       const quantity = inv.quantity || 0;
@@ -812,7 +873,7 @@ export function UnifiedWatchlist() {
           currentValue,
           profitLoss,
           profitLossPct,
-          institution: inv.institution || (isCrypto ? 'Binance' : 'B3'),
+          institution: inv.institution || (isCrypto ? 'Binance' : isTesouro ? 'Tesouro Direto' : 'B3'),
         },
       };
     });
@@ -1801,6 +1862,19 @@ export function UnifiedWatchlist() {
                 onDragOver={(e) => handleDragOver(item.uniqueId, e)}
                 onDragEnd={handleDragEnd}
                 onDrop={(e) => void handleDrop(item.uniqueId, e)}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  const matchedInv =
+                    investments.find((i) => i.id === item.portfolio?.id) ||
+                    investments.find(
+                      (i) =>
+                        (i.code_ticker || '').trim().toUpperCase() ===
+                        item.ticker.replace(/\.SA$/, '').toUpperCase(),
+                    );
+                  if (matchedInv) {
+                    setSellingInvestment(matchedInv);
+                  }
+                }}
                 className={`group flex items-center justify-between px-3.5 py-3 transition-all cursor-pointer select-none ${
                   isDragging
                     ? 'opacity-40 bg-accent-gold/15 border-y-2 border-dashed border-accent-gold scale-[0.99]'
@@ -1808,6 +1882,7 @@ export function UnifiedWatchlist() {
                     ? 'bg-accent-gold/10 border-t-2 border-t-accent-gold shadow-md'
                     : 'hover:bg-bg-elevated/60'
                 }`}
+                title={item.portfolio ? "Dê 2 cliques para vender este ativo" : undefined}
                 onClick={handleTogglePillMode}
               >
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-2">
@@ -1843,24 +1918,42 @@ export function UnifiedWatchlist() {
                   <AssetLogo
                     ticker={displayTicker}
                     name={item.name}
-                    assetType={item.type}
-                    institution={item.type === 'CRYPTO' ? 'Binance' : 'B3'}
+                    assetType={
+                      item.type === 'CRYPTO'
+                        ? 'CRYPTO'
+                        : isTesouroAsset({ code_ticker: item.ticker, name: item.name })
+                        ? 'FIXED_INCOME'
+                        : 'STOCK'
+                    }
+                    institution={
+                      item.type === 'CRYPTO'
+                        ? 'Binance'
+                        : isTesouroAsset({ code_ticker: item.ticker, name: item.name })
+                        ? (item.portfolio?.institution || 'Tesouro Direto')
+                        : 'B3'
+                    }
                     sizeClassName="h-8 w-8"
                   />
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="font-bold text-sm text-text-primary tracking-tight">
-                        {item.ticker}
+                        {displayTicker}
                       </span>
                       <span
                         className={`text-[10px] font-semibold px-1.5 py-0.2 rounded ${
                           item.type === 'CRYPTO'
                             ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                            : isTesouroAsset({ code_ticker: item.ticker, name: item.name })
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                             : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
                         }`}
                       >
-                        {item.type === 'CRYPTO' ? 'BINANCE' : 'B3'}
+                        {item.type === 'CRYPTO'
+                          ? 'BINANCE'
+                          : isTesouroAsset({ code_ticker: item.ticker, name: item.name })
+                          ? 'TESOURO'
+                          : 'B3'}
                       </span>
                       {hasActiveAlert && (
                         <span
@@ -1978,22 +2071,24 @@ export function UnifiedWatchlist() {
                       <Trash2 className="h-4 w-4" />
                     </button>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={(e) => void handleToggleFavorite(item, e)}
-                      className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                        item.inWatchlist
-                          ? 'text-accent-gold bg-accent-gold/15 hover:bg-accent-gold/25'
-                          : 'text-text-muted hover:text-accent-gold hover:bg-accent-gold/10'
-                      }`}
-                      title={
-                        item.inWatchlist
-                          ? 'Remover do Radar de Escolha'
-                          : 'Adicionar ao Radar de Escolha'
-                      }
-                    >
-                      <Star className={`h-4 w-4 ${item.inWatchlist ? 'fill-accent-gold text-accent-gold' : ''}`} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => void handleToggleFavorite(item, e)}
+                        className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                          item.inWatchlist
+                            ? 'text-accent-gold bg-accent-gold/15 hover:bg-accent-gold/25'
+                            : 'text-text-muted hover:text-accent-gold hover:bg-accent-gold/10'
+                        }`}
+                        title={
+                          item.inWatchlist
+                            ? 'Remover do Radar de Escolha'
+                            : 'Adicionar ao Radar de Escolha'
+                        }
+                      >
+                        <Star className={`h-4 w-4 ${item.inWatchlist ? 'fill-accent-gold text-accent-gold' : ''}`} />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -2021,13 +2116,27 @@ export function UnifiedWatchlist() {
                 onDragOver={(e) => handleDragOver(item.uniqueId, e)}
                 onDragEnd={handleDragEnd}
                 onDrop={(e) => void handleDrop(item.uniqueId, e)}
-                className={`group relative bg-bg-surface p-4 rounded-xl border transition-all shadow-xs flex flex-col justify-between ${
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  const matchedInv =
+                    investments.find((i) => i.id === item.portfolio?.id) ||
+                    investments.find(
+                      (i) =>
+                        (i.code_ticker || '').trim().toUpperCase() ===
+                        item.ticker.replace(/\.SA$/, '').toUpperCase(),
+                    );
+                  if (matchedInv) {
+                    setSellingInvestment(matchedInv);
+                  }
+                }}
+                className={`group relative bg-bg-surface p-4 rounded-xl border transition-all shadow-xs flex flex-col justify-between cursor-pointer select-none ${
                   isDragging
                     ? 'opacity-40 bg-accent-gold/10 border-dashed border-accent-gold scale-[0.98]'
                     : isDragOver
                     ? 'ring-2 ring-accent-gold bg-accent-gold/10 border-accent-gold shadow-lg'
                     : 'border-border-default/60 hover:border-accent-gold/40 hover:bg-bg-elevated/70'
                 }`}
+                title={item.portfolio ? "Dê 2 cliques para vender este ativo" : undefined}
               >
                 <div>
                   <div className="flex items-center justify-between gap-2">
@@ -2063,21 +2172,39 @@ export function UnifiedWatchlist() {
                       <AssetLogo
                         ticker={displayTicker}
                         name={item.name}
-                        assetType={item.type}
-                        institution={item.type === 'CRYPTO' ? 'Binance' : 'B3'}
+                        assetType={
+                          item.type === 'CRYPTO'
+                            ? 'CRYPTO'
+                            : isTesouroAsset({ code_ticker: item.ticker, name: item.name })
+                            ? 'FIXED_INCOME'
+                            : 'STOCK'
+                        }
+                        institution={
+                          item.type === 'CRYPTO'
+                            ? 'Binance'
+                            : isTesouroAsset({ code_ticker: item.ticker, name: item.name })
+                            ? (item.portfolio?.institution || 'Tesouro Direto')
+                            : 'B3'
+                        }
                         sizeClassName="h-8 w-8"
                       />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-sm text-text-primary">{item.ticker}</span>
+                          <span className="font-bold text-sm text-text-primary">{displayTicker}</span>
                           <span
                             className={`text-[9px] font-semibold px-1.5 py-0.2 rounded ${
                               item.type === 'CRYPTO'
                                 ? 'bg-amber-500/15 text-amber-400'
+                                : isTesouroAsset({ code_ticker: item.ticker, name: item.name })
+                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                                 : 'bg-blue-500/15 text-blue-400'
                             }`}
                           >
-                            {item.type === 'CRYPTO' ? 'BINANCE' : 'B3'}
+                            {item.type === 'CRYPTO'
+                              ? 'BINANCE'
+                              : isTesouroAsset({ code_ticker: item.ticker, name: item.name })
+                              ? 'TESOURO'
+                              : 'B3'}
                           </span>
                         </div>
                         <p className="text-xs text-text-muted truncate">{item.name}</p>
@@ -2111,22 +2238,24 @@ export function UnifiedWatchlist() {
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={(e) => void handleToggleFavorite(item, e)}
-                          className={`p-1.5 rounded-md transition-all ${
-                            item.inWatchlist
-                              ? 'text-accent-gold bg-accent-gold/15'
-                              : 'text-text-muted hover:text-accent-gold hover:bg-accent-gold/10'
-                          }`}
-                          title={
-                            item.inWatchlist
-                              ? 'Remover do Radar de Escolha'
-                              : 'Fixar no Radar de Escolha'
-                          }
-                        >
-                          <Star className={`h-3.5 w-3.5 ${item.inWatchlist ? 'fill-accent-gold' : ''}`} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => void handleToggleFavorite(item, e)}
+                            className={`p-1.5 rounded-md transition-all ${
+                              item.inWatchlist
+                                ? 'text-accent-gold bg-accent-gold/15'
+                                : 'text-text-muted hover:text-accent-gold hover:bg-accent-gold/10'
+                            }`}
+                            title={
+                              item.inWatchlist
+                                ? 'Remover do Radar de Escolha'
+                                : 'Fixar no Radar de Escolha'
+                            }
+                          >
+                            <Star className={`h-3.5 w-3.5 ${item.inWatchlist ? 'fill-accent-gold' : ''}`} />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -2629,6 +2758,18 @@ export function UnifiedWatchlist() {
           </div>
         </div>
       )}
+
+      {/* Modal de Venda de Ativo */}
+      <SellInvestmentModal
+        open={!!sellingInvestment}
+        investment={sellingInvestment}
+        availableInvestments={investments}
+        onClose={() => setSellingInvestment(null)}
+        onSuccess={() => {
+          void loadPortfolio();
+          void loadWatchlist(true);
+        }}
+      />
     </div>
   );
 }

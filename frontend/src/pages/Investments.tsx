@@ -106,7 +106,7 @@ export const getAssetCategoryKey = (inv: Investment): string => {
   const isCrypto =
     inv.asset_type === 'CRYPTO' ||
     inv.institution === 'Binance' ||
-    ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL'].includes(inv.code_ticker?.toUpperCase() || '');
+    ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(inv.code_ticker?.toUpperCase() || '');
   if (isCrypto) return 'CRYPTO';
 
   if (inv.asset_type === 'STOCK') return 'STOCK';
@@ -237,7 +237,7 @@ export function Investments() {
       inv.currency === 'USD' ||
       inv.currency === 'USDT' ||
       name.includes('WISE_USD') ||
-      ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL'].includes(ticker);
+      ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(ticker);
 
     if (isCrypto) return 'USD';
     if (inv.currency === 'EUR' || name.includes('WISE_EUR')) return 'EUR';
@@ -373,6 +373,7 @@ export function Investments() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
   const [sellingInvestment, setSellingInvestment] = useState<Investment | null>(null);
+  const [showSellModal, setShowSellModal] = useState<boolean>(false);
   const [editingTrade, setEditingTrade] = useState<InvestmentTrade | null>(null);
   const [editingRealizedOp, setEditingRealizedOp] = useState<RealizedOperation | null>(null);
   const [realizedOpNewDate, setRealizedOpNewDate] = useState<string>('');
@@ -405,24 +406,31 @@ export function Investments() {
   })();
 
   const fetchInvestments = async () => {
-    setLoading(true);
+    // Só exibe o carregamento inicial se não houver nenhum ativo em memória
+    if (investments.length === 0) {
+      setLoading(true);
+    }
     try {
-      const [invData, divData, tradeRes, evolutionRes, realizedRes] = await Promise.all([
-        api.getInvestments(),
+      // 1. Busca os investimentos e resumo primeiro para renderizar a tabela na hora
+      const invData = await api.getInvestments();
+      setInvestments(invData.investments);
+      setSummary(invData.summary);
+      setLoading(false);
+
+      // 2. Busca proventos, histórico e evolução em paralelo sem travar a interface
+      Promise.all([
         api.getDividends().catch(() => null),
         api.getTrades().catch(() => null),
         api.getInvestmentEvolution().catch(() => null),
         api.getRealizedOperations().catch(() => null),
-      ]);
-      setInvestments(invData.investments);
-      setSummary(invData.summary);
-      if (divData) setDividendsData(divData);
-      if (tradeRes?.trades) setTradesData(tradeRes.trades);
-      if (evolutionRes?.evolution) setEvolutionData(evolutionRes.evolution);
-      if (realizedRes?.operations) setRealizedOperations(realizedRes.operations);
+      ]).then(([divData, tradeRes, evolutionRes, realizedRes]) => {
+        if (divData) setDividendsData(divData);
+        if (tradeRes?.trades) setTradesData(tradeRes.trades);
+        if (evolutionRes?.evolution) setEvolutionData(evolutionRes.evolution);
+        if (realizedRes?.operations) setRealizedOperations(realizedRes.operations);
+      });
     } catch (err) {
       notify('Falha ao carregar investimentos.', 'error');
-    } finally {
       setLoading(false);
     }
   };
@@ -1908,7 +1916,7 @@ export function Investments() {
                     const isCrypto =
                       inv.asset_type === 'CRYPTO' ||
                       inv.institution === 'Binance' ||
-                      ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL'].includes(inv.code_ticker?.toUpperCase() || '');
+                      ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(inv.code_ticker?.toUpperCase() || '');
 
                     let curPrice = inv.current_price || inv.average_price || 0;
                     if (inv.sync_source && inv.sync_source.includes('#')) {
@@ -1936,7 +1944,7 @@ export function Investments() {
                     const isCrypto =
                       inv.asset_type === 'CRYPTO' ||
                       inv.institution === 'Binance' ||
-                      ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL'].includes(inv.code_ticker?.toUpperCase() || '');
+                      ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(inv.code_ticker?.toUpperCase() || '');
 
                     let avgPrice = inv.average_price || inv.current_price || 0;
                     if (inv.sync_source && inv.sync_source.includes('#')) {
@@ -1989,7 +1997,7 @@ export function Investments() {
                     const isCrypto =
                       inv.asset_type === 'CRYPTO' ||
                       inv.institution === 'Binance' ||
-                      ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL'].includes(inv.code_ticker?.toUpperCase() || '');
+                      ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(inv.code_ticker?.toUpperCase() || '');
                     if (isCrypto && inv.currency === 'BRL') {
                       curPrice = curPrice * (rates['usd'] ?? 0.1818);
                     }
@@ -2213,7 +2221,7 @@ export function Investments() {
                                 const isCrypto =
                                   inv.asset_type === 'CRYPTO' ||
                                   inv.institution === 'Binance' ||
-                                  ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL'].includes(inv.code_ticker?.toUpperCase() || '');
+                                  ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(inv.code_ticker?.toUpperCase() || '');
 
                                 const nativeCurr = getNativeCurrency(inv);
 
@@ -2256,14 +2264,12 @@ export function Investments() {
                                   <tr
                                     key={inv.id}
                                     onDoubleClick={() => {
-                                      setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
-                                      setEditingInvestment(inv);
-                                      setShowAddModal(true);
+                                      setSellingInvestment(inv);
                                     }}
                                     className={`transition-colors cursor-pointer select-none border-b ${
                                       isDark ? 'border-slate-800/80 hover:bg-slate-800/40' : 'border-slate-100 hover:bg-slate-50/70'
                                     }`}
-                                    title="Clique 2x para editar este ativo"
+                                    title="Dê 2 cliques para vender este ativo"
                                   >
                                     {/* Ativo com Foto Real + Nome / Ticker + Banco/Corretora */}
                                     <td className="pl-4 sm:pl-5 pr-2 py-3">
@@ -2358,21 +2364,23 @@ export function Investments() {
                                       {pctCarteira.toFixed(2)}%
                                     </td>
 
-                                    {/* Opções (...) com Menu Dropdown */}
+                                    {/* Opções com Botão Direto de Vender e (...) */}
                                     <td
                                       className="pr-4 sm:pr-5 pl-2 py-3 text-right relative"
                                       onClick={(e) => e.stopPropagation()}
                                     >
-                                      <button
-                                        type="button"
-                                        onClick={() => setOpenOptionMenuId(isOptionOpen ? null : inv.id)}
-                                        className={`p-1 rounded transition-colors ${
-                                          isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'
-                                        }`}
-                                        title="Mais opções"
-                                      >
-                                        <MoreHorizontal className="h-4 w-4" />
-                                      </button>
+                                      <div className="inline-flex items-center justify-end gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => setOpenOptionMenuId(isOptionOpen ? null : inv.id)}
+                                          className={`p-1 rounded transition-colors ${
+                                            isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'
+                                          }`}
+                                          title="Mais opções"
+                                        >
+                                          <MoreHorizontal className="h-4 w-4" />
+                                        </button>
+                                      </div>
 
                                       {isOptionOpen && (
                                         <div className={`absolute right-4 top-8 w-44 rounded-xl border p-1.5 z-50 text-left space-y-0.5 animate-fade-in ${
@@ -2576,9 +2584,13 @@ export function Investments() {
       />
 
       <SellInvestmentModal
-        open={!!sellingInvestment}
+        open={!!sellingInvestment || showSellModal}
         investment={sellingInvestment}
-        onClose={() => setSellingInvestment(null)}
+        availableInvestments={investments}
+        onClose={() => {
+          setSellingInvestment(null);
+          setShowSellModal(false);
+        }}
         onSuccess={fetchInvestments}
       />
 

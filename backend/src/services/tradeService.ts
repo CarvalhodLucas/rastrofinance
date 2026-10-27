@@ -252,6 +252,10 @@ export async function sellInvestmentPosition(
   }
 
   // 2. Registrar no Histórico Unificado de Transações (Extrato / TRADES)
+  const tradeDate = sellData.date
+    ? (sellData.date.includes('T') ? sellData.date : `${sellData.date}T12:00:00.000Z`)
+    : new Date().toISOString();
+
   const trade = await recordInvestmentTrade({
     trade_type: 'SELL',
     asset_type: investment.asset_type as TradeAssetType,
@@ -263,7 +267,7 @@ export async function sellInvestmentPosition(
     total_value: grossSale,
     from_ticker: investment.code_ticker,
     from_quantity: sellQty,
-    date: sellData.date ? new Date(sellData.date).toISOString() : new Date().toISOString(),
+    date: tradeDate,
     source: 'MANUAL',
     notes: sellData.notes || `Venda manual (Resultado: ${realizedPnl >= 0 ? '+' : ''}R$ ${realizedPnl.toFixed(2)})`,
   }, user);

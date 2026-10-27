@@ -99,6 +99,23 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
       ).slice(0, 8);
       setSuggestions(matches);
       setShowSuggestions(true);
+
+      // Se o usuário digitou ou colou o ticker completo exato, adianta nome e tipo
+      const exact = rastroAssets.find((a) => a.ticker.toUpperCase() === clean.trim());
+      if (exact && !name) {
+        setName(exact.name);
+        if (exact.type === 'FIIs' || exact.ticker.endsWith('11')) {
+          setAssetType('FII');
+          if (!institution || institution === 'B3') setInstitution(defaultBank);
+        } else if (exact.type === 'Ações') {
+          setAssetType('STOCK');
+          if (!institution || institution === 'B3') setInstitution(defaultBank);
+        } else if (exact.type === 'Cripto' || exact.exchange === 'Crypto') {
+          setAssetType('CRYPTO');
+          setInstitution('Binance');
+          setCurrency('USD');
+        }
+      }
     } else {
       setSuggestions([]);
       setShowSuggestions(false);
@@ -129,7 +146,9 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
       const q = await api.getQuote(item.ticker, 'compact');
       if (q && q.price && q.price > 0) {
         setCurrentPrice(String(q.price));
-        if (!averagePrice) setAveragePrice(String(q.price));
+        if (!averagePrice || averagePrice === '0' || averagePrice === '0.00') {
+          setAveragePrice(String(q.price));
+        }
       }
     } catch {
       // ignora erro de cotação se não encontrar
@@ -141,26 +160,46 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
   const handleLookupOnline = async (symbolToLookup: string) => {
     const clean = symbolToLookup.trim().toUpperCase();
     if (!clean) return;
+
+    // Se já estiver na base local, preenche os dados cadastrais imediatamente
+    const localMatch = rastroAssets.find((a) => a.ticker.toUpperCase() === clean);
+    if (localMatch) {
+      setName(localMatch.name);
+      if (localMatch.type === 'FIIs' || clean.endsWith('11')) {
+        setAssetType('FII');
+        if (!institution || institution === 'B3') setInstitution(defaultBank);
+      } else if (localMatch.type === 'Ações') {
+        setAssetType('STOCK');
+        if (!institution || institution === 'B3') setInstitution(defaultBank);
+      } else if (localMatch.type === 'Cripto' || localMatch.exchange === 'Crypto') {
+        setAssetType('CRYPTO');
+        setInstitution('Binance');
+        setCurrency('USD');
+      }
+    }
+
     setFetchingQuote(true);
     setShowSuggestions(false);
     try {
       const q = await api.getQuote(clean, 'compact');
       if (q && q.price && q.price > 0) {
-        setName(q.name || clean);
+        if (!name && q.name) setName(q.name);
         setCurrentPrice(String(q.price));
         if (!averagePrice || averagePrice === '0' || averagePrice === '0.00') {
           setAveragePrice(String(q.price));
         }
-        if (clean.endsWith('11')) {
-          setAssetType('FII');
-          if (!institution || institution === 'B3') setInstitution(defaultBank);
-        } else if (/[0-9]$/.test(clean)) {
-          setAssetType('STOCK');
-          if (!institution || institution === 'B3') setInstitution(defaultBank);
-        } else {
-          setAssetType('CRYPTO');
-          setInstitution('Binance');
-          setCurrency('USD');
+        if (!localMatch) {
+          if (clean.endsWith('11')) {
+            setAssetType('FII');
+            if (!institution || institution === 'B3') setInstitution(defaultBank);
+          } else if (/[0-9]$/.test(clean)) {
+            setAssetType('STOCK');
+            if (!institution || institution === 'B3') setInstitution(defaultBank);
+          } else {
+            setAssetType('CRYPTO');
+            setInstitution('Binance');
+            setCurrency('USD');
+          }
         }
       }
     } catch {
@@ -170,9 +209,22 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
     }
   };
 
-  const handleTickerBlur = () => {
-    if (ticker.trim().length >= 3 && (!currentPrice || currentPrice === '0' || !name)) {
-      handleLookupOnline(ticker);
+  const handleTickerBlur = (e: React.FocusEvent) => {
+    if (searchRef.current && searchRef.current.contains(e.relatedTarget as Node)) {
+      return;
+    }
+    setTimeout(() => {
+      setShowSuggestions(false);
+    }, 150);
+
+    const clean = ticker.trim().toUpperCase();
+    if (clean.length >= 3 && (!currentPrice || currentPrice === '0' || !name)) {
+      const exact = rastroAssets.find((a) => a.ticker.toUpperCase() === clean);
+      if (exact) {
+        handleSelectSuggestion(exact);
+      } else {
+        handleLookupOnline(clean);
+      }
     }
   };
 
@@ -187,7 +239,7 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
       const isCrypto =
         investmentToEdit.asset_type === 'CRYPTO' ||
         (investmentToEdit.institution || '').toUpperCase().includes('BINANCE') ||
-        ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL'].includes(
+        ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(
           (investmentToEdit.code_ticker || '').toUpperCase()
         );
 
@@ -337,6 +389,24 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
                   onChange={(e) => handleTickerChange(e.target.value)}
                   onFocus={() => ticker && handleTickerChange(ticker)}
                   onBlur={handleTickerBlur}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (showSuggestions && suggestions.length > 0) {
+                        handleSelectSuggestion(suggestions[0]);
+                      } else if (ticker.trim().length >= 2) {
+                        const clean = ticker.trim().toUpperCase();
+                        const match = rastroAssets.find((a) => a.ticker.toUpperCase() === clean);
+                        if (match) {
+                          handleSelectSuggestion(match);
+                        } else {
+                          handleLookupOnline(clean);
+                        }
+                      }
+                    } else if (e.key === 'Escape') {
+                      setShowSuggestions(false);
+                    }
+                  }}
                   placeholder="Ex: POMO4, PETR4, MXRF11"
                   className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base font-medium uppercase text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
                 />
@@ -344,7 +414,10 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
 
               {/* Dropdown de sugestões do banco RASTRO */}
               {showSuggestions && (suggestions.length > 0 || ticker.trim().length >= 2) && (
-                <div className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-xl border border-border bg-bg-card p-1.5 shadow-2xl z-50 animate-fade-in space-y-1">
+                <div
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-xl border border-border bg-bg-card p-1.5 shadow-2xl z-50 animate-fade-in space-y-1"
+                >
                   <div className="px-3 py-1 text-xs font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1 border-b border-border/50 pb-1">
                     <Search className="h-3.5 w-3.5 text-accent-gold" />
                     <span>Banco de Ativos (RASTRO)</span>
@@ -353,8 +426,15 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
                     <button
                       key={item.ticker}
                       type="button"
-                      onClick={() => handleSelectSuggestion(item)}
-                      className="w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs sm:text-sm text-left hover:bg-bg-elevated transition-colors group"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectSuggestion(item);
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleSelectSuggestion(item);
+                      }}
+                      className="w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs sm:text-sm text-left hover:bg-bg-elevated transition-colors group cursor-pointer"
                     >
                       <div className="flex flex-col truncate">
                         <span className="font-bold font-mono text-accent-gold group-hover:text-amber-300">
@@ -376,7 +456,11 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
                         e.preventDefault();
                         handleLookupOnline(ticker);
                       }}
-                      className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-xs sm:text-sm text-left text-accent-gold hover:bg-bg-elevated transition-colors border-t border-border/50 font-medium"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleLookupOnline(ticker);
+                      }}
+                      className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-xs sm:text-sm text-left text-accent-gold hover:bg-bg-elevated transition-colors border-t border-border/50 font-medium cursor-pointer"
                     >
                       <Search className="h-3.5 w-3.5" />
                       <span>Buscar cotação online de "{ticker}"</span>

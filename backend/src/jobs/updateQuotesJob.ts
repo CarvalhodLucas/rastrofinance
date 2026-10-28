@@ -15,12 +15,10 @@ export async function runUpdateQuotesJob(user?: UserSessionPayload | null): Prom
     const quoteEligibleInvestments = investments.filter(
       (i) =>
         i.code_ticker &&
-        !i.code_ticker.includes('RENDA+') &&
-        !i.code_ticker.startsWith('LTN') &&
         !i.code_ticker.startsWith('CDB') &&
         !i.code_ticker.startsWith('LCI') &&
         !i.code_ticker.startsWith('LCA') &&
-        !i.code_ticker.startsWith('TESOURO')
+        !i.code_ticker.startsWith('WISE')
     );
 
     const usdRate = await getUsdBrlRate();
@@ -64,14 +62,17 @@ export async function runUpdateQuotesJob(user?: UserSessionPayload | null): Prom
                 updatedSyncSource = `${parts[0] || 'MANUAL'}#${parts[1] || inv.average_price || 0}#${finalPrice}` as any;
               }
 
-              await upsertInvestment({
-                ...inv,
-                current_price: finalPrice,
-                total_value: newTotalVal,
-                sync_source: updatedSyncSource,
-                currency: isCryptoAsset ? 'USD' : 'BRL',
-                last_synced_at: new Date().toISOString(),
-              });
+              await upsertInvestment(
+                {
+                  ...inv,
+                  current_price: finalPrice,
+                  total_value: newTotalVal,
+                  sync_source: updatedSyncSource,
+                  currency: isCryptoAsset ? 'USD' : 'BRL',
+                  last_synced_at: new Date().toISOString(),
+                },
+                user,
+              );
               return true;
             }
           } catch (e: any) {

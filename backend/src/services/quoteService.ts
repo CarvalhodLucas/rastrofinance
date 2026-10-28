@@ -196,6 +196,146 @@ async function getStockSparkline(yahooSymbol: string): Promise<number[]> {
   }
 }
 
+interface TesouroBondInfo {
+  name: string;
+  price: number;
+  investmentPrice: number;
+  redemptionPrice: number;
+  indexer?: string;
+  isin?: string;
+  maturity?: string;
+}
+
+const TESOURO_CACHE_KEY = 'TESOURO_DIRETO_BONDS_MAP';
+const TESOURO_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutos
+
+export function isTesouroDiretoTicker(ticker: string): boolean {
+  const t = ticker.toUpperCase().trim();
+  return (
+    t.includes('TESOURO') ||
+    t.includes('RENDA+') ||
+    t.includes('EDUCA+') ||
+    t.startsWith('LTN') ||
+    t.startsWith('NTNB') ||
+    t.startsWith('NTN-B') ||
+    t.startsWith('LFT')
+  );
+}
+
+async function getAllTesouroBondsMap(): Promise<Map<string, TesouroBondInfo>> {
+  const cached = memoryCache.get(TESOURO_CACHE_KEY);
+  if (cached && Date.now() - cached.timestamp < TESOURO_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  const map = new Map<string, TesouroBondInfo>();
+
+  try {
+    const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+    const [resInvest, resResgate] = (await Promise.all([
+      fetch('https://www.tesourodireto.com.br/o/rentabilidade/investir', { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('https://www.tesourodireto.com.br/o/rentabilidade/resgatar', { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+    ])) as [any, any];
+
+    // 1. Preenche a partir do endpoint de resgate (todos os títulos ativos com PU de mercado para resgate)
+    for (const b of (resResgate?.TesouroLegado || [])) {
+      if (!b.treasuryBondName) continue;
+      const key = b.treasuryBondName.toUpperCase().trim();
+      map.set(key, {
+        name: b.treasuryBondName,
+        price: b.unitaryRedemptionValue || 0,
+        redemptionPrice: b.unitaryRedemptionValue || 0,
+        investmentPrice: b.unitaryInvestmentValue || 0,
+        indexer: b.redemptionProfitabilityFeeIndexerName || b.investmentProfitabilityIndexerName,
+        isin: b.isinCode,
+        maturity: b.maturityDate,
+      });
+    }
+
+    // 2. Mescla com títulos em oferta para investimento (atualiza preço com unitaryInvestmentValue se disponível)
+    for (const b of (resInvest?.TesouroLegado || [])) {
+      if (!b.treasuryBondName) continue;
+      const key = b.treasuryBondName.toUpperCase().trim();
+      const existing = map.get(key);
+      const investVal = b.unitaryInvestmentValue || 0;
+      const redVal = b.unitaryRedemptionValue || existing?.redemptionPrice || 0;
+      const finalPrice = investVal > 0 ? investVal : (redVal > 0 ? redVal : (existing?.price || 0));
+
+      map.set(key, {
+        ...existing,
+        name: b.treasuryBondName,
+        price: finalPrice,
+        investmentPrice: investVal,
+        redemptionPrice: redVal,
+        indexer: b.investmentProfitabilityIndexerName || b.redemptionProfitabilityFeeIndexerName || existing?.indexer,
+        isin: b.isinCode || existing?.isin,
+        maturity: b.maturityDate || existing?.maturity,
+      });
+    }
+
+    if (map.size > 0) {
+      memoryCache.set(TESOURO_CACHE_KEY, { data: map, timestamp: Date.now() });
+    }
+  } catch (err: any) {
+    console.warn('[quoteService] Erro ao carregar cotações do Tesouro Direto:', err?.message || err);
+  }
+
+  return map;
+}
+
+export async function getTesouroDiretoQuote(ticker: string): Promise<TesouroBondInfo | null> {
+  const q = ticker.toUpperCase().trim();
+  const map = await getAllTesouroBondsMap();
+  if (map.size === 0) return null;
+
+  // 1. Busca direta exata pela chave
+  if (map.has(q)) return map.get(q)!;
+
+  // 2. Mapeamentos específicos por títulos do portfólio
+  if (q.includes('RENDA+') && q.includes('2065')) {
+    for (const [k, v] of map.entries()) {
+      if (k.includes('RENDA+') && k.includes('2065')) return v;
+    }
+  }
+  if (q.includes('LTN') && q.includes('2028')) {
+    for (const [k, v] of map.entries()) {
+      if (k.includes('PREFIXADO') && k.includes('2028') && !k.includes('JUROS')) return v;
+    }
+  }
+  if (q.includes('NTNB') && q.includes('2029')) {
+    for (const [k, v] of map.entries()) {
+      if (k.includes('IPCA+') && k.includes('2029') && !k.includes('JUROS')) return v;
+    }
+  }
+
+  // 3. Busca por ano e tipo de título
+  const yearMatch = q.match(/\b(20[2-8][0-9])\b/);
+  const year = yearMatch ? yearMatch[1] : null;
+
+  let typeWord = '';
+  if (q.includes('RENDA')) typeWord = 'RENDA+';
+  else if (q.includes('EDUCA')) typeWord = 'EDUCA+';
+  else if (q.includes('SELIC') || q.includes('LFT')) typeWord = 'SELIC';
+  else if (q.includes('PREFIXADO') || q.includes('LTN')) typeWord = 'PREFIXADO';
+  else if (q.includes('IPCA') || q.includes('NTNB')) typeWord = 'IPCA+';
+
+  for (const [k, v] of map.entries()) {
+    if (year && k.includes(year)) {
+      if (typeWord && k.includes(typeWord)) {
+        if (!q.includes('JUROS') && k.includes('JUROS SEMESTRAIS')) continue;
+        return v;
+      }
+    }
+  }
+
+  // Fallback: substring
+  for (const [k, v] of map.entries()) {
+    if (k.includes(q) || q.includes(k)) return v;
+  }
+
+  return null;
+}
+
 /**
  * Busca e calcula variações em múltiplos períodos (1D, 7D, 30D, 1Y) para Criptomoedas na Binance.
  */
@@ -502,6 +642,37 @@ export async function processQuoteTicker(
     };
     memoryCache.set(cacheKey, { data: resBinance, timestamp: Date.now() });
     return resBinance;
+  }
+
+  // 2. Tentar obter cotação oficial do Tesouro Direto (PU e taxas do Tesouro Nacional / B3)
+  if (isTesouroDiretoTicker(originalSymbol)) {
+    const tdQuote = await getTesouroDiretoQuote(originalSymbol);
+    if (tdQuote && tdQuote.price > 0) {
+      const resTd = {
+        symbol: originalSymbol,
+        yahooSymbol: originalSymbol,
+        price: tdQuote.price,
+        name: tdQuote.name,
+        variation: '0.00',
+        changeAmount: 0,
+        high24h: tdQuote.investmentPrice || tdQuote.price,
+        low24h: tdQuote.redemptionPrice || tdQuote.price,
+        volume: 0,
+        marketCap: '--',
+        currency: 'BRL',
+        p_l: 0,
+        dy: 0,
+        vpa: tdQuote.price,
+        lpa: 0,
+        pvp: 1,
+        recommendation: 'COMPRA',
+        variations: { '1D': '0.00', '7D': '0.00', '30D': '0.00', '1Y': '0.00' },
+        changeAmounts: { '1D': 0, '7D': 0, '30D': 0, '1Y': 0 },
+        sparklines: { '1D': [], '7D': [], '30D': [], '1Y': [] },
+      };
+      memoryCache.set(cacheKey, { data: resTd, timestamp: Date.now() });
+      return resTd;
+    }
   }
 
   try {

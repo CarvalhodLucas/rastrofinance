@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { X, Loader2, Save, Search, Zap, Calendar } from 'lucide-react';
+import { X, Loader2, Save, Search, Zap, Calendar, Wallet, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { api } from '@/services/api';
@@ -52,6 +52,7 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
   const [transactionDate, setTransactionDate] = useState(() => new Date().toISOString().substring(0, 10));
   const [loading, setLoading] = useState(false);
   const [fetchingQuote, setFetchingQuote] = useState(false);
+  const [isCaixinha, setIsCaixinha] = useState(false);
 
   // Contas bancárias conectadas do usuário
   const [connectedBanks, setConnectedBanks] = useState<string[]>([]);
@@ -236,12 +237,22 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
       setInstitution(investmentToEdit.institution || defaultBank);
       setQuantity(String(investmentToEdit.quantity));
 
+      const isCaixinhaAsset =
+        (investmentToEdit.code_ticker || '').toUpperCase().includes('WISE') ||
+        (investmentToEdit.institution || '').toUpperCase().includes('WISE') ||
+        (investmentToEdit.name || '').toUpperCase().includes('CAIXINHA') ||
+        (investmentToEdit.name || '').toUpperCase().includes('WISE') ||
+        (investmentToEdit.name || '').toUpperCase().includes('RESERVA');
+
+      setIsCaixinha(isCaixinhaAsset);
+
       const isCrypto =
-        investmentToEdit.asset_type === 'CRYPTO' ||
+        !isCaixinhaAsset &&
+        (investmentToEdit.asset_type === 'CRYPTO' ||
         (investmentToEdit.institution || '').toUpperCase().includes('BINANCE') ||
         ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(
           (investmentToEdit.code_ticker || '').toUpperCase()
-        );
+        ));
 
       let avgP = investmentToEdit.average_price || 0;
       let curP = investmentToEdit.current_price || 0;
@@ -253,8 +264,8 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
         curP = curP * usdRate;
       }
 
-      setAveragePrice(String(avgP));
-      setCurrentPrice(String(curP));
+      setAveragePrice(isCaixinhaAsset ? '1' : String(avgP));
+      setCurrentPrice(isCaixinhaAsset ? '1' : String(curP));
       setCurrency(isCrypto ? 'USD' : investmentToEdit.currency || 'BRL');
       setYieldRate(investmentToEdit.yield_rate !== undefined && investmentToEdit.yield_rate > 0 ? String(investmentToEdit.yield_rate) : '');
       setYieldFrequency(investmentToEdit.yield_frequency || 'MONTHLY');
@@ -275,6 +286,7 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
       setYieldRate('');
       setYieldFrequency('MONTHLY');
       setTransactionDate(new Date().toISOString().substring(0, 10));
+      setIsCaixinha(false);
     }
   }, [investmentToEdit, initialAssetType, open, defaultBank]);
 
@@ -282,6 +294,73 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isCaixinha) {
+      if (!name.trim()) {
+        notify('O nome da caixinha é obrigatório.', 'error');
+        return;
+      }
+      const qty = parseFloat(quantity);
+      if (isNaN(qty) || qty <= 0) {
+        notify('Informe um saldo válido para a caixinha.', 'error');
+        return;
+      }
+
+      let autoTicker = ticker.trim().toUpperCase();
+      if (!autoTicker) {
+        const instUpper = institution.toUpperCase();
+        if (instUpper.includes('WISE')) {
+          autoTicker = currency === 'EUR' ? 'WISE_EUR' : currency === 'CLP' ? 'WISE_CLP' : 'WISE_USD';
+        } else {
+          autoTicker = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 15) || `CAIXINHA_${currency}`;
+        }
+      }
+
+      const parsedYield = yieldRate.trim() ? parseFloat(yieldRate.replace(',', '.')) : 0;
+      setLoading(true);
+      try {
+        if (investmentToEdit?.id) {
+          const srcPrefix = (investmentToEdit.sync_source || 'MANUAL').split('#')[0];
+          await api.updateInvestment(investmentToEdit.id, {
+            name: name.trim(),
+            code_ticker: autoTicker,
+            asset_type: 'FIXED_INCOME',
+            institution: institution.trim() || 'Wise',
+            quantity: qty,
+            average_price: 1,
+            current_price: 1,
+            currency,
+            sync_source: `${srcPrefix}#1#1` as any,
+            yield_rate: parsedYield,
+            yield_frequency: yieldFrequency,
+            date: transactionDate,
+          });
+          notify('Caixinha atualizada com sucesso!', 'success');
+        } else {
+          await api.createInvestment({
+            name: name.trim(),
+            code_ticker: autoTicker,
+            asset_type: 'FIXED_INCOME',
+            institution: institution.trim() || 'Wise',
+            quantity: qty,
+            average_price: 1,
+            current_price: 1,
+            currency,
+            yield_rate: parsedYield,
+            yield_frequency: yieldFrequency,
+            date: transactionDate,
+          });
+          notify('Caixinha cadastrada com sucesso!', 'success');
+        }
+        onSuccess();
+        onClose();
+      } catch (err) {
+        notify(err instanceof Error ? err.message : 'Falha ao salvar caixinha.', 'error');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     if (!name.trim() || !ticker.trim()) {
       notify('Nome e Ticker são obrigatórios.', 'error');
@@ -360,9 +439,18 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-md rounded-2xl border border-border bg-bg-card p-6 shadow-2xl">
         <div className="flex items-center justify-between border-b border-border pb-4">
-          <h2 className="text-xl font-bold text-text-primary">
-            {investmentToEdit ? 'Editar Ativo' : 'Novo Ativo de Investimento'}
-          </h2>
+          <div>
+            <h2 className="text-xl font-bold text-text-primary">
+              {investmentToEdit
+                ? (isCaixinha ? 'Editar Caixinha / Reserva' : 'Editar Ativo')
+                : (isCaixinha ? 'Nova Caixinha / Reserva' : 'Novo Ativo de Investimento')}
+            </h2>
+            <p className="text-xs text-text-secondary mt-0.5">
+              {isCaixinha
+                ? 'Contas remuneradas, saldo direto e caixinhas (Wise, Nubank, etc.)'
+                : 'Ações, FIIs, Criptomoedas e Renda Fixa com cotações'}
+            </p>
+          </div>
           <button
             onClick={onClose}
             className="rounded-lg p-1.5 text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors"
@@ -372,259 +460,415 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="relative" ref={searchRef}>
-              <label className="block text-sm font-semibold text-text-primary mb-1.5 flex items-center justify-between">
-                <span>Ticker / Código *</span>
-                {fetchingQuote && (
-                  <span className="text-xs text-accent-gold flex items-center gap-1 font-normal">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Buscando preço...
-                  </span>
-                )}
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={ticker}
-                  onChange={(e) => handleTickerChange(e.target.value)}
-                  onFocus={() => ticker && handleTickerChange(ticker)}
-                  onBlur={handleTickerBlur}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (showSuggestions && suggestions.length > 0) {
-                        handleSelectSuggestion(suggestions[0]);
-                      } else if (ticker.trim().length >= 2) {
-                        const clean = ticker.trim().toUpperCase();
-                        const match = rastroAssets.find((a) => a.ticker.toUpperCase() === clean);
-                        if (match) {
-                          handleSelectSuggestion(match);
-                        } else {
-                          handleLookupOnline(clean);
-                        }
-                      }
-                    } else if (e.key === 'Escape') {
-                      setShowSuggestions(false);
-                    }
-                  }}
-                  placeholder="Ex: POMO4, PETR4, MXRF11"
-                  className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base font-medium uppercase text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
-                />
-              </div>
-
-              {/* Dropdown de sugestões do banco RASTRO */}
-              {showSuggestions && (suggestions.length > 0 || ticker.trim().length >= 2) && (
-                <div
-                  onMouseDown={(e) => e.preventDefault()}
-                  className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-xl border border-border bg-bg-card p-1.5 shadow-2xl z-50 animate-fade-in space-y-1"
-                >
-                  <div className="px-3 py-1 text-xs font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1 border-b border-border/50 pb-1">
-                    <Search className="h-3.5 w-3.5 text-accent-gold" />
-                    <span>Banco de Ativos (RASTRO)</span>
-                  </div>
-                  {suggestions.map((item) => (
-                    <button
-                      key={item.ticker}
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleSelectSuggestion(item);
-                      }}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleSelectSuggestion(item);
-                      }}
-                      className="w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs sm:text-sm text-left hover:bg-bg-elevated transition-colors group cursor-pointer"
-                    >
-                      <div className="flex flex-col truncate">
-                        <span className="font-bold font-mono text-accent-gold group-hover:text-amber-300">
-                          {item.ticker}
-                        </span>
-                        <span className="text-xs text-text-secondary truncate">
-                          {item.name}
-                        </span>
-                      </div>
-                      <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-bg-primary text-text-secondary border border-border">
-                        {item.type || 'B3'}
-                      </span>
-                    </button>
-                  ))}
-                  {ticker.trim().length >= 2 && (
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleLookupOnline(ticker);
-                      }}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleLookupOnline(ticker);
-                      }}
-                      className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-xs sm:text-sm text-left text-accent-gold hover:bg-bg-elevated transition-colors border-t border-border/50 font-medium cursor-pointer"
-                    >
-                      <Search className="h-3.5 w-3.5" />
-                      <span>Buscar cotação online de "{ticker}"</span>
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-text-primary mb-1.5">
-                Tipo de Ativo *
-              </label>
-              <select
-                value={assetType}
-                onChange={(e) => {
-                  const val = e.target.value as AssetType;
-                  setAssetType(val);
-                  if (val === 'CRYPTO') {
-                    setCurrency('USD');
-                  }
-                }}
-                className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base text-text-primary focus:border-accent-gold focus:outline-none"
-              >
-                <option value="STOCK">Ação Brasil (B3)</option>
-                <option value="FII">Fundo Imobiliário (FII)</option>
-                <option value="CRYPTO">Criptomoeda</option>
-                <option value="FIXED_INCOME">Renda Fixa (Tesouro/CDB)</option>
-                <option value="OTHER">Outros / Internacional</option>
-              </select>
-            </div>
+          {/* Alternador de Modo: Investimento vs Caixinha */}
+          <div className="flex rounded-xl p-1 bg-bg-primary border border-border">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCaixinha(false);
+              }}
+              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                !isCaixinha
+                  ? 'bg-bg-card text-text-primary shadow-xs border border-border/80 font-bold'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
+              <span>Ações / Cripto / FII</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsCaixinha(true);
+                setAssetType('FIXED_INCOME');
+                if (!name) setName('Wise Dólar (USD)');
+                if (!institution || institution === 'XP Investimentos') setInstitution('Wise');
+                if (!currency || currency === 'BRL') setCurrency('USD');
+                setAveragePrice('1');
+                setCurrentPrice('1');
+              }}
+              className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                isCaixinha
+                  ? 'bg-emerald-500/15 text-emerald-400 shadow-xs border border-emerald-500/30 font-bold'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Wallet className="h-3.5 w-3.5 text-emerald-500" />
+              <span>Caixinha / Reserva (Wise)</span>
+            </button>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-text-primary mb-1.5">
-              Nome do Ativo / Descrição *
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Marcopolo S.A., Petrobras PN, Bitcoin"
-              className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5 flex items-center justify-between">
-                <span>Banco / Corretora *</span>
-                <span className="text-xs text-text-secondary font-normal">Onde comprou</span>
-              </label>
-              <div className="relative">
+          {isCaixinha ? (
+            /* ======================================================== */
+            /* MODO CAIXINHA / RESERVA (WISE, NUBANK, ETC.)             */
+            /* ======================================================== */
+            <div className="space-y-4 animate-fade-in">
+              <div>
+                <label className="block text-sm font-semibold text-text-primary mb-1.5">
+                  Nome da Caixinha / Reserva *
+                </label>
                 <input
                   type="text"
-                  list="institution-options"
-                  value={institution}
-                  onChange={(e) => setInstitution(e.target.value)}
-                  placeholder="Selecione ou digite o banco"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Wise Dólar, Wise Euro, Caixinha Nubank"
                   className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
                 />
-                <datalist id="institution-options">
-                  {allInstitutionOptions.map((inst) => (
-                    <option key={inst} value={inst} />
-                  ))}
-                </datalist>
               </div>
-              {/* Chips rápidos dos principais bancos do usuário */}
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {topQuickInstitutions.map((inst) => (
-                  <button
-                    key={inst}
-                    type="button"
-                    onClick={() => setInstitution(inst)}
-                    className={`px-2.5 py-1 text-xs rounded-lg border transition-all ${
-                      institution === inst
-                        ? 'border-accent-gold bg-accent-gold/20 text-accent-gold font-bold shadow-xs'
-                        : 'border-border/60 bg-bg-elevated/40 text-text-secondary hover:text-text-primary hover:border-border'
-                    }`}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-text-primary mb-1.5">
+                    Instituição / Banco *
+                  </label>
+                  <input
+                    type="text"
+                    list="institution-options"
+                    value={institution}
+                    onChange={(e) => setInstitution(e.target.value)}
+                    placeholder="Wise, Nubank, etc."
+                    className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['Wise', 'Nubank', 'Inter', 'Santander'].map((b) => (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => {
+                          setInstitution(b);
+                          if (b === 'Wise' && currency === 'BRL') setCurrency('USD');
+                        }}
+                        className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                          institution === b
+                            ? 'bg-accent-gold/20 text-accent-gold border border-accent-gold/40 font-bold'
+                            : 'bg-bg-elevated text-text-secondary hover:text-text-primary border border-border/50'
+                        }`}
+                      >
+                        {b}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-text-primary mb-1.5">
+                    Moeda da Caixinha *
+                  </label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm text-text-primary focus:border-accent-gold focus:outline-none"
                   >
-                    {inst}
-                  </button>
-                ))}
+                    <option value="USD">🇺🇸 Dólar (USD $)</option>
+                    <option value="EUR">🇪🇺 Euro (EUR €)</option>
+                    <option value="BRL">🇧🇷 Real (BRL R$)</option>
+                    <option value="CLP">🇨🇱 Peso Chileno (CLP $)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-text-primary mb-1.5">
+                    Saldo Atual *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="any"
+                      value={quantity}
+                      onChange={(e) => {
+                        setQuantity(e.target.value);
+                        setAveragePrice('1');
+                        setCurrentPrice('1');
+                      }}
+                      placeholder="0.00"
+                      className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base font-bold text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none pr-12 font-mono"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-text-secondary">
+                      {currency}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-text-secondary mt-1">
+                    Preço fixado em 1,00 (saldo puro).
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-text-primary mb-1.5 flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4 text-accent-gold" />
+                    Data do Saldo *
+                  </label>
+                  <input
+                    type="date"
+                    value={transactionDate}
+                    onChange={(e) => setTransactionDate(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-bg-primary px-3 py-2 text-sm sm:text-base font-medium text-text-primary focus:border-accent-gold focus:outline-none cursor-pointer"
+                  />
+                </div>
               </div>
             </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5">
-                  Moeda
-                </label>
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base text-text-primary focus:border-accent-gold focus:outline-none"
-                >
-                  <option value="BRL">BRL (R$)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="CLP">CLP ($)</option>
-                  <option value="USDT">USDT</option>
-                </select>
+          ) : (
+            /* ======================================================== */
+            /* MODO INVESTIMENTO TRADICIONAL (AÇÕES, FIIS, CRIPTO)      */
+            /* ======================================================== */
+            <div className="space-y-4 animate-fade-in">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative" ref={searchRef}>
+                  <label className="block text-sm font-semibold text-text-primary mb-1.5 flex items-center justify-between">
+                    <span>Ticker / Código *</span>
+                    {fetchingQuote && (
+                      <span className="text-xs text-accent-gold flex items-center gap-1 font-normal">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Preço...
+                      </span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={ticker}
+                      onChange={(e) => handleTickerChange(e.target.value)}
+                      onFocus={() => ticker && handleTickerChange(ticker)}
+                      onBlur={handleTickerBlur}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (showSuggestions && suggestions.length > 0) {
+                            handleSelectSuggestion(suggestions[0]);
+                          } else if (ticker.trim().length >= 2) {
+                            const clean = ticker.trim().toUpperCase();
+                            const match = rastroAssets.find((a) => a.ticker.toUpperCase() === clean);
+                            if (match) {
+                              handleSelectSuggestion(match);
+                            } else {
+                              handleLookupOnline(clean);
+                            }
+                          }
+                        } else if (e.key === 'Escape') {
+                          setShowSuggestions(false);
+                        }
+                      }}
+                      placeholder="Ex: POMO4, PETR4, MXRF11"
+                      className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base font-medium uppercase text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Dropdown de sugestões do banco RASTRO */}
+                  {showSuggestions && (suggestions.length > 0 || ticker.trim().length >= 2) && (
+                    <div
+                      onMouseDown={(e) => e.preventDefault()}
+                      className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-xl border border-border bg-bg-card p-1.5 shadow-2xl z-50 animate-fade-in space-y-1"
+                    >
+                      <div className="px-3 py-1 text-xs font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1 border-b border-border/50 pb-1">
+                        <Search className="h-3.5 w-3.5 text-accent-gold" />
+                        <span>Banco de Ativos (RASTRO)</span>
+                      </div>
+                      {suggestions.map((item) => (
+                        <button
+                          key={item.ticker}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectSuggestion(item);
+                          }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSelectSuggestion(item);
+                          }}
+                          className="w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs sm:text-sm text-left hover:bg-bg-elevated transition-colors group cursor-pointer"
+                        >
+                          <div className="flex flex-col truncate">
+                            <span className="font-bold font-mono text-accent-gold group-hover:text-amber-300">
+                              {item.ticker}
+                            </span>
+                            <span className="text-xs text-text-secondary truncate">
+                              {item.name}
+                            </span>
+                          </div>
+                          <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-bg-primary text-text-secondary border border-border">
+                            {item.type || 'B3'}
+                          </span>
+                        </button>
+                      ))}
+                      {ticker.trim().length >= 2 && (
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleLookupOnline(ticker);
+                          }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleLookupOnline(ticker);
+                          }}
+                          className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-xs sm:text-sm text-left text-accent-gold hover:bg-bg-elevated transition-colors border-t border-border/50 font-medium cursor-pointer"
+                        >
+                          <Search className="h-3.5 w-3.5" />
+                          <span>Buscar cotação online de "{ticker}"</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-text-primary mb-1.5">
+                    Tipo de Ativo *
+                  </label>
+                  <select
+                    value={assetType}
+                    onChange={(e) => {
+                      const val = e.target.value as AssetType;
+                      setAssetType(val);
+                      if (val === 'CRYPTO') {
+                        setCurrency('USD');
+                      }
+                    }}
+                    className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base text-text-primary focus:border-accent-gold focus:outline-none"
+                  >
+                    <option value="STOCK">Ação Brasil (B3)</option>
+                    <option value="FII">Fundo Imobiliário (FII)</option>
+                    <option value="CRYPTO">Criptomoeda</option>
+                    <option value="FIXED_INCOME">Renda Fixa (Tesouro/CDB)</option>
+                    <option value="OTHER">Outros / Internacional</option>
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="h-4 w-4 text-accent-gold" />
-                    Data da Compra *
-                  </span>
-                  <span className="text-xs text-text-secondary font-normal">Mês no gráfico</span>
+                <label className="block text-sm font-semibold text-text-primary mb-1.5">
+                  Nome do Ativo / Descrição *
                 </label>
                 <input
-                  type="date"
-                  value={transactionDate}
-                  onChange={(e) => setTransactionDate(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-bg-primary px-3 py-2 text-sm sm:text-base font-medium text-text-primary focus:border-accent-gold focus:outline-none cursor-pointer"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Marcopolo S.A., Petrobras PN, Bitcoin"
+                  className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
                 />
               </div>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5">
-                Quantidade *
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder="0.00"
-                className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base font-medium text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5 flex items-center justify-between">
+                    <span>Banco / Corretora *</span>
+                    <span className="text-xs text-text-secondary font-normal">Onde comprou</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      list="institution-options"
+                      value={institution}
+                      onChange={(e) => setInstitution(e.target.value)}
+                      placeholder="Selecione ou digite o banco"
+                      className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
+                    />
+                    <datalist id="institution-options">
+                      {allInstitutionOptions.map((inst) => (
+                        <option key={inst} value={inst} />
+                      ))}
+                    </datalist>
+                  </div>
+                  {/* Chips rápidos dos principais bancos do usuário */}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {topQuickInstitutions.map((inst) => (
+                      <button
+                        key={inst}
+                        type="button"
+                        onClick={() => setInstitution(inst)}
+                        className={`px-2.5 py-1 text-xs rounded-lg border transition-all ${
+                          institution === inst
+                            ? 'border-accent-gold bg-accent-gold/20 text-accent-gold font-bold shadow-xs'
+                            : 'border-border/60 bg-bg-elevated/40 text-text-secondary hover:text-text-primary hover:border-border'
+                        }`}
+                      >
+                        {inst}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5">
+                      Moeda
+                    </label>
+                    <select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base text-text-primary focus:border-accent-gold focus:outline-none"
+                    >
+                      <option value="BRL">BRL (R$)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="CLP">CLP ($)</option>
+                      <option value="USDT">USDT</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="h-4 w-4 text-accent-gold" />
+                        Data da Compra *
+                      </span>
+                      <span className="text-xs text-text-secondary font-normal">Mês no gráfico</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={transactionDate}
+                      onChange={(e) => setTransactionDate(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-bg-primary px-3 py-2 text-sm sm:text-base font-medium text-text-primary focus:border-accent-gold focus:outline-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5">
+                    Quantidade *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base font-medium text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5">
+                    Preço Médio ({currency === 'USD' ? '$' : currency === 'EUR' ? '€' : 'R$'})
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={averagePrice}
+                    onChange={(e) => setAveragePrice(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base font-medium text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5">
+                    Preço Atual ({currency === 'USD' ? '$' : currency === 'EUR' ? '€' : 'R$'})
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={currentPrice}
+                    onChange={(e) => setCurrentPrice(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base font-medium text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5">
-                Preço Médio ({currency === 'USD' ? '$' : currency === 'EUR' ? '€' : 'R$'})
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={averagePrice}
-                onChange={(e) => setAveragePrice(e.target.value)}
-                placeholder="0.00"
-                className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base font-medium text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm sm:text-base font-semibold text-text-primary mb-1.5">
-                Preço Atual ({currency === 'USD' ? '$' : currency === 'EUR' ? '€' : 'R$'})
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={currentPrice}
-                onChange={(e) => setCurrentPrice(e.target.value)}
-                placeholder="0.00"
-                className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base font-medium text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
-              />
-            </div>
-          </div>
+          )}
 
           {/* Seção de Taxa de Rendimento Automático (ex: Wise Rende+, Caixa, Renda Fixa) */}
-          {(assetType === 'FIXED_INCOME' ||
+          {(isCaixinha ||
+            assetType === 'FIXED_INCOME' ||
             assetType === 'OTHER' ||
             institution.toLowerCase().includes('wise') ||
             name.toLowerCase().includes('wise') ||

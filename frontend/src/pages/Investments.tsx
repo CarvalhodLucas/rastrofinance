@@ -95,7 +95,7 @@ export const DISPLAY_CATEGORY_LABELS: Record<string, string> = {
   FII: 'Fundos Imobiliários',
   CRYPTO: 'Criptomoedas',
   TREASURY: 'Tesouro Direto',
-  FIXED_INCOME: 'Renda Fixa',
+  FIXED_INCOME: 'Renda Fixa / Caixinhas',
   ETF: 'ETFs',
   OTHER: 'Outros / Internacional',
 };
@@ -114,6 +114,16 @@ export const getAssetCategoryKey = (inv: Investment): string => {
 
   const cleanName = (inv.name || '').toUpperCase();
   const cleanTicker = (inv.code_ticker || '').toUpperCase();
+
+  // Caixinhas e Contas remuneradas (Wise, etc.) agrupadas em FIXED_INCOME / Caixinhas
+  if (
+    cleanTicker.includes('WISE') ||
+    cleanName.includes('WISE') ||
+    cleanName.includes('CAIXINHA') ||
+    cleanTicker.includes('CAIXINHA')
+  ) {
+    return 'FIXED_INCOME';
+  }
 
   // Tesouro Direto
   if (
@@ -226,22 +236,21 @@ export function Investments() {
    * - Wise CLP -> Sempre em Peso Chileno ($)
    */
   const getNativeCurrency = (inv: Partial<Investment>): Currency => {
-    const assetType = inv.asset_type;
     const inst = (inv.institution || '').toUpperCase();
     const name = (inv.name || '').toUpperCase();
     const ticker = (inv.code_ticker || '').toUpperCase();
 
+    // Moeda explícita da caixinha/ativo ou nome
+    if (inv.currency === 'USD' || inv.currency === 'USDT' || ticker.includes('WISE_USD') || name.includes('WISE DÓLAR') || name.includes('WISE DOLAR')) return 'USD';
+    if (inv.currency === 'EUR' || ticker.includes('WISE_EUR') || name.includes('WISE EURO')) return 'EUR';
+    if (inv.currency === 'CLP' || ticker.includes('WISE_CLP')) return 'CLP';
+
     const isCrypto =
-      assetType === 'CRYPTO' ||
+      inv.asset_type === 'CRYPTO' ||
       inst.includes('BINANCE') ||
-      inv.currency === 'USD' ||
-      inv.currency === 'USDT' ||
-      name.includes('WISE_USD') ||
       ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(ticker);
 
     if (isCrypto) return 'USD';
-    if (inv.currency === 'EUR' || name.includes('WISE_EUR')) return 'EUR';
-    if (inv.currency === 'CLP') return 'CLP';
     return 'BRL';
   };
 
@@ -374,6 +383,7 @@ export function Investments() {
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
   const [sellingInvestment, setSellingInvestment] = useState<Investment | null>(null);
   const [showSellModal, setShowSellModal] = useState<boolean>(false);
+  const [sellModalInitialTab, setSellModalInitialTab] = useState<'SELL' | 'EDIT'>('SELL');
   const [editingTrade, setEditingTrade] = useState<InvestmentTrade | null>(null);
   const [editingRealizedOp, setEditingRealizedOp] = useState<RealizedOperation | null>(null);
   const [realizedOpNewDate, setRealizedOpNewDate] = useState<string>('');
@@ -2256,6 +2266,12 @@ export function Investments() {
 
                                 const isOptionOpen = openOptionMenuId === inv.id;
 
+                                const isCaixinha =
+                                  inv.code_ticker?.toUpperCase().includes('WISE') ||
+                                  inv.name?.toUpperCase().includes('WISE') ||
+                                  inv.name?.toUpperCase().includes('CAIXINHA') ||
+                                  inv.institution?.toUpperCase().includes('WISE');
+
                                 const displayName = (isCrypto || inv.asset_type === 'STOCK' || inv.asset_type === 'FII')
                                   ? (inv.code_ticker || inv.name)
                                   : (inv.name || inv.code_ticker);
@@ -2265,11 +2281,12 @@ export function Investments() {
                                     key={inv.id}
                                     onDoubleClick={() => {
                                       setSellingInvestment(inv);
+                                      setSellModalInitialTab('SELL');
                                     }}
                                     className={`transition-colors cursor-pointer select-none border-b ${
                                       isDark ? 'border-slate-800/80 hover:bg-slate-800/40' : 'border-slate-100 hover:bg-slate-50/70'
                                     }`}
-                                    title="Dê 2 cliques para vender este ativo"
+                                    title={isCaixinha ? "Dê 2 cliques para resgatar ou editar esta caixinha" : "Dê 2 cliques para vender ou editar este ativo"}
                                   >
                                     {/* Ativo com Foto Real + Nome / Ticker + Banco/Corretora */}
                                     <td className="pl-4 sm:pl-5 pr-2 py-3">
@@ -2284,13 +2301,19 @@ export function Investments() {
                                         <div className="min-w-0">
                                           <div className={`font-bold text-sm sm:text-[14.5px] truncate flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                                             <span className="truncate">{displayName}</span>
+                                            {isCaixinha && (
+                                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                                                <Wallet className="h-2.5 w-2.5 text-emerald-400" />
+                                                Caixinha
+                                              </span>
+                                            )}
                                             {inv.yield_rate !== undefined && inv.yield_rate > 0 && (
                                               <span
                                                 className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0"
-                                                title={`Rendimento automático de ${inv.yield_rate}% ${inv.yield_frequency === 'ANNUAL' ? 'ao ano' : 'ao mês'} somado todo dia 1º`}
+                                                title={`Rendimento automático de ${inv.yield_rate}% ${inv.yield_frequency === 'ANNUAL' ? 'ao ano (~' + (inv.yield_rate / 12).toFixed(2) + '% a.m.)' : 'ao mês'} somado todo dia 1º`}
                                               >
                                                 <Zap className="h-2.5 w-2.5 fill-amber-500/30" />
-                                                <span>{inv.yield_rate}%</span>
+                                                <span>{inv.yield_rate}% {inv.yield_frequency === 'ANNUAL' ? 'a.a.' : 'a.m.'}</span>
                                               </span>
                                             )}
                                           </div>
@@ -2306,28 +2329,27 @@ export function Investments() {
 
                                     {/* Quant. */}
                                     <td className={`px-3 py-3 text-right text-xs sm:text-[13.5px] font-medium tabular-nums ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-                                      {inv.quantity.toLocaleString('pt-BR', { maximumFractionDigits: isCrypto ? 8 : 4 })}
+                                      {inv.quantity.toLocaleString('pt-BR', { minimumFractionDigits: isCaixinha ? 2 : 0, maximumFractionDigits: isCrypto ? 8 : 4 })}
                                     </td>
 
                                     {/* Preço Médio */}
                                     <td className={`px-3 py-3 text-right text-xs sm:text-[13.5px] font-medium tabular-nums ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-                                      {formatAssetValue(avgPrice, inv, true, activeCategoryCurr)}
+                                      {isCaixinha ? '1,00' : formatAssetValue(avgPrice, inv, true, activeCategoryCurr)}
                                     </td>
 
                                     {/* Preço Atual com Lápis de Edição Rápida */}
                                     <td className={`px-3 py-3 text-right text-xs sm:text-[13.5px] font-medium tabular-nums ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
                                       <span className="inline-flex items-center justify-end gap-1.5">
-                                        <span>{formatAssetValue(curPrice, inv, true, activeCategoryCurr)}</span>
+                                        <span>{isCaixinha ? '1,00' : formatAssetValue(curPrice, inv, true, activeCategoryCurr)}</span>
                                         <button
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
-                                            setEditingInvestment(inv);
-                                            setShowAddModal(true);
+                                            setSellingInvestment(inv);
+                                            setSellModalInitialTab('EDIT');
                                           }}
                                           className={`transition-colors p-1 rounded ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}
-                                          title="Editar cotação / ativo"
+                                          title={isCaixinha ? "Editar saldo / dados da caixinha" : "Editar dados do ativo"}
                                         >
                                           <Edit2 className="h-3 w-3" />
                                         </button>
@@ -2336,22 +2358,50 @@ export function Investments() {
 
                                     {/* Variação */}
                                     <td className="px-3 py-3 text-right text-xs sm:text-[13.5px] tabular-nums">
-                                      <span className={`font-bold inline-flex items-center gap-0.5 justify-end ${
-                                        varPct >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'
-                                      }`}>
-                                        {varPct >= 0 ? '+' : ''}{varPct.toFixed(2)}% {varPct >= 0 ? '▲' : '▼'}
-                                      </span>
+                                      {isCaixinha ? (
+                                        inv.yield_rate !== undefined && inv.yield_rate > 0 ? (
+                                          <span
+                                            className="font-bold text-amber-500 inline-flex items-center gap-0.5 justify-end"
+                                            title={`Rendimento configurado: ${inv.yield_rate}% ${inv.yield_frequency === 'ANNUAL' ? 'ao ano (~' + (inv.yield_rate / 12).toFixed(2) + '% a.m.)' : 'ao mês'}`}
+                                          >
+                                            <Zap className="h-2.5 w-2.5 fill-amber-500/30" />
+                                            +{inv.yield_rate}% {inv.yield_frequency === 'ANNUAL' ? 'a.a.' : 'a.m.'}
+                                          </span>
+                                        ) : (
+                                          <span className={`text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                            Estável (1:1)
+                                          </span>
+                                        )
+                                      ) : (
+                                        <span className={`font-bold inline-flex items-center gap-0.5 justify-end ${
+                                          varPct >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'
+                                        }`}>
+                                          {varPct >= 0 ? '+' : ''}{varPct.toFixed(2)}% {varPct >= 0 ? '▲' : '▼'}
+                                        </span>
+                                      )}
                                     </td>
 
                                     {/* Ganho / Perda */}
                                     <td className="px-3 py-3 text-right text-xs sm:text-[13.5px] tabular-nums">
-                                      <span className={`font-bold inline-flex items-center gap-0.5 justify-end ${
-                                        profitLoss >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'
-                                      }`}>
-                                        {profitLoss > 0
-                                          ? `+${formatAssetValue(profitLoss, inv, false, activeCategoryCurr)}`
-                                          : formatAssetValue(profitLoss, inv, false, activeCategoryCurr)}
-                                      </span>
+                                      {isCaixinha ? (
+                                        profitLoss > 0 ? (
+                                          <span className="font-bold text-emerald-500 inline-flex items-center gap-0.5 justify-end">
+                                            +{formatAssetValue(profitLoss, inv, false, activeCategoryCurr)}
+                                          </span>
+                                        ) : (
+                                          <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                            -
+                                          </span>
+                                        )
+                                      ) : (
+                                        <span className={`font-bold inline-flex items-center gap-0.5 justify-end ${
+                                          profitLoss >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'
+                                        }`}>
+                                          {profitLoss > 0
+                                            ? `+${formatAssetValue(profitLoss, inv, false, activeCategoryCurr)}`
+                                            : formatAssetValue(profitLoss, inv, false, activeCategoryCurr)}
+                                        </span>
+                                      )}
                                     </td>
 
                                     {/* Saldo */}
@@ -2587,9 +2637,11 @@ export function Investments() {
         open={!!sellingInvestment || showSellModal}
         investment={sellingInvestment}
         availableInvestments={investments}
+        initialTab={sellModalInitialTab}
         onClose={() => {
           setSellingInvestment(null);
           setShowSellModal(false);
+          setSellModalInitialTab('SELL');
         }}
         onSuccess={fetchInvestments}
       />

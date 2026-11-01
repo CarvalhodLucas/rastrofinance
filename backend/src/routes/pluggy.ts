@@ -109,19 +109,23 @@ pluggyRouter.delete('/accounts/:id', async (req, res) => {
 /** POST /api/pluggy/manual-account — cria ou atualiza o saldo de uma conta manual. */
 pluggyRouter.post('/manual-account', async (req, res) => {
   const user = (req as AuthenticatedRequest).user;
-  const { id, institutionName, accountName, accountType, balance, currency } = req.body as {
+  const { id, institutionName, accountName, accountType, balance, currency, accountNumber, subBalances } = req.body as {
     id?: string;
     institutionName?: string;
     accountName?: string;
     accountType?: string;
     balance?: number;
     currency?: string;
+    accountNumber?: string;
+    subBalances?: Record<string, number>;
   };
 
   if (!accountName || balance === undefined || balance === null) {
     res.status(400).json({ error: 'Nome da conta e saldo são obrigatórios.' });
     return;
   }
+
+  const accNumVal = subBalances ? JSON.stringify(subBalances) : (accountNumber !== undefined ? accountNumber : undefined);
 
   try {
     // 1. Tenta atualizar conta existente por UUID 'id' ou 'pluggy_account_id'
@@ -135,6 +139,9 @@ pluggyRouter.post('/manual-account', async (req, res) => {
         currency: currency || 'BRL',
         last_synced_at: new Date().toISOString(),
       };
+      if (accNumVal !== undefined) {
+        updatePayload.account_number = accNumVal;
+      }
 
       const query = isUuid
         ? supabase.from('connected_accounts').update(updatePayload).or(`id.eq.${id},pluggy_account_id.eq.${id}`)
@@ -158,7 +165,7 @@ pluggyRouter.post('/manual-account', async (req, res) => {
       institution_logo: null,
       account_type: (accountType as any) || 'CHECKING',
       account_name: accountName,
-      account_number: null,
+      account_number: accNumVal ?? null,
       balance: Number(balance),
       currency: currency || 'BRL',
       is_active: true,

@@ -201,6 +201,7 @@ export const api = {
     accountType?: string;
     balance: number;
     currency?: string;
+    subBalances?: Record<string, number>;
   }) =>
     request<{ account: ConnectedAccount }>('/api/pluggy/manual-account', {
       method: 'POST',

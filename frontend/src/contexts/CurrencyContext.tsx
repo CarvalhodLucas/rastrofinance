@@ -101,6 +101,12 @@ function makeCompactFormatter(currency: Currency, rates: Record<string, number>)
   };
 }
 
+export function formatCurrencyRaw(value: number, curr?: string): string {
+  const c = ((curr || 'BRL').toUpperCase()) as Currency;
+  const loc = LOCALE[c] || 'pt-BR';
+  return new Intl.NumberFormat(loc, { style: 'currency', currency: c }).format(value);
+}
+
 export interface CurrencyContextValue {
   currency: Currency;
   setCurrency: (c: Currency) => Promise<void>;
@@ -109,6 +115,8 @@ export interface CurrencyContextValue {
   rateDate: string;
   fmt: (value: number | Transaction | BalanceValue) => string;
   fmtCompact: (value: number | Transaction | BalanceValue) => string;
+  fmtRaw: (value: number, curr?: string) => string;
+  convert: (amount: number, fromCurr: string, toCurr: string) => number;
   isLoadingRate: boolean;
 }
 
@@ -180,9 +188,29 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const fmt        = useCallback(makeFormatter(currency, rates), [currency, rates]);
   const fmtCompact = useCallback(makeCompactFormatter(currency, rates), [currency, rates]);
 
+  const convert = useCallback(
+    (amount: number, fromCurr: string, toCurr: string) => {
+      const f = (fromCurr || 'BRL').toUpperCase() as Currency;
+      const t = (toCurr || 'BRL').toUpperCase() as Currency;
+      return convertAmount(amount, f, t, rates);
+    },
+    [rates],
+  );
+
   return (
     <CurrencyContext.Provider
-      value={{ currency, setCurrency, rate: currentRate, rates, rateDate, fmt, fmtCompact, isLoadingRate }}
+      value={{
+        currency,
+        setCurrency,
+        rate: currentRate,
+        rates,
+        rateDate,
+        fmt,
+        fmtCompact,
+        fmtRaw: formatCurrencyRaw,
+        convert,
+        isLoadingRate,
+      }}
     >
       {children}
     </CurrencyContext.Provider>
@@ -198,6 +226,11 @@ export function useCurrency() {
 /** Shorthand: returns the currency-aware format function. */
 export function useFmt() {
   return useCurrency().fmt;
+}
+
+/** Shorthand: returns the raw native currency format function. */
+export function useFmtRaw() {
+  return formatCurrencyRaw;
 }
 
 /** Shorthand: returns the compact currency-aware format function. */

@@ -12,7 +12,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useAccounts } from '@/hooks/usePluggy';
 import { api } from '@/services/api';
 import { timeAgo } from '@/lib/format';
-import { useFmt } from '@/contexts/CurrencyContext';
+import { useFmt, useFmtRaw, useCurrency } from '@/contexts/CurrencyContext';
 import type { ConnectedAccount } from '@/types/finance';
 
 const TYPE_LABEL: Record<string, string> = {
@@ -24,6 +24,8 @@ const TYPE_LABEL: Record<string, string> = {
 
 export function Connect() {
   const fmt = useFmt();
+  const fmtRaw = useFmtRaw();
+  const { currency: systemCurrency } = useCurrency();
   const { accounts: allAccounts, loading, error, reload } = useAccounts();
   const accounts = allAccounts.filter(a => a.is_active !== false);
   const { notify } = useToast();
@@ -236,23 +238,71 @@ export function Connect() {
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium text-text-primary flex items-center gap-2 flex-wrap">
-                              <span className="truncate">{acc.account_name || acc.institution_name}</span>
-                              <span className="text-xs font-normal text-text-secondary">
-                                ({TYPE_LABEL[acc.account_type] ?? acc.account_type})
-                              </span>
-                              {acc.currency && acc.currency !== 'BRL' && (
-                                <span className="rounded bg-accent-gold/15 px-1.5 py-0.5 text-[10px] font-bold text-accent-gold border border-accent-gold/30">
-                                  {acc.currency}
-                                </span>
-                              )}
-                            </p>
-                            <p className="text-xs text-text-secondary mt-0.5">
-                              <span className="font-semibold text-text-primary">Saldo: {fmt({ balance: acc.balance, currency: acc.currency })}</span> · Atualizado há {timeAgo(acc.last_synced_at)}
-                              {acc.last_synced_at && (
-                                <span className="ml-1 text-accent-green">✓</span>
-                              )}
-                            </p>
+                            {(() => {
+                              const accountCurrency = (acc.currency || 'BRL').toUpperCase();
+                              const isDiff = accountCurrency !== systemCurrency;
+
+                              let subBalances: Record<string, number> | null = null;
+                              if (acc.account_number && acc.account_number.startsWith('{')) {
+                                try {
+                                  const parsed = JSON.parse(acc.account_number);
+                                  if (parsed && typeof parsed === 'object') {
+                                    subBalances = parsed;
+                                  }
+                                } catch {}
+                              }
+
+                              const validSubs = subBalances
+                                ? Object.entries(subBalances).filter(([, amt]) => typeof amt === 'number' && amt !== 0)
+                                : [];
+
+                              return (
+                                <>
+                                  <p className="truncate font-medium text-text-primary flex items-center gap-2 flex-wrap">
+                                    <span className="truncate">{acc.account_name || acc.institution_name}</span>
+                                    <span className="text-xs font-normal text-text-secondary">
+                                      ({TYPE_LABEL[acc.account_type] ?? acc.account_type})
+                                    </span>
+                                    <span className="rounded bg-accent-gold/15 px-1.5 py-0.5 text-[10px] font-bold text-accent-gold border border-accent-gold/30">
+                                      {accountCurrency}
+                                    </span>
+                                  </p>
+
+                                  <div className="text-xs text-text-secondary mt-0.5 space-y-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-semibold text-text-primary">
+                                        Saldo: {fmtRaw(acc.balance, accountCurrency)}
+                                      </span>
+                                      {isDiff && (
+                                        <span className="text-[11px] text-text-muted font-mono">
+                                          (~{fmt({ balance: acc.balance, currency: acc.currency })})
+                                        </span>
+                                      )}
+                                      <span className="text-text-muted">·</span>
+                                      <span>Atualizado há {timeAgo(acc.last_synced_at)}</span>
+                                      {acc.last_synced_at && (
+                                        <span className="text-accent-green">✓</span>
+                                      )}
+                                    </div>
+
+                                    {validSubs.length > 1 && (
+                                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                        <span className="text-[10px] text-text-muted font-medium">Multi-moeda:</span>
+                                        {validSubs.map(([cCode, amt]) => (
+                                          <span
+                                            key={cCode}
+                                            className="inline-flex items-center gap-1 rounded bg-bg-elevated px-1.5 py-0.5 text-[10px] font-mono text-text-secondary border border-border/60"
+                                          >
+                                            <span className="font-bold text-text-primary">{cCode}:</span>
+                                            <span>{fmtRaw(amt, cCode)}</span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
 

@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: dark;
   --color-bg-primary: #0a0e1a;
   --color-bg-card: #111827;
   --color-bg-elevated: #1c2333;
@@ -23,6 +24,23 @@
 
   html {
     font-size: 13.5px;
+    color-scheme: dark;
+  }
+
+  select {
+    color-scheme: dark;
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+  }
+
+  select option {
+    background-color: #111827;
+    color: #f9fafb;
+  }
+
+  select optgroup {
+    background-color: #111827;
+    color: #9ca3af;
   }
 
   html,
@@ -38,6 +56,7 @@
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    color-scheme: dark;
   }
 
   /* Números monetários sempre com tabular-nums para alinhamento. */

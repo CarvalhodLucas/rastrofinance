@@ -325,7 +325,7 @@ export function SellInvestmentModal({
     try {
       const avgP = isCashOrStable ? 1 : (parseFloat(editAveragePrice) || 0);
       const curP = isCashOrStable ? 1 : (parseFloat(editCurrentPrice) || avgP);
-      const parsedYield = editYieldRate.trim() ? parseFloat(editYieldRate.replace(',', '.')) : 0;
+      const parsedYield = isCashOrStable && editYieldRate.trim() ? parseFloat(editYieldRate.replace(',', '.')) : 0;
       const srcPrefix = (activeInvestment.sync_source || 'MANUAL').split('#')[0];
 
       await api.updateInvestment(activeInvestment.id, {
@@ -875,8 +875,8 @@ export function SellInvestmentModal({
               </div>
             )}
 
-            {/* Seção de Rendimento Automático se elegível */}
-            {(isCashOrStable || editAssetType === 'FIXED_INCOME' || editAssetType === 'OTHER' || (editYieldRate && parseFloat(editYieldRate) > 0)) && (
+            {/* Seção de Rendimento Automático exclusiva para Caixinhas / Saldo remunerado */}
+            {isCashOrStable && (
               <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white flex items-center gap-1.5">

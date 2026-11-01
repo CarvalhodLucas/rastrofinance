@@ -23,23 +23,25 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 
 const INVESTMENT_SUBTABS = [
-  { tab: 'WATCHLIST',        label: 'Radar de Cotações',      icon: Sparkles,    color: 'text-accent-gold', activeClass: 'text-accent-gold bg-accent-gold/10' },
-  { tab: 'OVERVIEW',         label: 'Visão Geral',           icon: BarChart3,   color: 'text-accent-gold', activeClass: 'text-accent-gold bg-accent-gold/10' },
-  { tab: 'STOCK',            label: 'Ações (B3)',             icon: Building2,   color: 'text-blue-400',    activeClass: 'text-blue-400 bg-blue-500/10' },
-  { tab: 'FII',              label: 'FIIs',                   icon: Layers,      color: 'text-purple-400',  activeClass: 'text-purple-400 bg-purple-500/10' },
-  { tab: 'FIXED_INCOME',     label: 'Renda Fixa',             icon: ShieldCheck, color: 'text-emerald-400', activeClass: 'text-emerald-400 bg-emerald-500/10' },
-  { tab: 'CRYPTO',           label: 'Criptomoedas',           icon: Coins,       color: 'text-amber-400',   activeClass: 'text-amber-400 bg-amber-500/10' },
-  { tab: 'TRADES',           label: 'Histórico de Transações',icon: History,     color: 'text-blue-300',    activeClass: 'text-blue-300 bg-blue-500/10' },
-  { tab: 'DIVIDENDS',        label: 'Dividendos & Proventos', icon: TrendingUp,  color: 'text-amber-400',   activeClass: 'text-amber-400 bg-amber-500/10' },
-  { tab: 'REALIZED_HISTORY', label: 'Ganhos & Perdas',        icon: History,     color: 'text-emerald-400', activeClass: 'text-emerald-400 bg-emerald-500/10' },
-  { tab: 'IMPORT_B3',        label: 'Importar Extrato',       icon: FileSpreadsheet, color: 'text-accent-gold', activeClass: 'text-accent-gold bg-accent-gold/10' },
+  { tab: 'WATCHLIST',        key: 'nav.watchlist_radar', label: 'Radar de Cotações',      icon: Sparkles,    color: 'text-accent-gold', activeClass: 'text-accent-gold bg-accent-gold/10' },
+  { tab: 'OVERVIEW',         key: 'nav.overview',        label: 'Visão Geral',           icon: BarChart3,   color: 'text-accent-gold', activeClass: 'text-accent-gold bg-accent-gold/10' },
+  { tab: 'STOCK',            key: 'nav.stocks',          label: 'Ações (B3)',             icon: Building2,   color: 'text-blue-400',    activeClass: 'text-blue-400 bg-blue-500/10' },
+  { tab: 'FII',              key: 'nav.fiis',            label: 'FIIs',                   icon: Layers,      color: 'text-purple-400',  activeClass: 'text-purple-400 bg-purple-500/10' },
+  { tab: 'FIXED_INCOME',     key: 'nav.fixed_income',    label: 'Renda Fixa',             icon: ShieldCheck, color: 'text-emerald-400', activeClass: 'text-emerald-400 bg-emerald-500/10' },
+  { tab: 'CRYPTO',           key: 'nav.crypto',          label: 'Criptomoedas',           icon: Coins,       color: 'text-amber-400',   activeClass: 'text-amber-400 bg-amber-500/10' },
+  { tab: 'TRADES',           key: 'nav.trades',          label: 'Histórico de Transações',icon: History,     color: 'text-blue-300',    activeClass: 'text-blue-300 bg-blue-500/10' },
+  { tab: 'DIVIDENDS',        key: 'nav.dividends',       label: 'Dividendos & Proventos', icon: TrendingUp,  color: 'text-amber-400',   activeClass: 'text-amber-400 bg-amber-500/10' },
+  { tab: 'REALIZED_HISTORY', key: 'nav.realized',        label: 'Ganhos & Perdas',        icon: History,     color: 'text-emerald-400', activeClass: 'text-emerald-400 bg-emerald-500/10' },
+  { tab: 'IMPORT_B3',        key: 'nav.import_b3',       label: 'Importar Extrato',       icon: FileSpreadsheet, color: 'text-accent-gold', activeClass: 'text-accent-gold bg-accent-gold/10' },
 ];
 
 interface NavItem {
   to: string;
+  key: string;
   label: string;
   icon: any;
   end: boolean;
@@ -48,13 +50,13 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/transactions', label: 'Transações', icon: CreditCard, end: false },
-  { to: '/investments', label: 'Investimentos', icon: Coins, end: false, hasSubMenu: true },
-  { to: '/planilha', label: 'Planilha', icon: Table2, end: false },
-  { to: '/insights', label: 'Insights IA', icon: BrainCircuit, end: false },
-  { to: '/connect', label: 'Contas', icon: Landmark, end: false },
-  { to: '/settings', label: 'Configurações', icon: SettingsIcon, end: false },
+  { to: '/', key: 'nav.dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/transactions', key: 'nav.transactions', label: 'Transações', icon: CreditCard, end: false },
+  { to: '/investments', key: 'nav.investments', label: 'Investimentos', icon: Coins, end: false, hasSubMenu: true },
+  { to: '/planilha', key: 'nav.planilha', label: 'Planilha', icon: Table2, end: false },
+  { to: '/insights', key: 'nav.insights', label: 'Insights IA', icon: BrainCircuit, end: false },
+  { to: '/connect', key: 'nav.connect', label: 'Contas', icon: Landmark, end: false },
+  { to: '/settings', key: 'nav.settings', label: 'Configurações', icon: SettingsIcon, end: false },
 ];
 
 function Logo() {
@@ -80,6 +82,7 @@ interface SidebarProps {
 export function Sidebar({ lastSync, isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const { currency, setCurrency } = useCurrency();
+  const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const isInvestmentsPage = location.pathname.startsWith('/investments');
@@ -122,9 +125,10 @@ export function Sidebar({ lastSync, isOpen, onClose }: SidebarProps) {
         </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {NAV.map(({ to, label, icon: Icon, end, hasSubMenu, group }, idx) => {
+        {NAV.map(({ to, key, label, icon: Icon, end, hasSubMenu, group }, idx) => {
           const prevItem = idx > 0 ? NAV[idx - 1] : null;
           const showGroupHeader = group && (!prevItem || prevItem.group !== group);
+          const translatedLabel = t(key, label);
 
           const renderIcon = () => {
             if (typeof Icon === 'string') {
@@ -161,7 +165,7 @@ export function Sidebar({ lastSync, isOpen, onClose }: SidebarProps) {
                     )}
                   >
                     {renderIcon()}
-                    <span className="flex-1 text-left">{label}</span>
+                    <span className="flex-1 text-left">{translatedLabel}</span>
                     <ChevronDown
                       className={cn(
                         'h-4 w-4 shrink-0 transition-transform duration-200',
@@ -173,7 +177,7 @@ export function Sidebar({ lastSync, isOpen, onClose }: SidebarProps) {
                   {/* Submenu: Sub-abas de Investimentos */}
                   {investmentsOpen && (
                     <div className="mt-0.5 ml-2 space-y-0.5 border-l border-border/50 pl-2">
-                      {INVESTMENT_SUBTABS.map(({ tab, label: subLabel, icon: SubIcon, color, activeClass }) => {
+                      {INVESTMENT_SUBTABS.map(({ tab, key: subKey, label: subLabel, icon: SubIcon, color, activeClass }) => {
                         const isActive = isInvestmentsPage && activeTab === tab;
                         return (
                           <button
@@ -187,7 +191,7 @@ export function Sidebar({ lastSync, isOpen, onClose }: SidebarProps) {
                             )}
                           >
                             <SubIcon className={cn('h-3.5 w-3.5 shrink-0', isActive ? color : '')} />
-                            <span className="text-left leading-tight">{subLabel}</span>
+                            <span className="text-left leading-tight">{t(subKey, subLabel)}</span>
                           </button>
                         );
                       })}
@@ -209,7 +213,7 @@ export function Sidebar({ lastSync, isOpen, onClose }: SidebarProps) {
                   }
                 >
                   {renderIcon()}
-                  {label}
+                  {translatedLabel}
                 </NavLink>
               )}
             </div>
@@ -220,7 +224,7 @@ export function Sidebar({ lastSync, isOpen, onClose }: SidebarProps) {
       <div className="border-t border-border p-4 space-y-3">
         <div>
           <label className="block text-[10px] font-bold text-text-muted mb-1.5 uppercase tracking-wider">
-            Moeda Principal
+            {t('nav.main_currency', 'Moeda Principal')}
           </label>
           <div className="grid grid-cols-2 gap-1 bg-bg-elevated p-1 rounded-lg border border-border">
             {[
@@ -268,7 +272,7 @@ export function Sidebar({ lastSync, isOpen, onClose }: SidebarProps) {
                   logout();
                   onClose();
                 }}
-                title="Sair da conta"
+                title={t('nav.logout', 'Sair da conta')}
                 className="rounded-lg p-1.5 text-text-muted hover:bg-red-500/15 hover:text-red-400 transition-colors cursor-pointer shrink-0"
               >
                 <LogOut className="h-4 w-4" />
@@ -282,7 +286,7 @@ export function Sidebar({ lastSync, isOpen, onClose }: SidebarProps) {
             <span className="absolute inline-flex h-full w-full animate-pulse-soft rounded-full bg-accent-green/60" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-green" />
           </span>
-          Última sync: {lastSync}
+          {t('nav.last_sync', 'Última sync')}: {lastSync}
         </div>
       </div>
     </aside>
@@ -292,18 +296,20 @@ export function Sidebar({ lastSync, isOpen, onClose }: SidebarProps) {
 
 // 5 abas principais para navegação inferior fluida no celular (Mobile First)
 const MOBILE_NAV = [
-  { to: '/', label: 'Início', icon: LayoutDashboard, end: true },
-  { to: '/transactions', label: 'Transações', icon: CreditCard, end: false },
-  { to: '/investments', label: 'Investir', icon: Coins, end: false },
-  { to: '/planilha', label: 'Planilha', icon: Table2, end: false },
-  { to: '/connect', label: 'Contas', icon: Landmark, end: false },
+  { to: '/', key: 'nav.home', label: 'Início', icon: LayoutDashboard, end: true },
+  { to: '/transactions', key: 'nav.transactions', label: 'Transações', icon: CreditCard, end: false },
+  { to: '/investments', key: 'nav.invest', label: 'Investir', icon: Coins, end: false },
+  { to: '/planilha', key: 'nav.planilha', label: 'Planilha', icon: Table2, end: false },
+  { to: '/connect', key: 'nav.connect', label: 'Contas', icon: Landmark, end: false },
 ];
 
 /** Bottom navigation no mobile com suporte a Safe Area e toque confortável. */
 export function MobileNav() {
+  const { t } = useLanguage();
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex items-center border-t border-border/80 bg-bg-card/95 backdrop-blur-md pb-[env(safe-area-inset-bottom,0px)] md:hidden shadow-lg shadow-black/40">
-      {MOBILE_NAV.map(({ to, label, icon: Icon, end }) => (
+      {MOBILE_NAV.map(({ to, key, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}
@@ -329,7 +335,7 @@ export function MobileNav() {
                   <Icon className="h-4.5 w-4.5" />
                 )}
               </div>
-              <span className="leading-tight truncate max-w-[64px]">{label}</span>
+              <span className="leading-tight truncate max-w-[64px]">{t(key, label)}</span>
             </>
           )}
         </NavLink>

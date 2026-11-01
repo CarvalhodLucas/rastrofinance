@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { RefreshCw, Menu, Sun, Moon, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { formatDateFull } from '@/lib/format';
 import { useCurrency, type Currency } from '@/contexts/CurrencyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface HeaderProps {
@@ -22,6 +22,7 @@ const CURRENCIES: Array<{ code: Currency; flag: string; label: string }> = [
 
 export function Header({ title, syncing, onSync, onToggleSidebar }: HeaderProps) {
   const { user } = useAuth();
+  const { t, formatDate } = useLanguage();
   const today = new Date().toISOString().split('T')[0] ?? '';
   const { currency, setCurrency, isLoadingRate } = useCurrency();
 
@@ -61,7 +62,7 @@ export function Header({ title, syncing, onSync, onToggleSidebar }: HeaderProps)
             {title}
           </h1>
           <p className="text-[11px] capitalize text-text-muted hidden sm:block">
-            {formatDateFull(today)}
+            {formatDate(today)}
           </p>
         </div>
       </div>
@@ -71,17 +72,17 @@ export function Header({ title, syncing, onSync, onToggleSidebar }: HeaderProps)
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('open-support-chat'))}
           className="flex items-center gap-1.5 h-8 px-2 sm:px-2.5 rounded-lg border border-accent-gold/40 bg-accent-gold/10 text-accent-gold hover:bg-accent-gold hover:text-slate-950 text-xs font-bold transition-all cursor-pointer shadow-xs"
-          title="Abrir Chat de Suporte & Análise Financeira"
+          title={t('header.support_tooltip', 'Abrir Chat de Suporte & Análise Financeira')}
         >
           <Bot className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">Suporte IA</span>
+          <span className="hidden sm:inline">{t('header.support_ai', 'Suporte IA')}</span>
         </button>
 
         {/* Alternador de Tema Claro / Escuro */}
         <button
           onClick={toggleTheme}
           className="flex items-center justify-center h-8 w-8 rounded-lg border border-border bg-bg-elevated text-text-primary hover:text-accent-gold transition-colors cursor-pointer"
-          title={theme === 'dark' ? 'Mudar para Tema Claro (Light)' : 'Mudar para Tema Escuro (Dark)'}
+          title={theme === 'dark' ? t('header.theme_light', 'Mudar para Tema Claro') : t('header.theme_dark', 'Mudar para Tema Escuro')}
         >
           {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-300" />}
         </button>
@@ -96,7 +97,7 @@ export function Header({ title, syncing, onSync, onToggleSidebar }: HeaderProps)
             onChange={(e) => void setCurrency(e.target.value as Currency)}
             disabled={isLoadingRate}
             className="bg-transparent text-xs font-bold text-text-primary outline-none cursor-pointer"
-            title="Alternar Moeda de Exibição do Site"
+            title={t('header.currency_tooltip', 'Alternar Moeda de Exibição do Site')}
           >
             {CURRENCIES.map((c) => (
               <option key={c.code} value={c.code} className="bg-bg-card text-text-primary">
@@ -119,7 +120,7 @@ export function Header({ title, syncing, onSync, onToggleSidebar }: HeaderProps)
         {onSync && (
           <Button variant="secondary" size="sm" onClick={onSync} disabled={syncing} className="h-8 px-2 sm:px-3 text-xs font-semibold">
             <RefreshCw className={syncing ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
-            <span className="hidden sm:inline">{syncing ? 'Sincronizando…' : 'Sincronizar'}</span>
+            <span className="hidden sm:inline">{syncing ? (t('nav.syncing', 'Sincronizando…')) : (t('nav.sync', 'Sincronizar'))}</span>
           </Button>
         )}
       </div>

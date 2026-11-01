@@ -18,27 +18,28 @@ import { SmartSheet } from '@/pages/SmartSheet';
 import { Investments } from '@/pages/Investments';
 import { ConectarSantander } from '@/pages/Configuracoes/ConectarSantander';
 import { CurrencyProvider } from '@/contexts/CurrencyContext';
+import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Login } from '@/pages/Login';
 import { SupportChat } from '@/components/support/SupportChat';
 import { api } from '@/services/api';
-import { timeAgo } from '@/lib/format';
 
-const TITLES: Record<string, string> = {
-  '/': 'Dashboard',
-  '/transactions': 'Transações',
-  '/investments': 'Investimentos',
-  '/watchlist': 'Radar & Acompanhamento',
-  '/insights': 'Insights IA',
-  '/connect': 'Contas',
-  '/settings': 'Configurações',
-  '/planilha': 'Planilha Inteligente',
+const ROUTE_KEYS: Record<string, string> = {
+  '/': 'nav.dashboard',
+  '/transactions': 'nav.transactions',
+  '/investments': 'nav.investments',
+  '/watchlist': 'nav.watchlist',
+  '/insights': 'nav.insights',
+  '/connect': 'nav.connect',
+  '/settings': 'nav.settings',
+  '/planilha': 'nav.planilha_full',
 };
 
 function Shell() {
   const location = useLocation();
   const { notify } = useToast();
+  const { t, timeAgo } = useLanguage();
   const [lastSync, setLastSync] = useState('—');
   const [syncing, setSyncing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -59,7 +60,7 @@ function Shell() {
 
   useEffect(() => {
     void refreshLastSync();
-  }, []);
+  }, [timeAgo]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -106,7 +107,8 @@ function Shell() {
     }
   };
 
-  const title = TITLES[location.pathname] ?? 'Rastro Finance';
+  const titleKey = ROUTE_KEYS[location.pathname];
+  const title = titleKey ? t(titleKey) : 'Rastro Finance';
 
   return (
     <div className="flex h-[100dvh] min-h-[100dvh] overflow-hidden bg-bg-primary">
@@ -146,19 +148,21 @@ export default function App() {
     <BrowserRouter>
       <ToastProvider>
         <AuthProvider>
-          <CurrencyProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <Shell />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </CurrencyProvider>
+          <LanguageProvider>
+            <CurrencyProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <Shell />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </CurrencyProvider>
+          </LanguageProvider>
         </AuthProvider>
       </ToastProvider>
     </BrowserRouter>

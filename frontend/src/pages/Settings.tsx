@@ -34,6 +34,7 @@ import { api } from '@/services/api';
 import { CATEGORY_NAMES } from '@/lib/categories';
 import { cn } from '@/lib/utils';
 import { useCurrency, useFmt, type Currency } from '@/contexts/CurrencyContext';
+import { useLanguage, LANGUAGE_OPTIONS } from '@/contexts/LanguageContext';
 import type { FinancialGoal } from '@/types/finance';
 import { Link } from 'react-router-dom';
 
@@ -59,10 +60,12 @@ type ActiveTab = 'all' | 'notifications' | 'currency' | 'goals' | 'system';
 export function Settings() {
   const { notify } = useToast();
   const { currency, setCurrency, rate, rateDate, isLoadingRate } = useCurrency();
+  const { language, setLanguage, t } = useLanguage();
   const fmt = useFmt();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('all');
   const [savingCurrency, setSavingCurrency] = useState(false);
+  const [savingLanguage, setSavingLanguage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showTelegramToken, setShowTelegramToken] = useState(false);
@@ -217,10 +220,10 @@ export function Settings() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-gold/10 text-accent-gold">
               <Sliders className="h-5 w-5" />
             </div>
-            <h1 className="text-2xl font-bold text-text-primary">Configurações & Preferências</h1>
+            <h1 className="text-2xl font-bold text-text-primary">{t('settings.title', 'Configurações & Preferências')}</h1>
           </div>
           <p className="mt-1 text-sm text-text-secondary">
-            Personalize notificações automáticas, moedas de exibição, limites financeiros e automações de IA.
+            {t('settings.subtitle', 'Personalize idioma, notificações automáticas, moedas de exibição, limites financeiros e automações de IA.')}
           </p>
         </div>
 
@@ -228,7 +231,7 @@ export function Settings() {
           {hasUnsavedChanges && (
             <span className="flex items-center gap-1.5 text-xs font-medium text-amber-400">
               <AlertCircle className="h-4 w-4 animate-pulse" />
-              Alterações não salvas
+              {t('settings.unsaved_changes', 'Alterações não salvas')}
             </span>
           )}
           <Button
@@ -244,7 +247,7 @@ export function Settings() {
             ) : (
               <Save className="h-4 w-4" />
             )}
-            {saving ? 'Salvando...' : 'Salvar Alterações'}
+            {saving ? t('settings.saving', 'Salvando...') : t('settings.save_changes', 'Salvar Alterações')}
           </Button>
         </div>
       </div>
@@ -255,13 +258,13 @@ export function Settings() {
           active={activeTab === 'all'}
           onClick={() => setActiveTab('all')}
           icon={<Sliders className="h-4 w-4" />}
-          label="Visão Geral"
+          label={t('settings.tab_all', 'Visão Geral')}
         />
         <TabButton
           active={activeTab === 'notifications'}
           onClick={() => setActiveTab('notifications')}
           icon={<MessageSquare className="h-4 w-4" />}
-          label="Notificações"
+          label={t('settings.tab_notifications', 'Notificações')}
           badge={
             (isWhatsappActive || isTelegramActive) ? (
               <span className="h-2 w-2 rounded-full bg-accent-green inline-block" />
@@ -272,21 +275,26 @@ export function Settings() {
           active={activeTab === 'currency'}
           onClick={() => setActiveTab('currency')}
           icon={<Globe className="h-4 w-4" />}
-          label="Moeda & Região"
-          badge={<span className="text-xs font-mono font-bold text-accent-gold">{currency}</span>}
+          label={t('settings.tab_language_currency', 'Idioma & Moeda')}
+          badge={
+            <div className="flex items-center gap-1">
+              <span className="text-xs">{language === 'es' ? '🇪🇸' : '🇧🇷'}</span>
+              <span className="text-xs font-mono font-bold text-accent-gold">{currency}</span>
+            </div>
+          }
         />
         <TabButton
           active={activeTab === 'goals'}
           onClick={() => setActiveTab('goals')}
           icon={<Target className="h-4 w-4" />}
-          label="Metas Financeiras"
+          label={t('settings.tab_goals', 'Metas Financeiras')}
           badge={goals.length > 0 ? <span className="rounded-full bg-bg-elevated px-1.5 py-0.5 text-[10px] text-text-secondary">{goals.length}</span> : undefined}
         />
         <TabButton
           active={activeTab === 'system'}
           onClick={() => setActiveTab('system')}
           icon={<Zap className="h-4 w-4" />}
-          label="Ações do Sistema"
+          label={t('settings.tab_system', 'Ações do Sistema')}
         />
       </div>
 
@@ -300,10 +308,10 @@ export function Settings() {
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-accent-green" />
-                  Notificações & Canais de Alerta
+                  {t('settings.notifications_title', 'Notificações & Canais de Alerta')}
                 </h2>
                 <span className="text-xs text-text-secondary">
-                  Receba relatórios e análises preditivas direto no seu celular.
+                  {t('settings.notifications_subtitle', 'Receba relatórios e análises preditivas direto no seu celular.')}
                 </span>
               </div>
 
@@ -316,32 +324,32 @@ export function Settings() {
                         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-green/10 text-accent-green">
                           <MessageSquare className="h-4 w-4" />
                         </div>
-                        WhatsApp
+                        {t('settings.whatsapp_title', 'WhatsApp')}
                       </CardTitle>
                       <StatusBadge
                         active={isWhatsappActive}
-                        label={isWhatsappActive ? 'Ativo' : 'Desativado'}
+                        label={isWhatsappActive ? t('status.active', 'Ativo') : t('status.inactive', 'Desativado')}
                       />
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4 pt-0">
                     <div className="rounded-lg bg-bg-elevated/40 p-3 space-y-3 border border-border/40">
                       <Toggle
-                        label="Resumos automáticos no WhatsApp"
-                        description="Envia balanços de ganhos e gastos"
+                        label={t('settings.whatsapp_toggle', 'Resumos automáticos no WhatsApp')}
+                        description={t('settings.whatsapp_toggle_desc', 'Envia balanços de ganhos e gastos')}
                         checked={form.whatsapp_enabled}
                         onChange={(v) => updateForm({ whatsapp_enabled: v })}
                       />
                       <div className="h-px bg-border/40" />
                       <Toggle
-                        label="Análise e alertas de IA"
-                        description="Detecta anomalias e dicas preditivas"
+                        label={t('settings.ai_toggle', 'Análise e alertas de IA')}
+                        description={t('settings.ai_toggle_desc', 'Detecta anomalias e dicas preditivas')}
                         checked={form.ai_analysis_enabled}
                         onChange={(v) => updateForm({ ai_analysis_enabled: v })}
                       />
                     </div>
 
-                    <Field label="Horário do Relatório Diário" icon={<Clock className="h-3.5 w-3.5" />}>
+                    <Field label={t('settings.daily_report_time', 'Horário do Relatório Diário')} icon={<Clock className="h-3.5 w-3.5" />}>
                       <input
                         type="time"
                         value={form.daily_report_time}
@@ -350,7 +358,7 @@ export function Settings() {
                       />
                     </Field>
 
-                    <Field label="Número WhatsApp (DDI + DDD + Número)" icon={<Phone className="h-3.5 w-3.5" />}>
+                    <Field label={t('settings.whatsapp_number', 'Número WhatsApp (DDI + DDD + Número)')} icon={<Phone className="h-3.5 w-3.5" />}>
                       <input
                         type="text"
                         placeholder="Ex: 5511999999999"
@@ -370,25 +378,25 @@ export function Settings() {
                         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-blue/10 text-accent-blue">
                           <Send className="h-4 w-4 text-accent-blue" />
                         </div>
-                        Telegram Bot
+                        {t('settings.telegram_title', 'Telegram Bot')}
                       </CardTitle>
                       <StatusBadge
                         active={isTelegramActive}
-                        label={isTelegramActive ? 'Ativo' : 'Pendente'}
+                        label={isTelegramActive ? t('status.active', 'Ativo') : t('status.pending', 'Pendente')}
                       />
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4 pt-0">
                     <div className="rounded-lg bg-bg-elevated/40 p-3 border border-border/40">
                       <Toggle
-                        label="Enviar resumos pelo Telegram"
-                        description="Mensagens automáticas via Bot dedicado"
+                        label={t('settings.telegram_toggle', 'Enviar resumos pelo Telegram')}
+                        description={t('settings.telegram_toggle_desc', 'Mensagens automáticas via Bot dedicado')}
                         checked={form.telegram_enabled}
                         onChange={(v) => updateForm({ telegram_enabled: v })}
                       />
                     </div>
 
-                    <Field label="Bot Token" icon={<Key className="h-3.5 w-3.5" />}>
+                    <Field label={t('settings.telegram_bot_token', 'Bot Token')} icon={<Key className="h-3.5 w-3.5" />}>
                       <div className="relative">
                         <input
                           type={showTelegramToken ? 'text' : 'password'}
@@ -408,7 +416,7 @@ export function Settings() {
                       </div>
                     </Field>
 
-                    <Field label="Chat ID" icon={<Hash className="h-3.5 w-3.5" />}>
+                    <Field label={t('settings.telegram_chat_id', 'Chat ID')} icon={<Hash className="h-3.5 w-3.5" />}>
                       <input
                         type="text"
                         placeholder="Ex: 987654321"
@@ -422,7 +430,7 @@ export function Settings() {
                     <div className="rounded-lg border border-accent-blue/20 bg-accent-blue/5 p-3 text-xs text-text-secondary space-y-1.5">
                       <div className="flex items-center gap-1.5 font-medium text-text-primary">
                         <HelpCircle className="h-3.5 w-3.5 text-accent-blue" />
-                        <span>Como configurar o Telegram:</span>
+                        <span>{t('settings.telegram_guide_title', 'Como configurar o Telegram:')}</span>
                       </div>
                       <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
                         <li>Fale com <span className="font-semibold text-accent-blue">@BotFather</span> no Telegram e digite <code className="bg-bg-elevated px-1 py-0.5 rounded text-text-primary font-mono">/newbot</code>.</li>
@@ -436,93 +444,181 @@ export function Settings() {
             </div>
           )}
 
-          {/* SECTION: MOEDA DE EXIBIÇÃO */}
+          {/* SECTION: IDIOMA & MOEDA DE EXIBIÇÃO */}
           {(activeTab === 'all' || activeTab === 'currency') && (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                      <Globe className="h-5 w-5 text-accent-gold" />
-                      Moeda de Exibição do Sistema
-                    </CardTitle>
-                    <p className="mt-1 text-xs text-text-secondary">
-                      Todos os valores e gráficos do painel serão convertidos automaticamente em tempo real.
-                    </p>
+            <div className="space-y-6">
+              {/* CARD: IDIOMA DO SISTEMA */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                        <Globe className="h-5 w-5 text-accent-gold" />
+                        {t('settings.language_title', 'Idioma do Sistema')}
+                      </CardTitle>
+                      <p className="mt-1 text-xs text-text-secondary">
+                        {t('settings.language_subtitle', 'Escolha o idioma de exibição para a interface, navegação e relatórios.')}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-accent-gold/10 px-3 py-1 text-xs font-semibold text-accent-gold border border-accent-gold/20 flex items-center gap-1.5">
+                      <span>{language === 'es' ? '🇪🇸' : '🇧🇷'}</span>
+                      <span>{language === 'es' ? 'Español' : 'Português'}</span>
+                    </span>
                   </div>
-                  <span className="rounded-full bg-accent-gold/10 px-3 py-1 text-xs font-semibold text-accent-gold border border-accent-gold/20">
-                    {currency} ({CURRENCY_OPTIONS.find((c) => c.code === currency)?.symbol})
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Balanced 4-column Grid for all viewports */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {CURRENCY_OPTIONS.map((c) => {
-                    const isSelected = currency === c.code;
-                    return (
-                      <button
-                        key={c.code}
-                        type="button"
-                        onClick={async () => {
-                          setSavingCurrency(true);
-                          try {
-                            await setCurrency(c.code);
-                            notify(`Moeda de exibição alterada para ${c.label} (${c.symbol}).`, 'success');
-                          } catch {
-                            notify('Falha ao salvar preferência de moeda.', 'error');
-                          } finally {
-                            setSavingCurrency(false);
-                          }
-                        }}
-                        disabled={savingCurrency}
-                        className={cn(
-                          'relative flex flex-col items-center justify-center gap-1.5 rounded-xl border p-4 transition-all duration-200 text-center disabled:opacity-60',
-                          isSelected
-                            ? 'border-accent-gold bg-accent-gold/10 shadow-md shadow-accent-gold/5 ring-1 ring-accent-gold/30'
-                            : 'border-border bg-bg-elevated/50 hover:border-accent-gold/50 hover:bg-bg-elevated'
-                        )}
-                      >
-                        {isSelected && (
-                          <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-accent-gold text-bg-primary text-[10px]">
-                            <Check className="h-3 w-3 stroke-[3]" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {LANGUAGE_OPTIONS.map((lang) => {
+                      const isSelected = language === lang.code;
+                      return (
+                        <button
+                          key={lang.code}
+                          type="button"
+                          onClick={async () => {
+                            if (language === lang.code) return;
+                            setSavingLanguage(true);
+                            try {
+                              await setLanguage(lang.code);
+                              notify(
+                                lang.code === 'es'
+                                  ? 'Idioma cambiado a Español.'
+                                  : 'Idioma alterado para Português.',
+                                'success'
+                              );
+                            } catch {
+                              notify(t('settings.save_error', 'Falha ao salvar idioma.'), 'error');
+                            } finally {
+                              setSavingLanguage(false);
+                            }
+                          }}
+                          disabled={savingLanguage}
+                          className={cn(
+                            'relative flex items-center gap-3.5 rounded-xl border p-4 text-left transition-all duration-200 disabled:opacity-60 cursor-pointer',
+                            isSelected
+                              ? 'border-accent-gold bg-accent-gold/10 shadow-md shadow-accent-gold/5 ring-1 ring-accent-gold/30'
+                              : 'border-border bg-bg-elevated/50 hover:border-accent-gold/50 hover:bg-bg-elevated'
+                          )}
+                        >
+                          <span className="text-3xl shrink-0 transition-transform duration-200 hover:scale-110">
+                            {lang.flag}
                           </span>
-                        )}
-                        <span className="text-3xl transition-transform duration-200 hover:scale-110">{c.flag}</span>
-                        <span className="font-mono text-sm font-bold text-text-primary">{c.symbol} · {c.code}</span>
-                        <span className="text-xs text-text-secondary">{c.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-text-primary text-sm">
+                                {lang.label}
+                              </span>
+                              {isSelected && (
+                                <span className="rounded bg-accent-gold/20 px-1.5 py-0.5 text-[10px] font-bold text-accent-gold">
+                                  {lang.code === 'es' ? 'Activo' : 'Ativo'}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">
+                              {lang.description}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-gold text-bg-primary text-[11px]">
+                              <Check className="h-3.5 w-3.5 stroke-[3]" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Status da Cotação em Tempo Real */}
-                {currency !== 'BRL' && (
-                  <div className="rounded-xl border border-border/80 bg-bg-elevated/70 p-3.5 text-xs text-text-secondary">
-                    {isLoadingRate ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-accent-gold" />
-                        Buscando cotação em tempo real para {currency}...
-                      </span>
-                    ) : (
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-2 w-2 rounded-full bg-accent-green animate-pulse" />
-                          <span>Cotação atualizada:</span>
-                          <span className="font-mono font-bold text-text-primary">
-                            1 BRL = {rate.toFixed(4)} {currency}
-                          </span>
-                          {rateDate && <span className="text-text-muted">({rateDate})</span>}
-                        </div>
-                        <div className="rounded-md bg-bg-primary/60 px-2.5 py-1 text-text-muted font-mono">
-                          Exemplo: R$ 100,00 = <strong className="text-accent-gold">{fmt(100)}</strong>
-                        </div>
-                      </div>
-                    )}
+              {/* CARD: MOEDA DE EXIBIÇÃO */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                        <Globe className="h-5 w-5 text-accent-gold" />
+                        {t('settings.currency_title', 'Moeda de Exibição do Sistema')}
+                      </CardTitle>
+                      <p className="mt-1 text-xs text-text-secondary">
+                        {t('settings.currency_subtitle', 'Todos os valores e gráficos do painel serão convertidos automaticamente em tempo real.')}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-accent-gold/10 px-3 py-1 text-xs font-semibold text-accent-gold border border-accent-gold/20">
+                      {currency} ({CURRENCY_OPTIONS.find((c) => c.code === currency)?.symbol})
+                    </span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Balanced 4-column Grid for all viewports */}
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {CURRENCY_OPTIONS.map((c) => {
+                      const isSelected = currency === c.code;
+                      return (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={async () => {
+                            setSavingCurrency(true);
+                            try {
+                              await setCurrency(c.code);
+                              notify(
+                                `${t('settings.currency_changed', 'Moeda alterada')} ${c.label} (${c.symbol}).`,
+                                'success'
+                              );
+                            } catch {
+                              notify('Falha ao salvar preferência de moeda.', 'error');
+                            } finally {
+                              setSavingCurrency(false);
+                            }
+                          }}
+                          disabled={savingCurrency}
+                          className={cn(
+                            'relative flex flex-col items-center justify-center gap-1.5 rounded-xl border p-4 transition-all duration-200 text-center disabled:opacity-60',
+                            isSelected
+                              ? 'border-accent-gold bg-accent-gold/10 shadow-md shadow-accent-gold/5 ring-1 ring-accent-gold/30'
+                              : 'border-border bg-bg-elevated/50 hover:border-accent-gold/50 hover:bg-bg-elevated'
+                          )}
+                        >
+                          {isSelected && (
+                            <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-accent-gold text-bg-primary text-[10px]">
+                              <Check className="h-3 w-3 stroke-[3]" />
+                            </span>
+                          )}
+                          <span className="text-3xl transition-transform duration-200 hover:scale-110">{c.flag}</span>
+                          <span className="font-mono text-sm font-bold text-text-primary">{c.symbol} · {c.code}</span>
+                          <span className="text-xs text-text-secondary">{c.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Status da Cotação em Tempo Real */}
+                  {currency !== 'BRL' && (
+                    <div className="rounded-xl border border-border/80 bg-bg-elevated/70 p-3.5 text-xs text-text-secondary">
+                      {isLoadingRate ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-accent-gold" />
+                          {t('settings.rate_fetching', 'Buscando cotação em tempo real para')} {currency}...
+                        </span>
+                      ) : (
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-2 w-2 rounded-full bg-accent-green animate-pulse" />
+                            <span>{t('settings.rate_updated', 'Cotação atualizada:')}</span>
+                            <span className="font-mono font-bold text-text-primary">
+                              1 BRL = {rate.toFixed(4)} {currency}
+                            </span>
+                            {rateDate && <span className="text-text-muted">({rateDate})</span>}
+                          </div>
+                          <div className="rounded-md bg-bg-primary/60 px-2.5 py-1 text-text-muted font-mono">
+                            {t('settings.rate_example', 'Exemplo')}: R$ 100,00 = <strong className="text-accent-gold">{fmt(100)}</strong>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* SECTION: METAS FINANCEIRAS */}
@@ -533,14 +629,14 @@ export function Settings() {
                   <div>
                     <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                       <Target className="h-5 w-5 text-accent-blue" />
-                      Metas & Limites Orçamentários
+                      {t('settings.goals_title', 'Metas & Limites Orçamentários')}
                     </CardTitle>
                     <p className="mt-1 text-xs text-text-secondary">
-                      Defina orçamentos por categoria ou limite geral de gastos para monitoramento inteligente.
+                      {t('settings.goals_subtitle', 'Defina orçamentos por categoria ou limite geral de gastos para monitoramento inteligente.')}
                     </p>
                   </div>
                   <span className="rounded-full bg-bg-elevated px-3 py-1 text-xs text-text-secondary font-mono">
-                    {goals.length} {goals.length === 1 ? 'meta' : 'metas'}
+                    {goals.length} {goals.length === 1 ? (language === 'es' ? 'meta' : 'meta') : (language === 'es' ? 'metas' : 'metas')}
                   </span>
                 </div>
               </CardHeader>
@@ -549,12 +645,12 @@ export function Settings() {
                 <div className="rounded-xl border border-border/80 bg-bg-elevated/40 p-3.5 space-y-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
                     <Plus className="h-3.5 w-3.5 text-accent-gold" />
-                    Nova Meta Financeira
+                    {t('settings.new_goal', 'Nova Meta Financeira')}
                   </span>
                   <div className="grid gap-3 sm:grid-cols-12">
                     <div className="sm:col-span-5">
                       <input
-                        placeholder="Ex: Teto da Fatura, Reserva..."
+                        placeholder={language === 'es' ? 'Ej: Límite de Tarjeta, Reserva...' : 'Ex: Teto da Fatura, Reserva...'}
                         value={goalName}
                         onChange={(e) => setGoalName(e.target.value)}
                         className="input"
@@ -562,7 +658,7 @@ export function Settings() {
                     </div>
                     <div className="sm:col-span-3">
                       <input
-                        placeholder="Valor (R$)"
+                        placeholder={`${t('common.value', 'Valor')} (${currency})`}
                         value={goalAmount}
                         onChange={(e) => setGoalAmount(e.target.value)}
                         className="input font-mono"
@@ -574,7 +670,7 @@ export function Settings() {
                         onChange={(e) => setGoalCategory(e.target.value)}
                         className="input cursor-pointer"
                       >
-                        <option value="">Geral (Sem categoria)</option>
+                        <option value="">{t('settings.general_no_cat', 'Geral (Sem categoria)')}</option>
                         {CATEGORY_NAMES.map((c) => (
                           <option key={c} value={c}>
                             {c}
@@ -595,7 +691,7 @@ export function Settings() {
                       ) : (
                         <Plus className="h-3.5 w-3.5" />
                       )}
-                      Adicionar Meta
+                      {t('settings.add_goal', 'Adicionar Meta')}
                     </Button>
                   </div>
                 </div>
@@ -605,8 +701,8 @@ export function Settings() {
                   {goals.length === 0 ? (
                     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-8 text-center">
                       <Target className="h-8 w-8 text-text-muted/60 mb-2" />
-                      <p className="text-sm font-medium text-text-primary">Nenhuma meta configurada</p>
-                      <p className="text-xs text-text-secondary mt-0.5">Adicione um limite de gastos para receber alertas de estouro.</p>
+                      <p className="text-sm font-medium text-text-primary">{t('settings.no_goals', 'Nenhuma meta configurada')}</p>
+                      <p className="text-xs text-text-secondary mt-0.5">{t('settings.no_goals_desc', 'Adicione um limite de gastos para receber alertas de estouro.')}</p>
                     </div>
                   ) : (
                     goals.map((g) => (
@@ -636,7 +732,7 @@ export function Settings() {
                           size="icon"
                           onClick={() => removeGoal(g.id)}
                           disabled={busy === g.id}
-                          aria-label="Remover meta"
+                          aria-label={t('common.delete', 'Remover meta')}
                         >
                           {busy === g.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -658,10 +754,10 @@ export function Settings() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Zap className="h-5 w-5 text-accent-gold" />
-                  Ações Manuais & Execução de Jobs
+                  {t('settings.system_title', 'Ações Manuais & Execução de Jobs')}
                 </CardTitle>
                 <p className="text-xs text-text-secondary">
-                  Execute gatilhos manuais de sincronização e geração de relatórios de IA sob demanda.
+                  {t('settings.system_subtitle', 'Execute gatilhos manuais de sincronização e geração de relatórios de IA sob demanda.')}
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -669,7 +765,7 @@ export function Settings() {
                   <Button
                     variant="secondary"
                     className="flex flex-col items-start gap-1 p-3.5 h-auto justify-start text-left"
-                    onClick={() => runAction('sync', () => api.sync(), 'Sincronização bancária concluída.')}
+                    onClick={() => runAction('sync', () => api.sync(), language === 'es' ? 'Sincronización bancaria completada.' : 'Sincronização bancária concluída.')}
                     disabled={busy === 'sync'}
                   >
                     <div className="flex items-center gap-2 font-medium text-text-primary">
@@ -678,17 +774,17 @@ export function Settings() {
                       ) : (
                         <RefreshCw className="h-4 w-4 text-accent-blue" />
                       )}
-                      Sincronizar Bancos
+                      {t('settings.sync_banks', 'Sincronizar Bancos')}
                     </div>
                     <span className="text-[11px] text-text-secondary leading-tight">
-                      Atualizar extratos e saldos
+                      {t('settings.sync_banks_desc', 'Atualizar extratos e saldos')}
                     </span>
                   </Button>
 
                   <Button
                     variant="secondary"
                     className="flex flex-col items-start gap-1 p-3.5 h-auto justify-start text-left"
-                    onClick={() => runAction('daily', () => api.generateInsight('DAILY'), 'Insight diário gerado.')}
+                    onClick={() => runAction('daily', () => api.generateInsight('DAILY'), language === 'es' ? 'Insight diario generado.' : 'Insight diário gerado.')}
                     disabled={busy === 'daily'}
                   >
                     <div className="flex items-center gap-2 font-medium text-text-primary">
@@ -697,17 +793,17 @@ export function Settings() {
                       ) : (
                         <Sparkles className="h-4 w-4 text-accent-gold" />
                       )}
-                      Insight Diário
+                      {t('settings.daily_insight', 'Insight Diário')}
                     </div>
                     <span className="text-[11px] text-text-secondary leading-tight">
-                      Gerar análise IA de hoje
+                      {t('settings.daily_insight_desc', 'Gerar análise IA de hoje')}
                     </span>
                   </Button>
 
                   <Button
                     variant="secondary"
                     className="flex flex-col items-start gap-1 p-3.5 h-auto justify-start text-left"
-                    onClick={() => runAction('monthly', () => api.generateInsight('MONTHLY'), 'Relatório mensal gerado.')}
+                    onClick={() => runAction('monthly', () => api.generateInsight('MONTHLY'), language === 'es' ? 'Informe mensual generado.' : 'Relatório mensal gerado.')}
                     disabled={busy === 'monthly'}
                   >
                     <div className="flex items-center gap-2 font-medium text-text-primary">
@@ -716,10 +812,10 @@ export function Settings() {
                       ) : (
                         <Sparkles className="h-4 w-4 text-accent-gold" />
                       )}
-                      Relatório Mensal
+                      {t('settings.monthly_report', 'Relatório Mensal')}
                     </div>
                     <span className="text-[11px] text-text-secondary leading-tight">
-                      Gerar compilado do mês
+                      {t('settings.monthly_report_desc', 'Gerar compilado do mês')}
                     </span>
                   </Button>
                 </div>
@@ -735,7 +831,7 @@ export function Settings() {
             <CardHeader className="pb-3 border-b border-border/50">
               <CardTitle className="text-sm font-bold tracking-wide uppercase text-text-secondary flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-accent-green" />
-                Resumo do Sistema
+                {t('settings.system_summary', 'Resumo do Sistema')}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-3 text-xs">
@@ -744,7 +840,7 @@ export function Settings() {
                   <MessageSquare className="h-3.5 w-3.5 text-accent-green" /> WhatsApp
                 </span>
                 <span className={cn('font-semibold', isWhatsappActive ? 'text-accent-green' : 'text-text-muted')}>
-                  {isWhatsappActive ? `Ativo (${form.daily_report_time})` : 'Desativado'}
+                  {isWhatsappActive ? `${t('status.active', 'Ativo')} (${form.daily_report_time})` : t('status.inactive', 'Desativado')}
                 </span>
               </div>
 
@@ -753,13 +849,23 @@ export function Settings() {
                   <Send className="h-3.5 w-3.5 text-accent-blue" /> Telegram
                 </span>
                 <span className={cn('font-semibold', isTelegramActive ? 'text-accent-blue' : 'text-text-muted')}>
-                  {isTelegramActive ? 'Conectado' : 'Pendente'}
+                  {isTelegramActive ? t('status.connected', 'Conectado') : t('status.pending', 'Pendente')}
                 </span>
               </div>
 
               <div className="flex items-center justify-between py-1.5 border-b border-border/40">
                 <span className="text-text-secondary flex items-center gap-2">
-                  <Globe className="h-3.5 w-3.5 text-accent-gold" /> Moeda Ativa
+                  <Globe className="h-3.5 w-3.5 text-accent-gold" /> {t('settings.language_active', 'Idioma Ativo')}
+                </span>
+                <span className="font-semibold text-text-primary flex items-center gap-1.5">
+                  <span>{language === 'es' ? '🇪🇸' : '🇧🇷'}</span>
+                  <span>{language === 'es' ? 'Español' : 'Português'}</span>
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-1.5 border-b border-border/40">
+                <span className="text-text-secondary flex items-center gap-2">
+                  <Globe className="h-3.5 w-3.5 text-accent-gold" /> {t('settings.active_currency', 'Moeda Ativa')}
                 </span>
                 <span className="font-mono font-semibold text-text-primary">
                   {currency} ({CURRENCY_OPTIONS.find((c) => c.code === currency)?.symbol})
@@ -768,9 +874,11 @@ export function Settings() {
 
               <div className="flex items-center justify-between py-1.5">
                 <span className="text-text-secondary flex items-center gap-2">
-                  <Target className="h-3.5 w-3.5 text-accent-blue" /> Metas Ativas
+                  <Target className="h-3.5 w-3.5 text-accent-blue" /> {t('settings.active_goals', 'Metas Ativas')}
                 </span>
-                <span className="font-semibold text-text-primary">{goals.length} ativas</span>
+                <span className="font-semibold text-text-primary">
+                  {goals.length} {goals.length === 1 ? (language === 'es' ? 'activa' : 'ativa') : (language === 'es' ? 'activas' : 'ativas')}
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -780,7 +888,7 @@ export function Settings() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-bold tracking-wide uppercase text-text-secondary flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-accent-gold" />
-                Conectores Bancários
+                {t('settings.banking_connectors', 'Conectores Bancários')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -796,15 +904,15 @@ export function Settings() {
                     </div>
                   </div>
                   <span className="rounded bg-accent-green/10 px-2 py-0.5 text-[10px] font-semibold text-accent-green">
-                    Disponível
+                    {t('status.available', 'Disponível')}
                   </span>
                 </div>
                 <p className="text-[11px] text-text-secondary leading-relaxed">
-                  Conecte sua conta jurídica ou física Santander para sincronizar transações em tempo real.
+                  {t('settings.santander_desc', 'Conecte sua conta jurídica ou física Santander para sincronizar transações em tempo real.')}
                 </p>
                 <Link to="/configuracoes/conectar-santander">
                   <Button variant="secondary" size="sm" className="w-full justify-between text-xs mt-1">
-                    <span>Configurar Santander</span>
+                    <span>{t('settings.configure_santander', 'Configurar Santander')}</span>
                     <ChevronRight className="h-3.5 w-3.5" />
                   </Button>
                 </Link>
@@ -816,10 +924,10 @@ export function Settings() {
           <div className="rounded-xl border border-accent-gold/20 bg-accent-gold/5 p-4 text-xs text-text-secondary space-y-2">
             <div className="flex items-center gap-2 font-semibold text-text-primary">
               <ShieldCheck className="h-4 w-4 text-accent-gold" />
-              <span>Privacidade & Segurança</span>
+              <span>{t('settings.security_title', 'Privacidade & Segurança')}</span>
             </div>
             <p className="text-[11px] leading-relaxed text-text-secondary">
-              Seus tokens do Telegram e dados bancários são armazenados com criptografia de ponta e nunca expostos.
+              {t('settings.security_desc', 'Seus tokens do Telegram e dados bancários são armazenados com criptografia de ponta e nunca expostos.')}
             </p>
           </div>
         </div>

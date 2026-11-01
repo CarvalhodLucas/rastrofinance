@@ -373,17 +373,8 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
       return;
     }
 
-    // "Rendimento Automático Mensal" só deve ser visível para ativos elegíveis
-    const isYieldEligible =
-      assetType === 'FIXED_INCOME' ||
-      assetType === 'OTHER' ||
-      institution.toLowerCase().includes('wise') ||
-      name.toLowerCase().includes('wise') ||
-      name.toLowerCase().includes('rende+') ||
-      name.toLowerCase().includes('caixinha') ||
-      institution.toLowerCase().includes('caixa') ||
-      Boolean(yieldRate && parseFloat(yieldRate) > 0);
-
+    // Rendimento automático só é configurável na aba de Caixinha / Reserva (Wise)
+    const isYieldEligible = isCaixinha;
     const parsedYield = (isYieldEligible && yieldRate.trim()) ? parseFloat(yieldRate.replace(',', '.')) : 0;
 
     setLoading(true);
@@ -466,6 +457,7 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
               type="button"
               onClick={() => {
                 setIsCaixinha(false);
+                setYieldRate('');
               }}
               className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
                 !isCaixinha
@@ -866,16 +858,8 @@ export function AddInvestmentModal({ open, investmentToEdit, initialAssetType = 
             </div>
           )}
 
-          {/* Seção de Taxa de Rendimento Automático (ex: Wise Rende+, Caixa, Renda Fixa) */}
-          {(isCaixinha ||
-            assetType === 'FIXED_INCOME' ||
-            assetType === 'OTHER' ||
-            institution.toLowerCase().includes('wise') ||
-            name.toLowerCase().includes('wise') ||
-            name.toLowerCase().includes('rende+') ||
-            name.toLowerCase().includes('caixinha') ||
-            institution.toLowerCase().includes('caixa') ||
-            Boolean(yieldRate && parseFloat(yieldRate) > 0)) && (
+          {/* Seção de Taxa de Rendimento Automático (exclusiva para Caixinha / Reserva remunerada) */}
+          {isCaixinha && (
             <div className="rounded-xl border border-border/70 bg-bg-primary/40 p-4 space-y-3 animate-fade-in">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

@@ -11,9 +11,12 @@ import {
   HelpCircle,
   Minimize2,
   Maximize2,
+  Plus,
 } from 'lucide-react';
 import { api } from '@/services/api';
 import { useLocation } from 'react-router-dom';
+import { AddTransactionModal } from '@/components/transactions/AddTransactionModal';
+import { useAccounts } from '@/hooks/usePluggy';
 
 export interface ChatMsg {
   id: string;
@@ -147,6 +150,8 @@ export function SupportChat() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isAddTxOpen, setIsAddTxOpen] = useState(false);
+  const { accounts } = useAccounts();
 
   const [messages, setMessages] = useState<ChatMsg[]>(() => {
     try {
@@ -266,33 +271,59 @@ export function SupportChat() {
 
   return (
     <>
-      {/* Botão Flutuante no Canto Inferior Direito (acima da MobileNav em mobile) */}
-      <div className="fixed bottom-20 md:bottom-5 right-3 md:right-5 z-40 flex items-center">
+      {/* Botões Flutuantes no Canto Inferior Direito (acima da MobileNav em mobile) */}
+      <div className="fixed bottom-20 md:bottom-5 right-3 md:right-5 z-40 flex items-center gap-2">
         {!isOpen && (
-          <button
-            onClick={() => setIsOpen(true)}
-            className="group relative flex items-center gap-2.5 rounded-full bg-[#111827] border border-amber-500/60 hover:border-amber-400 px-3.5 py-2 sm:px-4 text-xs font-semibold text-white shadow-2xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-md"
-            title="Abrir Suporte com Inteligência Artificial"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-            </span>
-            <div className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40">
-              <Bot className="h-3.5 w-3.5" />
-            </div>
-            <span className="tracking-wide font-semibold text-slate-100 hidden sm:inline">
-              Suporte & Análise IA
-            </span>
-            <span className="tracking-wide font-semibold text-slate-100 sm:hidden">
-              Suporte IA
-            </span>
-            <span className="hidden sm:inline-block rounded-md bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-emerald-400">
-              Online
-            </span>
-          </button>
+          <>
+            {/* Botão de Adicionar Transação Rápida com '+' ao lado do chat IA */}
+            <button
+              type="button"
+              onClick={() => setIsAddTxOpen(true)}
+              className="group relative flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 text-slate-950 font-bold shadow-xl shadow-amber-500/30 border border-amber-300/60 transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer backdrop-blur-md"
+              title="Adicionar Transação Rápida (+)"
+              aria-label="Adicionar Transação Rápida"
+            >
+              <Plus className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.8] text-slate-950 transition-transform group-hover:rotate-90 duration-200" />
+            </button>
+
+            {/* Botão do Chat de IA */}
+            <button
+              onClick={() => setIsOpen(true)}
+              className="group relative flex items-center gap-2.5 rounded-full bg-[#111827] border border-amber-500/60 hover:border-amber-400 px-3.5 py-2 sm:px-4 text-xs font-semibold text-white shadow-2xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-md"
+              title="Abrir Suporte com Inteligência Artificial"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              <div className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                <Bot className="h-3.5 w-3.5" />
+              </div>
+              <span className="tracking-wide font-semibold text-slate-100 hidden sm:inline">
+                Suporte & Análise IA
+              </span>
+              <span className="tracking-wide font-semibold text-slate-100 sm:hidden">
+                Suporte IA
+              </span>
+              <span className="hidden sm:inline-block rounded-md bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-emerald-400">
+                Online
+              </span>
+            </button>
+          </>
         )}
       </div>
+
+      {isAddTxOpen && (
+        <AddTransactionModal
+          open={isAddTxOpen}
+          onClose={() => setIsAddTxOpen(false)}
+          onCreated={() => {
+            setIsAddTxOpen(false);
+            window.dispatchEvent(new Event('transactions:changed'));
+          }}
+          accounts={accounts}
+        />
+      )}
 
       {/* Janela de Chat Aberta */}
       {isOpen && (

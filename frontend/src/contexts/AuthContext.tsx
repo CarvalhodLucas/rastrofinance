@@ -23,7 +23,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => getStoredToken());
   const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
-  const [loading, setLoading] = useState(true);
+  // Se já houver token e usuário no storage local, inicia pronto para não bloquear no celular
+  const [loading, setLoading] = useState(() => !getStoredToken());
 
   const clearLocalUserData = () => {
     try {
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     api.logout().catch(() => {});
   }, []);
 
-  // Verificar validade do token ao iniciar a aplicação
+  // Verificar validade do token ao iniciar a aplicação em background
   useEffect(() => {
     let isMounted = true;
     const verifySession = async () => {
@@ -74,10 +75,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setStoredUser(remoteUser, isLocalStorage);
           setToken(storedToken);
         }
-      } catch (err) {
-        console.warn('[AuthContext] Sessão expirada ou inválida:', err);
-        if (isMounted) {
-          logout();
+      } catch (err: any) {
+        console.warn('[AuthContext] Sessão não verificada online:', err);
+        // Só desloga se o servidor explicitamente rejeitou por 401 (token inválido/expirado)
+        // Se for erro de rede/offline ou reconexão no celular, mantém o login persistido!
+        if (err?.status === 401 || err?.message?.includes('não autorizado') || err?.message?.includes('expirada')) {
+          if (isMounted) {
+            logout();
+          }
+        } else {
+          console.info('[AuthContext] Mantendo sessão ativa do dispositivo móvel/local.');
         }
       } finally {
         if (isMounted) setLoading(false);

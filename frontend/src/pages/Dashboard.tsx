@@ -37,8 +37,8 @@ export function Dashboard() {
 
   useEffect(() => {
     let active = true;
-    setTxLoading(true);
-    void (async () => {
+    const fetchTransactions = async () => {
+      setTxLoading(true);
       try {
         const [{ transactions }, prev] = await Promise.all([
           api.getTransactions({ month }),
@@ -52,11 +52,22 @@ export function Dashboard() {
       } finally {
         if (active) setTxLoading(false);
       }
-    })();
+    };
+
+    void fetchTransactions();
+
+    const handleChanged = () => {
+      void fetchTransactions();
+      void reload();
+    };
+
+    window.addEventListener('transactions:changed', handleChanged);
+
     return () => {
       active = false;
+      window.removeEventListener('transactions:changed', handleChanged);
     };
-  }, [month]);
+  }, [month, reload]);
 
   const recent = useMemo(() => transactions.slice(0, 10), [transactions]);
 

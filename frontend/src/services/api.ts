@@ -15,10 +15,18 @@ import type {
 } from '@/types/finance';
 
 const getApiBaseUrl = (): string => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost') {
-    return `http://${window.location.hostname}:3001`;
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined' && window.location.hostname) {
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+
+    // Se estiver rodando no celular / outro dispositivo pela rede local (ex: IP 192.168.x.x, 10.x.x.x)
+    if (!isLocalhost && (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
+      const port = '3001';
+      return `${window.location.protocol}//${hostname}:${port}`;
+    }
   }
+  if (envUrl) return envUrl;
   return 'http://localhost:3001';
 };
 
@@ -126,11 +134,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
       headers,
     });
-  } catch {
-    // Falha de rede (backend offline, CORS, sem internet).
-    throw new Error(
-      'Não foi possível conectar ao servidor. Verifique se o backend está rodando.',
+  } catch (err: any) {
+    // Falha de rede (backend offline, CORS, sem internet ou reconexão no celular).
+    const errorObj = new Error(
+      'Não foi possível conectar ao servidor. Verifique sua conexão e se o backend está rodando.',
     );
+    (errorObj as any).isNetworkError = true;
+    (errorObj as any).status = 0;
+    throw errorObj;
   }
 
   if (res.status === 401 && !path.startsWith('/api/auth/login') && !path.startsWith('/api/auth/register')) {
@@ -141,9 +152,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(
+    const errorObj = new Error(
       (body as { error?: string }).error ?? `Erro ${res.status} ao chamar a API.`,
     );
+    (errorObj as any).status = res.status;
+    throw errorObj;
   }
   return res.json() as Promise<T>;
 }

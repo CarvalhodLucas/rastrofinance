@@ -51,10 +51,10 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 }
 
 /**
- * Gera um token JWT com validade de 180 dias (se rememberMe) ou 1 dia (sessão temporária).
+ * Gera um token JWT com validade estendida de 365 dias (se rememberMe) ou 30 dias.
  */
 export function generateToken(payload: UserSessionPayload, rememberMe: boolean = true): string {
-  const expiresIn = rememberMe ? '180d' : '1d';
+  const expiresIn = rememberMe ? '365d' : '30d';
   return jwt.sign(payload, env.JWT_SECRET, { expiresIn });
 }
 

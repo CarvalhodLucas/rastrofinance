@@ -35,12 +35,19 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { login, register } = useAuth();
+  const { login, register, isAuthenticated } = useAuth();
   const { notify } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+
+  // Se já estiver logado (sessão persistente no celular), redireciona direto
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,6 +188,7 @@ export function Login() {
                   autoFocus
                   autoCapitalize="none"
                   autoCorrect="off"
+                  autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
                   placeholder="ex: lucas"
@@ -209,6 +217,7 @@ export function Login() {
                   </div>
                   <input
                     type="text"
+                    autoComplete="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="ex: Lucas Carvalho"
@@ -237,6 +246,7 @@ export function Login() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={isRegister ? 'Mínimo 6 caracteres' : '••••••••'}

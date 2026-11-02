@@ -36,6 +36,14 @@ export function useTransactions(filters: Filters) {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const handleChanged = () => {
+      void load();
+    };
+    window.addEventListener('transactions:changed', handleChanged);
+    return () => window.removeEventListener('transactions:changed', handleChanged);
+  }, [load]);
+
   return { transactions, loading, error, reload: load };
 }
 
@@ -58,6 +66,14 @@ export function useSummary(month?: string) {
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  useEffect(() => {
+    const handleChanged = () => {
+      void load();
+    };
+    window.addEventListener('transactions:changed', handleChanged);
+    return () => window.removeEventListener('transactions:changed', handleChanged);
   }, [load]);
 
   return { summary, loading, error, reload: load };

@@ -571,7 +571,9 @@ export async function getTransactions(
     if (filter.category) query = query.eq('category', filter.category);
     if (filter.accountId) query = query.eq('account_id', filter.accountId);
 
-    const { data, error } = await query.order('date', { ascending: false });
+    const { data, error } = await query
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
     if (error) throw error;
     return (data ?? []) as Transaction[];
   }
@@ -587,7 +589,9 @@ export async function getTransactions(
   if (filter.category) query = query.eq('category', filter.category);
   if (filter.accountId) query = query.eq('account_id', filter.accountId);
 
-  const { data, error } = await query.order('date', { ascending: false });
+  const { data, error } = await query
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as Transaction[];
 }
@@ -601,7 +605,8 @@ export async function getTransactionsBetween(
     .select('*')
     .gte('date', from)
     .lte('date', to)
-    .order('date', { ascending: false });
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as Transaction[];
 }
@@ -611,6 +616,7 @@ export async function getRecentTransactions(limit = 20): Promise<Transaction[]> 
     .from('transactions')
     .select('*')
     .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
   return (data ?? []) as Transaction[];
@@ -622,6 +628,7 @@ export async function getAnomalies(limit = 50): Promise<Transaction[]> {
     .select('*')
     .eq('is_anomaly', true)
     .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
   return (data ?? []) as Transaction[];

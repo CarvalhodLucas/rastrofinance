@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Camera, Plus, Search, FileSpreadsheet, Repeat, Receipt } from 'lucide-react';
+import { Camera, Plus, Search, FileSpreadsheet, Repeat, Receipt, ArrowUpDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -79,7 +79,9 @@ export function Transactions() {
     [filtered],
   );
 
-  // Agrupa por data.
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
+  // Agrupa por data e ordena rigorosamente por horário dentro de cada dia.
   const groups = useMemo(() => {
     const map = new Map<string, Transaction[]>();
     for (const t of filtered) {
@@ -87,10 +89,21 @@ export function Transactions() {
       arr.push(t);
       map.set(t.date, arr);
     }
-    return Array.from(map.entries()).sort(
-      ([a], [b]) => new Date(b).getTime() - new Date(a).getTime(),
-    );
-  }, [filtered]);
+    return Array.from(map.entries())
+      .sort(([a], [b]) => {
+        const timeA = new Date(`${a}T00:00:00`).getTime();
+        const timeB = new Date(`${b}T00:00:00`).getTime();
+        return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+      })
+      .map(([date, txs]) => [
+        date,
+        [...txs].sort((a, b) => {
+          const tA = a.created_at ? new Date(a.created_at).getTime() : new Date(`${a.date}T00:00:00`).getTime();
+          const tB = b.created_at ? new Date(b.created_at).getTime() : new Date(`${b.date}T00:00:00`).getTime();
+          return sortOrder === 'desc' ? tB - tA : tA - tB;
+        }),
+      ] as [string, Transaction[]]);
+  }, [filtered, sortOrder]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -231,10 +244,21 @@ export function Transactions() {
 
             {/* Resumo do filtro */}
             {!loading && !error && (
-              <div className="flex items-center justify-between rounded-lg border border-border bg-bg-card px-4 py-2.5 text-sm">
-                <span className="text-text-secondary">
-                  {filtered.length} transações
-                </span>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-bg-card px-4 py-2 text-sm">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-text-secondary">
+                    {filtered.length} transações
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/80 bg-bg-elevated/70 hover:bg-bg-elevated hover:border-accent-gold/40 text-xs font-semibold text-accent-gold transition-colors cursor-pointer select-none"
+                    title="Alternar ordem de horário"
+                  >
+                    <ArrowUpDown className="h-3 w-3" />
+                    <span>{sortOrder === 'desc' ? 'Mais recentes no topo' : 'Mais antigas no topo'}</span>
+                  </button>
+                </div>
                 <span
                   className={`font-mono font-semibold tnum ${total >= 0 ? 'text-accent-green' : 'text-accent-red'}`}
                 >

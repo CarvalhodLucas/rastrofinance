@@ -69,7 +69,15 @@ export function Dashboard() {
     };
   }, [month, reload]);
 
-  const recent = useMemo(() => transactions.slice(0, 10), [transactions]);
+  const recent = useMemo(() => {
+    return [...transactions]
+      .sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : new Date(`${a.date}T00:00:00`).getTime();
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : new Date(`${b.date}T00:00:00`).getTime();
+        return timeB - timeA;
+      })
+      .slice(0, 10);
+  }, [transactions]);
 
   if (error) {
     return (

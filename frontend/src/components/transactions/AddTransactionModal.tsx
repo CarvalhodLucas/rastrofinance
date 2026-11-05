@@ -1063,27 +1063,31 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
         {/* ABA 2: LANÇAMENTO EM LOTE (TABELA / LISTA COM VÁRIOS DE UMA VEZ)            */}
         {/* ========================================================================= */}
         {activeTab === 'BATCH' && !transactionToEdit && (
-          <div className="flex-1 overflow-y-auto flex flex-col">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Cabeçalho de padrões comuns para o lote - Colapsável */}
-            <div className="bg-bg-elevated/40 border-b border-border/70 transition-all shrink-0">
+            <div className="bg-bg-elevated/70 border-b border-border/80 shrink-0">
               <button
                 type="button"
                 onClick={() => setBatchDefaultsOpen((prev) => !prev)}
-                className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-bg-elevated/70 transition-colors cursor-pointer select-none"
+                className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-bg-elevated transition-colors cursor-pointer select-none"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <Layers className="h-3.5 w-3.5 text-accent-gold shrink-0" />
-                  <span className="text-xs font-bold text-text-primary uppercase tracking-wide truncate">
-                    Padrões para todos os lançamentos
+                  <span className="p-1 rounded-md bg-accent-gold/15 text-accent-gold shrink-0">
+                    <Layers className="h-3.5 w-3.5" />
                   </span>
-                  {!batchDefaultsOpen && (
-                    <span className="text-[11px] text-text-muted truncate hidden xs:inline border-l border-border/60 pl-2">
-                      {accountOptions.find((a) => a.id === accountId)?.account_name || 'Conta'} · {selectedCurrency}
-                    </span>
-                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-text-primary uppercase tracking-wide truncate">
+                      Padrões do Lote
+                    </p>
+                    {!batchDefaultsOpen && (
+                      <p className="text-[10px] text-text-muted truncate">
+                        {accountOptions.find((a) => a.id === accountId)?.account_name || 'Conta Padrão'} · {selectedCurrency} (Toque para alterar)
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 rounded-lg bg-bg-card border border-border/80 shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-accent-gold">
                     {batchDefaultsOpen ? 'Minimizar' : 'Configurar'}
                   </span>
@@ -1096,7 +1100,7 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
               </button>
 
               {batchDefaultsOpen && (
-                <div className="px-4 pb-3.5 pt-1 space-y-2.5 border-t border-border/40 animate-in fade-in duration-150">
+                <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-border/50 bg-bg-card/40 animate-in fade-in duration-150">
                   <p className="text-[11px] text-text-muted">
                     Defina a conta, data e moeda padrão aplicados às novas linhas do lote:
                   </p>
@@ -1179,6 +1183,17 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                         <option value="CLP">🇨🇱 Peso Chileno (CLP)</option>
                       </select>
                     </div>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setBatchDefaultsOpen(false)}
+                      className="text-[11px] font-semibold text-accent-gold bg-accent-gold/10 hover:bg-accent-gold/20 border border-accent-gold/30 rounded-lg px-3 py-1.5 flex items-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <ChevronUp className="h-3 w-3" />
+                      <span>Fechar e ver lançamentos</span>
+                    </button>
                   </div>
                 </div>
               )}

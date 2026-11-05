@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   Layers,
   Star,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
@@ -87,6 +89,7 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
   const [exchangeRate, setExchangeRate] = useState(1);
   const [loadingRate, setLoadingRate] = useState(false);
   const [defaultAccountId, setDefaultAccountIdState] = useState<string | null>(() => getDefaultAccountId());
+  const [batchDefaultsOpen, setBatchDefaultsOpen] = useState(false);
 
   const handleToggleDefaultAccount = (id: string) => {
     if (!id) return;
@@ -1061,98 +1064,124 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
         {/* ========================================================================= */}
         {activeTab === 'BATCH' && !transactionToEdit && (
           <div className="flex-1 overflow-y-auto flex flex-col">
-            {/* Cabeçalho de padrões comuns para o lote */}
-            <div className="bg-bg-elevated/40 border-b border-border/70 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-text-primary uppercase tracking-wide flex items-center gap-1.5">
-                  <Layers className="h-3.5 w-3.5 text-accent-gold" />
-                  Padrões para todos os lançamentos
-                </span>
-                <span className="text-[11px] text-text-muted">
-                  Preencha as linhas abaixo e salve tudo de uma vez
-                </span>
-              </div>
+            {/* Cabeçalho de padrões comuns para o lote - Colapsável */}
+            <div className="bg-bg-elevated/40 border-b border-border/70 transition-all shrink-0">
+              <button
+                type="button"
+                onClick={() => setBatchDefaultsOpen((prev) => !prev)}
+                className="w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-bg-elevated/70 transition-colors cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Layers className="h-3.5 w-3.5 text-accent-gold shrink-0" />
+                  <span className="text-xs font-bold text-text-primary uppercase tracking-wide truncate">
+                    Padrões para todos os lançamentos
+                  </span>
+                  {!batchDefaultsOpen && (
+                    <span className="text-[11px] text-text-muted truncate hidden xs:inline border-l border-border/60 pl-2">
+                      {accountOptions.find((a) => a.id === accountId)?.account_name || 'Conta'} · {selectedCurrency}
+                    </span>
+                  )}
+                </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] font-semibold text-text-secondary">
-                      Conta Padrão
-                    </label>
-                    {accountId && (
-                      <button
-                        type="button"
-                        onClick={() => handleToggleDefaultAccount(accountId)}
-                        className={cn(
-                          'text-[10px] font-semibold flex items-center gap-0.5 transition-colors cursor-pointer',
-                          defaultAccountId === accountId
-                            ? 'text-accent-gold'
-                            : 'text-text-muted hover:text-accent-gold',
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-accent-gold">
+                    {batchDefaultsOpen ? 'Minimizar' : 'Configurar'}
+                  </span>
+                  {batchDefaultsOpen ? (
+                    <ChevronUp className="h-3.5 w-3.5 text-accent-gold" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5 text-accent-gold" />
+                  )}
+                </div>
+              </button>
+
+              {batchDefaultsOpen && (
+                <div className="px-4 pb-3.5 pt-1 space-y-2.5 border-t border-border/40 animate-in fade-in duration-150">
+                  <p className="text-[11px] text-text-muted">
+                    Defina a conta, data e moeda padrão aplicados às novas linhas do lote:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-semibold text-text-secondary">
+                          Conta Padrão
+                        </label>
+                        {accountId && (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleDefaultAccount(accountId)}
+                            className={cn(
+                              'text-[10px] font-semibold flex items-center gap-0.5 transition-colors cursor-pointer',
+                              defaultAccountId === accountId
+                                ? 'text-accent-gold'
+                                : 'text-text-muted hover:text-accent-gold',
+                            )}
+                            title="Definir esta conta como padrão geral"
+                          >
+                            <Star className={cn('h-2.5 w-2.5', defaultAccountId === accountId && 'fill-accent-gold')} />
+                            <span>{defaultAccountId === accountId ? 'Padrão' : 'Fixar padrão'}</span>
+                          </button>
                         )}
-                        title="Definir esta conta como padrão geral"
+                      </div>
+                      <select
+                        value={accountId}
+                        onChange={(e) => {
+                          const newAcc = e.target.value;
+                          setAccountId(newAcc);
+                          setBatchItems((prev) =>
+                            prev.map((it) => ({ ...it, accountId: it.accountId || newAcc })),
+                          );
+                        }}
+                        className="input py-1.5 text-xs cursor-pointer"
                       >
-                        <Star className={cn('h-2.5 w-2.5', defaultAccountId === accountId && 'fill-accent-gold')} />
-                        <span>{defaultAccountId === accountId ? 'Padrão' : 'Fixar padrão'}</span>
-                      </button>
-                    )}
+                        {accountOptions.map((a: ConnectedAccount) => (
+                          <option key={a.id} value={a.id}>
+                            {defaultAccountId === a.id ? '⭐ ' : ''}
+                            {a.institution_name === 'Dinheiro'
+                              ? '💵 Dinheiro (Espécie)'
+                              : `${a.institution_name} — ${a.account_name}`}
+                            {defaultAccountId === a.id ? ' (Padrão)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-text-secondary mb-1">
+                        Data Padrão
+                      </label>
+                      <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => {
+                          const newDate = e.target.value;
+                          setDate(newDate);
+                          setBatchItems((prev) =>
+                            prev.map((it) => ({ ...it, date: it.date || newDate })),
+                          );
+                        }}
+                        className="input py-1.5 text-xs cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-text-secondary mb-1">
+                        Moeda
+                      </label>
+                      <select
+                        value={selectedCurrency}
+                        onChange={(e) => setSelectedCurrency(e.target.value as Currency)}
+                        className="input py-1.5 text-xs cursor-pointer"
+                      >
+                        <option value="BRL">🇧🇷 Real (BRL)</option>
+                        <option value="USD">🇺🇸 Dólar (USD)</option>
+                        <option value="EUR">🇪🇺 Euro (EUR)</option>
+                        <option value="CLP">🇨🇱 Peso Chileno (CLP)</option>
+                      </select>
+                    </div>
                   </div>
-                  <select
-                    value={accountId}
-                    onChange={(e) => {
-                      const newAcc = e.target.value;
-                      setAccountId(newAcc);
-                      setBatchItems((prev) =>
-                        prev.map((it) => ({ ...it, accountId: it.accountId || newAcc })),
-                      );
-                    }}
-                    className="input py-1.5 text-xs cursor-pointer"
-                  >
-                    {accountOptions.map((a: ConnectedAccount) => (
-                      <option key={a.id} value={a.id}>
-                        {defaultAccountId === a.id ? '⭐ ' : ''}
-                        {a.institution_name === 'Dinheiro'
-                          ? '💵 Dinheiro (Espécie)'
-                          : `${a.institution_name} — ${a.account_name}`}
-                        {defaultAccountId === a.id ? ' (Padrão)' : ''}
-                      </option>
-                    ))}
-                  </select>
                 </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-text-secondary mb-1">
-                    Data Padrão
-                  </label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => {
-                      const newDate = e.target.value;
-                      setDate(newDate);
-                      setBatchItems((prev) =>
-                        prev.map((it) => ({ ...it, date: it.date || newDate })),
-                      );
-                    }}
-                    className="input py-1.5 text-xs cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-text-secondary mb-1">
-                    Moeda
-                  </label>
-                  <select
-                    value={selectedCurrency}
-                    onChange={(e) => setSelectedCurrency(e.target.value as Currency)}
-                    className="input py-1.5 text-xs cursor-pointer"
-                  >
-                    <option value="BRL">🇧🇷 Real (BRL)</option>
-                    <option value="USD">🇺🇸 Dólar (USD)</option>
-                    <option value="EUR">🇪🇺 Euro (EUR)</option>
-                    <option value="CLP">🇨🇱 Peso Chileno (CLP)</option>
-                  </select>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Lista Dinâmica de Itens */}
@@ -1218,40 +1247,42 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                         value={item.description}
                         onChange={(e) => updateBatchItem(item.id, { description: e.target.value })}
                         placeholder="Descrição (ex: Almoço, Uber)"
-                        className="input py-2 text-xs"
+                        className="input py-1.5 sm:py-2 text-xs"
                       />
                     </div>
 
-                    {/* Valor */}
-                    <div className="sm:col-span-3">
-                      <div className="relative">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono text-[11px] text-text-muted">
-                          {CURRENCY_SYMBOLS[selectedCurrency]}
-                        </span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          value={item.amount}
-                          onChange={(e) => updateBatchItem(item.id, { amount: e.target.value })}
-                          placeholder="0,00"
-                          className="input pl-8 py-2 text-xs font-mono font-medium"
-                        />
+                    <div className="grid grid-cols-2 sm:contents gap-2">
+                      {/* Valor */}
+                      <div className="sm:col-span-3">
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono text-[11px] text-text-muted">
+                            {CURRENCY_SYMBOLS[selectedCurrency]}
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={item.amount}
+                            onChange={(e) => updateBatchItem(item.id, { amount: e.target.value })}
+                            placeholder="0,00"
+                            className="input pl-8 py-1.5 sm:py-2 text-xs font-mono font-medium"
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Categoria */}
-                    <div className="sm:col-span-4">
-                      <select
-                        value={item.category}
-                        onChange={(e) => updateBatchItem(item.id, { category: e.target.value })}
-                        className="input py-2 text-xs cursor-pointer"
-                      >
-                        <option value="">Sem categoria</option>
-                        {categoryNames.map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
+                      {/* Categoria */}
+                      <div className="sm:col-span-4">
+                        <select
+                          value={item.category}
+                          onChange={(e) => updateBatchItem(item.id, { category: e.target.value })}
+                          className="input py-1.5 sm:py-2 text-xs cursor-pointer"
+                        >
+                          <option value="">Sem categoria</option>
+                          {categoryNames.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>

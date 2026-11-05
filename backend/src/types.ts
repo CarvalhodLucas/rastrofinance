@@ -7,7 +7,8 @@ export type TransactionType =
   | 'CREDIT'
   | 'PIX'
   | 'TED'
-  | 'BOLETO';
+  | 'BOLETO'
+  | 'TRANSFER';
 
 export type InsightType =
   | 'DAILY_SUMMARY'

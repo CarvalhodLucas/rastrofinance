@@ -279,6 +279,25 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  createTransfer: (payload: {
+    sourceAccountId: string;
+    destinationAccountId: string;
+    amount: number;
+    date?: string;
+    description?: string;
+    currency?: string;
+    destinationAmount?: number;
+    destinationCurrency?: string;
+  }) =>
+    request<{
+      success: boolean;
+      sourceTransaction: Transaction;
+      destinationTransaction: Transaction;
+    }>('/api/transactions/transfer', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   updateTransaction: (id: string, payload: Partial<Transaction>) =>
     request<{ transaction: Transaction }>(`/api/transactions/${id}`, {
       method: 'PUT',

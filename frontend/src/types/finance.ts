@@ -8,7 +8,7 @@ export interface AuthUser {
 
 export type AccountType = 'CHECKING' | 'SAVINGS' | 'CREDIT' | 'INVESTMENT';
 
-export type TransactionType = 'DEBIT' | 'CREDIT' | 'PIX' | 'TED' | 'BOLETO';
+export type TransactionType = 'DEBIT' | 'CREDIT' | 'PIX' | 'TED' | 'BOLETO' | 'TRANSFER';
 
 export type InsightType =
   | 'DAILY_SUMMARY'

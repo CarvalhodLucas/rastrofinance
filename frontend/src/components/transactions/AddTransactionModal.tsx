@@ -13,6 +13,8 @@ import {
   Star,
   ChevronDown,
   ChevronUp,
+  ArrowLeftRight,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
@@ -61,16 +63,23 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
   const prevEditIdRef = useRef<string | null>(null);
 
   const [saving, setSaving] = useState(false);
-  const [savingAction, setSavingAction] = useState<'next' | 'close' | 'batch' | null>(null);
+  const [savingAction, setSavingAction] = useState<'next' | 'close' | 'batch' | 'transfer' | null>(null);
   const [scanningReceipt, setScanningReceipt] = useState(false);
 
-  // Abas de Modo: Individual/Sequencial vs Em Lote
-  const [activeTab, setActiveTab] = useState<'SINGLE' | 'BATCH'>('SINGLE');
+  // Abas de Modo: Individual/Sequencial vs Transferência vs Em Lote
+  const [activeTab, setActiveTab] = useState<'SINGLE' | 'TRANSFER' | 'BATCH'>('SINGLE');
 
   // Modo Contínuo (Salvar e continuar adicionando)
   const [continuousMode, setContinuousMode] = useState(false);
   const [sessionSavedCount, setSessionSavedCount] = useState(0);
   const [sessionTotalAmount, setSessionTotalAmount] = useState(0);
+
+  // Estados do modo Transferência entre Contas
+  const [transferSourceAccountId, setTransferSourceAccountId] = useState('');
+  const [transferDestAccountId, setTransferDestAccountId] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferDate, setTransferDate] = useState(todayISO);
+  const [transferDescription, setTransferDescription] = useState('');
 
   // Campos do formulário individual
   const [isExpense, setIsExpense] = useState(true);
@@ -197,6 +206,13 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
 
       setAccountId(defAccId);
       setDefaultAccountIdState(savedDefault);
+
+      setTransferSourceAccountId(defAccId);
+      const otherAcc = accountOptions.find((a) => a.id !== defAccId);
+      setTransferDestAccountId(otherAcc?.id || '');
+      setTransferAmount('');
+      setTransferDate(todayISO());
+      setTransferDescription('');
 
       setBatchItems((prev) =>
         prev.map((item) => ({
@@ -537,6 +553,58 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
     }
   };
 
+  // Funções do Modo Transferência entre Contas
+  const handleInvertTransferAccounts = () => {
+    setTransferSourceAccountId(transferDestAccountId);
+    setTransferDestAccountId(transferSourceAccountId);
+  };
+
+  const handleSubmitTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const num = parseFloat(transferAmount.replace(',', '.'));
+    if (!num || num <= 0) {
+      notify('Por favor, informe um valor maior que zero para a transferência.', 'error');
+      return;
+    }
+    if (!transferSourceAccountId || !transferDestAccountId) {
+      notify('Selecione a conta de origem e a conta de destino.', 'error');
+      return;
+    }
+    if (transferSourceAccountId === transferDestAccountId) {
+      notify('A conta de origem e destino não podem ser a mesma.', 'error');
+      return;
+    }
+
+    setSaving(true);
+    setSavingAction('transfer');
+    try {
+      const srcAcc = accountOptions.find((a) => a.id === transferSourceAccountId);
+      const destAcc = accountOptions.find((a) => a.id === transferDestAccountId);
+
+      await api.createTransfer({
+        sourceAccountId: transferSourceAccountId,
+        destinationAccountId: transferDestAccountId,
+        amount: num,
+        date: transferDate,
+        description: transferDescription.trim() || undefined,
+        currency: (srcAcc?.currency as Currency) || selectedCurrency,
+      });
+
+      const srcName = srcAcc?.institution_name === 'Dinheiro' ? 'Dinheiro' : (srcAcc?.account_name || 'Conta de Origem');
+      const destName = destAcc?.institution_name === 'Dinheiro' ? 'Dinheiro' : (destAcc?.account_name || 'Conta de Destino');
+
+      notify(`✓ Transferência de ${CURRENCY_SYMBOLS[selectedCurrency]} ${num.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de "${srcName}" para "${destName}" realizada com sucesso!`, 'success');
+      onCreated();
+      window.dispatchEvent(new Event('transactions:changed'));
+      handleClose();
+    } catch (err: any) {
+      notify(err.message || 'Falha ao realizar transferência.', 'error');
+    } finally {
+      setSaving(false);
+      setSavingAction(null);
+    }
+  };
+
   // Funções do Modo Em Lote (Batch)
   const addBatchRow = () => {
     setBatchItems((prev) => [...prev, createEmptyBatchItem(accountId)]);
@@ -651,46 +719,54 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
           </button>
         </div>
 
-        {/* Abas de Modo: Individual vs Em Lote (apenas na criação) */}
+        {/* Abas de Modo: Individual vs Transferência vs Em Lote (apenas na criação) */}
         {!transactionToEdit && (
-          <div className="flex border-b border-border/80 bg-bg-elevated/60 p-1.5 gap-1.5 select-none">
+          <div className="flex border-b border-border/80 bg-bg-elevated/60 p-1.5 gap-1.5 select-none overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={() => setActiveTab('SINGLE')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                'flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                 activeTab === 'SINGLE'
                   ? 'bg-bg-card text-accent-gold shadow-sm border border-accent-gold/30'
                   : 'text-text-muted hover:text-text-primary hover:bg-bg-card/50',
               )}
             >
-              <span>Lançamento Rápido</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent-gold/15 text-accent-gold font-normal hidden xs:inline">
-                + Salvar e Novo
-              </span>
+              <span>Lançamento</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('TRANSFER')}
+              className={cn(
+                'flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                activeTab === 'TRANSFER'
+                  ? 'bg-bg-card text-accent-gold shadow-sm border border-accent-gold/30'
+                  : 'text-text-muted hover:text-text-primary hover:bg-bg-card/50',
+              )}
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              <span>Transferência</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('BATCH')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                'flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                 activeTab === 'BATCH'
                   ? 'bg-bg-card text-accent-gold shadow-sm border border-accent-gold/30'
                   : 'text-text-muted hover:text-text-primary hover:bg-bg-card/50',
               )}
             >
               <Layers className="h-3.5 w-3.5" />
-              <span>Lançamento em Lote</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent-blue/15 text-accent-blue font-normal hidden xs:inline">
-                Vários de uma vez
-              </span>
+              <span>Em Lote</span>
             </button>
           </div>
         )}
 
-        {/* Banner IA Escanear Foto/Comprovante - acessível para ambos os modos (Individual ou Lote) */}
-        {!transactionToEdit && (
+        {/* Banner IA Escanear Foto/Comprovante - acessível para Lançamento Rápido e Em Lote */}
+        {!transactionToEdit && activeTab !== 'TRANSFER' && (
           <div className="border-b border-border/60 bg-accent-gold/5 px-4 sm:px-5 py-2.5 flex items-center justify-between gap-2 shrink-0">
             <div className="flex items-center gap-2 min-w-0">
               <Sparkles className="h-4 w-4 text-accent-gold shrink-0 animate-pulse" />
@@ -1058,6 +1134,213 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
             </form>
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* ABA 2: TRANSFERÊNCIA ENTRE CONTAS (MOVIMENTAÇÃO INTERNA)                  */}
+        {/* ========================================================================= */}
+        {activeTab === 'TRANSFER' && !transactionToEdit && (() => {
+          const srcAccount = accountOptions.find((a) => a.id === transferSourceAccountId);
+          const destAccount = accountOptions.find((a) => a.id === transferDestAccountId);
+          const parsedTransferNum = parseFloat(transferAmount.replace(',', '.')) || 0;
+          const isSameAccount = transferSourceAccountId && transferDestAccountId && transferSourceAccountId === transferDestAccountId;
+
+          return (
+            <form onSubmit={handleSubmitTransfer} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1 flex flex-col justify-between">
+              <div className="space-y-4">
+                {/* Seletor Visual de Contas (Origem ⇄ Destino) */}
+                <div className="rounded-2xl border border-border/80 bg-bg-elevated/40 p-3 sm:p-4 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-2 items-center">
+                    {/* Conta de Origem */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
+                          De (Origem / Saída)
+                        </label>
+                        {srcAccount && (
+                          <span className="text-[11px] font-mono text-text-muted">
+                            Saldo: {CURRENCY_SYMBOLS[srcAccount.currency as Currency || 'BRL']} {Number(srcAccount.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        )}
+                      </div>
+                      <select
+                        value={transferSourceAccountId}
+                        onChange={(e) => setTransferSourceAccountId(e.target.value)}
+                        className="input py-2 text-xs cursor-pointer w-full"
+                        required
+                      >
+                        <option value="" disabled>Selecione a conta de origem</option>
+                        {accountOptions.map((a: ConnectedAccount) => (
+                          <option key={a.id} value={a.id} disabled={a.id === transferDestAccountId}>
+                            {a.institution_name === 'Dinheiro'
+                              ? '💵 Dinheiro em Espécie'
+                              : `${a.institution_name} — ${a.account_name}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Botão de Inverter */}
+                    <div className="flex justify-center sm:pt-4">
+                      <button
+                        type="button"
+                        onClick={handleInvertTransferAccounts}
+                        title="Inverter origem e destino"
+                        className="h-8 w-8 rounded-full border border-border bg-bg-card hover:bg-bg-elevated hover:border-accent-gold text-accent-gold flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                      >
+                        <ArrowLeftRight className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {/* Conta de Destino */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
+                          Para (Destino / Entrada)
+                        </label>
+                        {destAccount && (
+                          <span className="text-[11px] font-mono text-text-muted">
+                            Saldo: {CURRENCY_SYMBOLS[destAccount.currency as Currency || 'BRL']} {Number(destAccount.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        )}
+                      </div>
+                      <select
+                        value={transferDestAccountId}
+                        onChange={(e) => setTransferDestAccountId(e.target.value)}
+                        className="input py-2 text-xs cursor-pointer w-full"
+                        required
+                      >
+                        <option value="" disabled>Selecione a conta de destino</option>
+                        {accountOptions.map((a: ConnectedAccount) => (
+                          <option key={a.id} value={a.id} disabled={a.id === transferSourceAccountId}>
+                            {a.institution_name === 'Dinheiro'
+                              ? '💵 Dinheiro em Espécie'
+                              : `${a.institution_name} — ${a.account_name}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {isSameAccount && (
+                    <p className="text-[11px] text-accent-red font-medium">
+                      ⚠️ A conta de origem e destino não podem ser a mesma.
+                    </p>
+                  )}
+                </div>
+
+                {/* Valor e Data */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-text-secondary mb-1">
+                      Valor da Transferência
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-text-muted">
+                        {CURRENCY_SYMBOLS[selectedCurrency]}
+                      </span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={transferAmount}
+                        onChange={(e) => setTransferAmount(e.target.value)}
+                        placeholder="0,00"
+                        className="input pl-9 text-base font-mono font-bold"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-text-secondary mb-1">
+                      Data da Movimentação
+                    </label>
+                    <input
+                      type="date"
+                      value={transferDate}
+                      onChange={(e) => setTransferDate(e.target.value)}
+                      className="input cursor-pointer"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Descrição Opcional */}
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary mb-1">
+                    Descrição / Motivo <span className="text-[11px] font-normal text-text-muted">(opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={transferDescription}
+                    onChange={(e) => setTransferDescription(e.target.value)}
+                    placeholder={
+                      srcAccount && destAccount
+                        ? `Ex: Transferência de ${srcAccount.institution_name} para ${destAccount.institution_name}`
+                        : 'Ex: Envio para reserva, saque de dinheiro, etc.'
+                    }
+                    className="input text-xs"
+                  />
+                </div>
+
+                {/* Resumo do Impacto nos Saldos */}
+                {parsedTransferNum > 0 && srcAccount && destAccount && !isSameAccount && (
+                  <div className="rounded-xl border border-accent-gold/20 bg-accent-gold/5 p-3 space-y-1.5 animate-in fade-in duration-150">
+                    <p className="text-[11px] font-semibold text-accent-gold flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3" />
+                      <span>Impacto nos saldos após a transferência:</span>
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-lg bg-bg-card/70 border border-border/60 p-2">
+                        <p className="text-[10px] text-text-muted truncate">{srcAccount.institution_name} ({srcAccount.account_name})</p>
+                        <p className="font-mono text-xs font-semibold text-accent-red">
+                          - {CURRENCY_SYMBOLS[selectedCurrency]} {parsedTransferNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-[10px] text-text-secondary">
+                          Novo saldo: {CURRENCY_SYMBOLS[selectedCurrency]} {(Number(srcAccount.balance || 0) - parsedTransferNum).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-bg-card/70 border border-border/60 p-2">
+                        <p className="text-[10px] text-text-muted truncate">{destAccount.institution_name} ({destAccount.account_name})</p>
+                        <p className="font-mono text-xs font-semibold text-accent-green">
+                          + {CURRENCY_SYMBOLS[selectedCurrency]} {parsedTransferNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-[10px] text-text-secondary">
+                          Novo saldo: {CURRENCY_SYMBOLS[selectedCurrency]} {(Number(destAccount.balance || 0) + parsedTransferNum).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Ações */}
+              <div className="flex gap-2 pt-3 border-t border-border/80">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex-1 text-xs cursor-pointer"
+                  onClick={handleClose}
+                  disabled={saving}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-2 text-xs font-bold gap-2 cursor-pointer"
+                  disabled={Boolean(saving || !parsedTransferNum || !transferSourceAccountId || !transferDestAccountId || isSameAccount)}
+                >
+                  {saving && savingAction === 'transfer' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4" />
+                  )}
+                  <span>Confirmar Transferência</span>
+                </Button>
+              </div>
+            </form>
+          );
+        })()}
 
         {/* ========================================================================= */}
         {/* ABA 2: LANÇAMENTO EM LOTE (TABELA / LISTA COM VÁRIOS DE UMA VEZ)            */}

@@ -7,6 +7,7 @@ import {
   setTransactionCategoryById,
   updateTransactionById,
   deleteTransaction,
+  getAllAccounts,
 } from '../services/supabaseService.js';
 import {
   categorizeTransactions,
@@ -146,6 +147,107 @@ transactionsRouter.post('/', async (req, res) => {
   }
 });
 
+/** POST /api/transactions/transfer — transfere valor entre duas contas do usuário. */
+transactionsRouter.post('/transfer', async (req, res) => {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const {
+      sourceAccountId,
+      destinationAccountId,
+      amount,
+      date,
+      description,
+      currency,
+      destinationAmount,
+      destinationCurrency,
+    } = req.body as {
+      sourceAccountId: string;
+      destinationAccountId: string;
+      amount: number;
+      date?: string;
+      description?: string;
+      currency?: string;
+      destinationAmount?: number;
+      destinationCurrency?: string;
+    };
+
+    if (!sourceAccountId || !destinationAccountId) {
+      res.status(400).json({ error: 'Conta de origem e conta de destino são obrigatórias.' });
+      return;
+    }
+
+    if (sourceAccountId === destinationAccountId) {
+      res.status(400).json({ error: 'A conta de origem e destino não podem ser a mesma.' });
+      return;
+    }
+
+    const numAmount = Number(amount);
+    if (!numAmount || numAmount <= 0) {
+      res.status(400).json({ error: 'O valor da transferência deve ser maior que zero.' });
+      return;
+    }
+
+    const txDate: string = date || new Date().toISOString().slice(0, 10);
+    const srcCurr = currency || 'BRL';
+    const destCurr = destinationCurrency || srcCurr;
+    const numDestAmount = destinationAmount !== undefined ? Number(destinationAmount) : numAmount;
+
+    // Busca dados das contas para compor as descrições automáticas
+    const allAccs = await getAllAccounts(user);
+    const srcAcc = allAccs.find((a) => a.id === sourceAccountId);
+    const destAcc = allAccs.find((a) => a.id === destinationAccountId);
+
+    const srcName = srcAcc?.institution_name === 'Dinheiro' ? 'Dinheiro em Espécie' : `${srcAcc?.institution_name} — ${srcAcc?.account_name}`;
+    const destName = destAcc?.institution_name === 'Dinheiro' ? 'Dinheiro em Espécie' : `${destAcc?.institution_name} — ${destAcc?.account_name}`;
+
+    const descOut = description?.trim() || `Transferência para ${destName}`;
+    const descIn = description?.trim() || `Transferência de ${srcName}`;
+
+    // 1. Saída da conta de origem (débito)
+    const outTx = await insertManualTransaction(
+      {
+        pluggy_transaction_id: `transfer_out_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        account_id: sourceAccountId,
+        date: txDate,
+        amount: -Math.abs(numAmount),
+        description: descOut,
+        category: 'Transferências',
+        transaction_type: 'TRANSFER',
+        original_currency: srcCurr,
+        original_amount: -Math.abs(numAmount),
+        exchange_rate: 1.0,
+      },
+      user,
+    );
+
+    // 2. Entrada na conta de destino (crédito)
+    const inTx = await insertManualTransaction(
+      {
+        pluggy_transaction_id: `transfer_in_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        account_id: destinationAccountId,
+        date: txDate,
+        amount: Math.abs(numDestAmount),
+        description: descIn,
+        category: 'Transferências',
+        transaction_type: 'TRANSFER',
+        original_currency: destCurr,
+        original_amount: Math.abs(numDestAmount),
+        exchange_rate: 1.0,
+      },
+      user,
+    );
+
+    res.status(201).json({
+      success: true,
+      sourceTransaction: outTx,
+      destinationTransaction: inTx,
+    });
+  } catch (err: any) {
+    console.error('[transactions] transfer error:', err);
+    res.status(500).json({ error: err.message || 'Falha ao realizar transferência entre contas.' });
+  }
+});
+
 /** GET /api/transactions?month=YYYY-MM&category=&account= */
 transactionsRouter.get('/', async (req, res) => {
   try {
@@ -175,6 +277,10 @@ transactionsRouter.get('/summary', async (req, res) => {
     let totalIncome = 0;
 
     for (const t of txs) {
+      // Transferências entre contas próprias não inflam o total gasto ou receita global
+      if (!account && (t.transaction_type === 'TRANSFER' || t.category === 'Transferências')) {
+        continue;
+      }
       if (t.amount < 0) {
         totalSpent += Math.abs(t.amount);
         const cat = t.category ?? 'Outros';

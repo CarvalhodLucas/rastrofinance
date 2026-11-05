@@ -15,6 +15,9 @@ import type {
   WeeklyAnalysis,
 } from '../types.js';
 
+export const VISION_MODEL = 'google/gemini-2.5-flash';
+export const TEXT_MODEL = 'deepseek/deepseek-v4-flash';
+
 const openai = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
   apiKey: env.OPENROUTER_API_KEY,
@@ -27,8 +30,9 @@ async function complete(
   user: string,
   maxTokens = 1000,
 ): Promise<string> {
+  const model = env.OPENROUTER_MODEL || TEXT_MODEL;
   const res = await openai.chat.completions.create({
-    model: env.OPENROUTER_MODEL,
+    model,
     max_tokens: maxTokens,
     messages: [
       { role: 'system', content: system },
@@ -365,7 +369,7 @@ export async function scanReceiptImage(
   base64Data: string,
   mimeType = 'image/jpeg',
 ): Promise<ScannedReceiptResult> {
-  const visionModel = env.OPENROUTER_VISION_MODEL || env.OPENROUTER_MODEL || 'google/gemini-2.5-flash';
+  const visionModel = env.OPENROUTER_VISION_MODEL || VISION_MODEL;
 
   const dataUrl = base64Data.startsWith('data:')
     ? base64Data
@@ -478,7 +482,7 @@ export async function scanStatementImage(
   base64Data: string,
   mimeType = 'image/jpeg',
 ): Promise<ScannedStatementResult> {
-  const visionModel = env.OPENROUTER_VISION_MODEL || env.OPENROUTER_MODEL || 'google/gemini-2.5-flash';
+  const visionModel = env.OPENROUTER_VISION_MODEL || VISION_MODEL;
 
   const dataUrl = base64Data.startsWith('data:')
     ? base64Data
@@ -583,7 +587,7 @@ export async function extractTextFromExcel(buffer: Buffer): Promise<string> {
 }
 
 export async function scanStatementText(text: string): Promise<ScannedStatementResult> {
-  const model = env.OPENROUTER_MODEL || 'google/gemini-2.5-flash';
+  const model = env.OPENROUTER_MODEL || TEXT_MODEL;
 
   const prompt = `Você é um assistente financeiro especialista em leitura de extratos bancários, faturas de cartão de crédito e extratos em formato de texto bruto.
 Analise o texto do extrato fornecido e extraia TODAS as transações válidas.

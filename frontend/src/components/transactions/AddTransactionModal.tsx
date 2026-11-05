@@ -298,6 +298,53 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
     onClose();
   };
 
+  const compressImageForOcr = (file: File): Promise<{ base64: string; mimeType: string }> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onerror = () => {
+        resolve({ base64: '', mimeType: file.type || 'image/jpeg' });
+      };
+      reader.onload = (e) => {
+        const rawUrl = (e.target?.result as string) || '';
+        const img = new Image();
+        img.onerror = () => {
+          resolve({ base64: rawUrl, mimeType: file.type || 'image/jpeg' });
+        };
+        img.onload = () => {
+          try {
+            const MAX_DIM = 1600;
+            let width = img.width;
+            let height = img.height;
+            if (width > MAX_DIM || height > MAX_DIM) {
+              if (width > height) {
+                height = Math.round((height * MAX_DIM) / width);
+                width = MAX_DIM;
+              } else {
+                width = Math.round((width * MAX_DIM) / height);
+                height = MAX_DIM;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              resolve({ base64: rawUrl, mimeType: file.type || 'image/jpeg' });
+              return;
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedUrl = canvas.toDataURL('image/jpeg', 0.85);
+            resolve({ base64: compressedUrl, mimeType: 'image/jpeg' });
+          } catch {
+            resolve({ base64: rawUrl, mimeType: file.type || 'image/jpeg' });
+          }
+        };
+        img.src = rawUrl;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleScanFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       notify('Por favor, selecione um arquivo de imagem (foto, print ou comprovante).', 'error');
@@ -305,14 +352,12 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
     }
     setScanningReceipt(true);
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      const { base64, mimeType } = await compressImageForOcr(file);
+      if (!base64) {
+        throw new Error('Falha ao processar o arquivo da imagem.');
+      }
 
-      const res = await api.scanReceipt(base64, file.type);
+      const res = await api.scanReceipt(base64, mimeType);
 
       // Prioriza a conta/banco que o usuário já selecionou no formulário
       let targetAccountId = accountId;

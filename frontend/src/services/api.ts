@@ -117,6 +117,25 @@ export function setRememberedUsername(username: string, remember: boolean): void
   } catch {}
 }
 
+export function getDefaultAccountId(): string | null {
+  try {
+    return localStorage.getItem('rastro_default_account_id');
+  } catch {
+    return null;
+  }
+}
+
+export function setDefaultAccountId(id: string | null): void {
+  try {
+    if (id) {
+      localStorage.setItem('rastro_default_account_id', id);
+    } else {
+      localStorage.removeItem('rastro_default_account_id');
+    }
+    window.dispatchEvent(new CustomEvent('default-account:changed', { detail: id }));
+  } catch {}
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getStoredToken();
   const headers: Record<string, string> = {
@@ -294,6 +313,17 @@ export const api = {
       transaction_type?: 'DEBIT' | 'CREDIT' | 'PIX' | 'BOLETO' | 'TED';
       is_expense?: boolean;
       notes?: string;
+      institution?: string;
+      transactions?: Array<{
+        amount: number;
+        currency?: 'BRL' | 'USD' | 'EUR' | 'CLP';
+        date: string;
+        description: string;
+        merchant_name?: string;
+        category?: string;
+        transaction_type?: 'DEBIT' | 'CREDIT' | 'PIX' | 'BOLETO' | 'TED';
+        is_expense?: boolean;
+      }>;
     }>('/api/transactions/scan-receipt', {
       method: 'POST',
       body: JSON.stringify({ image, mimeType }),

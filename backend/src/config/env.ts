@@ -38,7 +38,7 @@ export const env = {
   // OpenRouter
   OPENROUTER_API_KEY: required('OPENROUTER_API_KEY'),
   OPENROUTER_MODEL: optional('OPENROUTER_MODEL', 'deepseek/deepseek-v4-flash'),
-  OPENROUTER_VISION_MODEL: optional('OPENROUTER_VISION_MODEL', 'google/gemini-2.0-flash-001'),
+  OPENROUTER_VISION_MODEL: optional('OPENROUTER_VISION_MODEL', 'google/gemini-2.5-flash'),
 
   // Telegram Bot
   TELEGRAM_BOT_TOKEN: optional('TELEGRAM_BOT_TOKEN', ''),

@@ -40,16 +40,28 @@ async function complete(
 
 /** Tenta extrair JSON (objeto ou array) de uma resposta, tolerando ruído. */
 function parseJson<T>(raw: string): T {
-  const trimmed = raw.trim();
-  const cleaned = trimmed
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim();
+  let cleaned = raw.trim();
+  const jsonBlockMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (jsonBlockMatch && jsonBlockMatch[1]) {
+    cleaned = jsonBlockMatch[1].trim();
+  } else {
+    cleaned = cleaned
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+  }
   try {
     return JSON.parse(cleaned) as T;
   } catch {
     const match = cleaned.match(/[[{][\s\S]*[\]}]/);
-    if (match) return JSON.parse(match[0]) as T;
+    if (match) {
+      try {
+        return JSON.parse(match[0]) as T;
+      } catch {
+        const noTrailingCommas = match[0].replace(/,\s*([}\]])/g, '$1');
+        return JSON.parse(noTrailingCommas) as T;
+      }
+    }
     throw new Error(`Resposta da IA não é JSON válido: ${raw.slice(0, 200)}`);
   }
 }
@@ -345,64 +357,82 @@ export interface ScannedReceiptResult {
   transaction_type?: 'DEBIT' | 'CREDIT' | 'PIX' | 'BOLETO' | 'TED';
   is_expense?: boolean;
   notes?: string;
+  institution?: string;
+  transactions?: ScannedStatementItem[];
 }
 
 export async function scanReceiptImage(
   base64Data: string,
   mimeType = 'image/jpeg',
 ): Promise<ScannedReceiptResult> {
-  const visionModel = env.OPENROUTER_VISION_MODEL || env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
+  const visionModel = env.OPENROUTER_VISION_MODEL || env.OPENROUTER_MODEL || 'google/gemini-2.5-flash';
 
   const dataUrl = base64Data.startsWith('data:')
     ? base64Data
     : `data:${mimeType};base64,${base64Data}`;
 
-  const prompt = `Você é um assistente financeiro especialista em OCR e leitura de comprovantes, cupons fiscais, faturas e extratos bancários.
-Analise a imagem enviada com muita atenção e extraia as informações estruturadas da transação.
+  const prompt = `Você é um assistente financeiro especialista em OCR e leitura inteligente de comprovantes, cupons fiscais, faturas, extratos bancários e telas/prints de aplicativos (Santander, Bizum, Nubank, Itaú, Revolut, BB, Inter, etc.).
+Analise a imagem enviada com extrema atenção e extraia TODAS as transações visíveis.
 
 Categorias disponíveis:
-- Alimentação (supermercados, feiras, padarias)
-- Restaurantes e Delivery (restaurantes, lanchonetes, iFood, bares)
-- Transporte (combustível, Uber, 99, estacionamento, pedágio, passagens)
+- Alimentação (supermercados, feiras, padarias, mercadinhos)
+- Restaurantes e Delivery (restaurantes, bares, lanchonetes, delivery)
+- Transporte (combustível, passagens, Uber, 99, estacionamento, pedágio)
 - Moradia (aluguel, condomínio, luz, água, gás, internet)
 - Saúde (farmácia, consultas, exames, plano de saúde)
-- Lazer e Entretenimento (cinema, jogos, streaming, shows)
+- Lazer e Entretenimento (cinema, jogos, streaming, eventos)
 - Vestuário (roupas, calçados, acessórios)
 - Tecnologia (softwares, eletrônicos, assinaturas)
 - Educação (cursos, livros, faculdade)
 - Viagem (hospedagem, passagens aéreas, passeios)
-- Serviços Financeiros (tarifas, taxas, investimentos)
-- Transferências (TED, DOC, PIX entre contas)
-- Receita (salário, rendimentos, vendas, entradas)
+- Serviços Financeiros (tarifas, taxas, impostos, investimentos)
+- Transferências (Bizum, PIX, TED, transferências bancárias)
+- Receita (salário, rendimentos, vendas, entradas, Bizum recebido)
 - Outros
 
 Regras de extração:
-1. "amount": número positivo com o valor total final pago/recebido (ex: 149.90).
-2. "currency": detecte a moeda (BRL se tiver R$ ou for Brasil, USD se $, EUR se €, CLP se pesos chilenos ou Chile). Padrão: "BRL".
-3. "date": data da transação no formato ISO "YYYY-MM-DD" (se o ano não estiver legível, use o ano corrente).
-4. "description": nome claro e legível da compra (ex: "Jantar Restaurante Italiano", "Abastecimento Posto Ipiranga", "Compras Supermercado Extra").
-5. "merchant_name": nome do estabelecimento comercial ou beneficiário.
-6. "category": a categoria mais precisa da lista acima.
-7. "transaction_type": um dos valores: "DEBIT", "CREDIT", "PIX", "BOLETO" ou "TED".
-8. "is_expense": true para compras/pagamentos/saídas, false para depósitos/recebimentos/entradas.
-9. "notes": observações complementares (ex: principais itens comprados).
+1. "transactions": Extraia TODAS as transações válidas visíveis na imagem para este array.
+   - Se a imagem tiver apenas 1 transação (ex: comprovante único de pagamento ou PIX), preencha os dados principais e adicione esse item único no array "transactions".
+   - Se a imagem tiver MÚLTIPLAS transações (ex: print de extrato do banco, lista de movimentações, histórico de Bizum, cupom com vários lançamentos), adicione CADA UMA DELAS no array "transactions".
+2. "amount": número positivo com o valor (ex: 10.00 ou 149.90). Nunca negativo.
+3. "currency": detecte a moeda ("EUR" se tiver €, contexto europeu ou Bizum; "BRL" se R$ ou Brasil; "USD" se $; "CLP" se pesos chilenos). Se houver indícios de Espanha/Bizum/Europa, use "EUR".
+4. "date": data no formato ISO "YYYY-MM-DD" (se o ano não estiver explícito, use o ano corrente).
+5. "description": nome claro e legível da transação/estabelecimento/beneficiário (ex: "Bizum Generalitat Valenciana", "Supermercado Consum").
+6. "merchant_name": nome do estabelecimento, pagador ou beneficiário.
+7. "category": a categoria mais precisa da lista acima.
+8. "transaction_type": "DEBIT", "CREDIT", "PIX", "BOLETO" ou "TED".
+9. "is_expense": true para saídas/compras/Bizum enviado, false para entradas/salário/Bizum recebido.
+10. "institution": nome da instituição bancária ou financeira visível (ex: "Santander", "Bizum", "Nubank", etc.).
 
 Responda APENAS um JSON válido e estrito com o formato:
 {
-  "amount": number,
+  "institution": string,
   "currency": "BRL" | "USD" | "EUR" | "CLP",
+  "amount": number,
   "date": "YYYY-MM-DD",
   "description": string,
   "merchant_name": string,
   "category": string,
   "transaction_type": "DEBIT" | "CREDIT" | "PIX" | "BOLETO" | "TED",
   "is_expense": boolean,
-  "notes": string
+  "notes": string,
+  "transactions": [
+    {
+      "amount": number,
+      "currency": "BRL" | "USD" | "EUR" | "CLP",
+      "date": "YYYY-MM-DD",
+      "description": string,
+      "merchant_name": string,
+      "category": string,
+      "transaction_type": "DEBIT" | "CREDIT" | "PIX" | "BOLETO" | "TED",
+      "is_expense": boolean
+    }
+  ]
 }`;
 
   const res = await openai.chat.completions.create({
     model: visionModel,
-    max_tokens: 1000,
+    max_tokens: 3000,
     messages: [
       {
         role: 'user',
@@ -448,7 +478,7 @@ export async function scanStatementImage(
   base64Data: string,
   mimeType = 'image/jpeg',
 ): Promise<ScannedStatementResult> {
-  const visionModel = env.OPENROUTER_VISION_MODEL || env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
+  const visionModel = env.OPENROUTER_VISION_MODEL || env.OPENROUTER_MODEL || 'google/gemini-2.5-flash';
 
   const dataUrl = base64Data.startsWith('data:')
     ? base64Data
@@ -553,7 +583,7 @@ export async function extractTextFromExcel(buffer: Buffer): Promise<string> {
 }
 
 export async function scanStatementText(text: string): Promise<ScannedStatementResult> {
-  const model = env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
+  const model = env.OPENROUTER_MODEL || 'google/gemini-2.5-flash';
 
   const prompt = `Você é um assistente financeiro especialista em leitura de extratos bancários, faturas de cartão de crédito e extratos em formato de texto bruto.
 Analise o texto do extrato fornecido e extraia TODAS as transações válidas.

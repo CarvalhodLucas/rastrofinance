@@ -31,9 +31,14 @@ transactionsRouter.post('/scan-receipt', async (req, res) => {
   try {
     const result = await scanReceiptImage(image, mimeType);
     res.json(result);
-  } catch (err) {
+  } catch (err: any) {
     console.error('[transactions] scan receipt error:', err);
-    res.status(500).json({ error: 'Falha ao analisar o comprovante com a IA.' });
+    const msg = err?.message || '';
+    if (msg.includes('não é JSON válido')) {
+      res.status(422).json({ error: 'A IA não identificou transações legíveis na imagem. Verifique se a foto ou print está nítida.' });
+      return;
+    }
+    res.status(500).json({ error: err?.message || 'Falha ao analisar o comprovante com a IA.' });
   }
 });
 

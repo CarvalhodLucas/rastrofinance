@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, Trash2, Landmark, Loader2, Plus, Globe, Edit2, Wallet, CreditCard } from 'lucide-react';
+import { RefreshCw, Trash2, Landmark, Loader2, Plus, Globe, Edit2, Wallet, CreditCard, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -10,9 +10,10 @@ import { ImportStatementModal } from '@/components/transactions/ImportStatementM
 import { AddManualAccountModal } from '@/components/connect/AddManualAccountModal';
 import { useToast } from '@/components/ui/Toast';
 import { useAccounts } from '@/hooks/usePluggy';
-import { api } from '@/services/api';
+import { api, getDefaultAccountId, setDefaultAccountId } from '@/services/api';
 import { timeAgo } from '@/lib/format';
 import { useFmt, useFmtRaw, useCurrency } from '@/contexts/CurrencyContext';
+import { cn } from '@/lib/utils';
 import type { ConnectedAccount } from '@/types/finance';
 
 const TYPE_LABEL: Record<string, string> = {
@@ -32,6 +33,29 @@ export function Connect() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'connections' | 'import'>('connections');
+  const [defaultAccountId, setDefaultAccountIdState] = useState<string | null>(() => getDefaultAccountId());
+
+  useEffect(() => {
+    const handleDefChanged = (e: Event) => {
+      setDefaultAccountIdState((e as CustomEvent<string | null>).detail ?? getDefaultAccountId());
+    };
+    window.addEventListener('default-account:changed', handleDefChanged);
+    return () => window.removeEventListener('default-account:changed', handleDefChanged);
+  }, []);
+
+  const handleToggleDefault = (id: string) => {
+    if (defaultAccountId === id) {
+      setDefaultAccountId(null);
+      setDefaultAccountIdState(null);
+      notify('Conta padrão desmarcada.', 'info');
+    } else {
+      setDefaultAccountId(id);
+      setDefaultAccountIdState(id);
+      const acc = accounts.find((a) => a.id === id);
+      const name = acc?.account_name || acc?.institution_name || 'Conta';
+      notify(`⭐ "${name}" definida como conta padrão para novos lançamentos!`, 'success');
+    }
+  };
 
   const [showManualModal, setShowManualModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<ConnectedAccount | null>(null);
@@ -266,6 +290,12 @@ export function Connect() {
                                     <span className="rounded bg-accent-gold/15 px-1.5 py-0.5 text-[10px] font-bold text-accent-gold border border-accent-gold/30">
                                       {accountCurrency}
                                     </span>
+                                    {defaultAccountId === acc.id && (
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-accent-gold/15 border border-accent-gold/40 px-2 py-0.5 text-[10px] font-bold text-accent-gold shadow-xs">
+                                        <Star className="h-2.5 w-2.5 fill-accent-gold text-accent-gold" />
+                                        Padrão
+                                      </span>
+                                    )}
                                   </p>
 
                                   <div className="text-xs text-text-secondary mt-0.5 space-y-1">
@@ -306,7 +336,27 @@ export function Connect() {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
+                        <div className="flex items-center justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40 flex-wrap">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleToggleDefault(acc.id)}
+                            className={cn(
+                              'h-8 gap-1.5 text-xs border transition-all cursor-pointer flex-1 sm:flex-initial',
+                              defaultAccountId === acc.id
+                                ? 'border-accent-gold/60 bg-accent-gold/20 text-accent-gold font-bold shadow-xs'
+                                : 'border-border/80 text-text-muted hover:text-accent-gold hover:border-accent-gold/40',
+                            )}
+                            title={
+                              defaultAccountId === acc.id
+                                ? 'Esta é a sua conta padrão para novos lançamentos'
+                                : 'Definir como conta padrão para novos lançamentos'
+                            }
+                          >
+                            <Star className={cn('h-3.5 w-3.5', defaultAccountId === acc.id && 'fill-accent-gold text-accent-gold')} />
+                            <span>{defaultAccountId === acc.id ? 'Padrão' : 'Tornar Padrão'}</span>
+                          </Button>
+
                           <Button
                             variant="secondary"
                             size="sm"

@@ -8,7 +8,16 @@ export type TransactionType =
   | 'PIX'
   | 'TED'
   | 'BOLETO'
-  | 'TRANSFER';
+  | 'TRANSFER'
+  | 'CREDIT_CARD';
+
+export interface SubTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  category?: string | null;
+  date?: string;
+}
 
 export type InsightType =
   | 'DAILY_SUMMARY'
@@ -56,6 +65,7 @@ export interface Transaction {
   original_currency?: string;
   original_amount?: number;
   exchange_rate?: number;
+  sub_transactions?: SubTransaction[];
   created_at: string;
   updated_at: string;
 }

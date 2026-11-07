@@ -16,6 +16,7 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
   Educação: { icon: '📚', color: '#6366F1' },
   Viagem: { icon: '✈️', color: '#14B8A6' },
   'Serviços Financeiros': { icon: '🏦', color: '#64748B' },
+  'Cartão de Crédito': { icon: '💳', color: '#A855F7' },
   Transferências: { icon: '🔄', color: '#94A3B8' },
   Receita: { icon: '💰', color: '#22C55E' },
   Outros: { icon: '📦', color: '#4B5563' },

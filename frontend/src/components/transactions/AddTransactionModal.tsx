@@ -15,6 +15,8 @@ import {
   ChevronUp,
   ArrowLeftRight,
   ArrowRight,
+  CreditCard,
+  Coins,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
@@ -23,7 +25,8 @@ import { useCategories } from '@/hooks/useCategories';
 import { ManageCategoriesModal } from '@/components/categories/ManageCategoriesModal';
 import { cn } from '@/lib/utils';
 import { useCurrency, type Currency } from '@/contexts/CurrencyContext';
-import type { ConnectedAccount, Transaction } from '@/types/finance';
+import type { ConnectedAccount, SubTransaction, Transaction } from '@/types/finance';
+import rastroAssets from '@/data/assetsDatabase.json';
 
 interface Props {
   open: boolean;
@@ -32,6 +35,7 @@ interface Props {
   accounts: ConnectedAccount[];
   autoTriggerScan?: boolean;
   transactionToEdit?: Transaction | null;
+  preferredAccountId?: string;
 }
 
 interface BatchItem {
@@ -44,18 +48,58 @@ interface BatchItem {
   accountId: string;
 }
 
-const TX_TYPES = ['DEBIT', 'PIX', 'TED', 'BOLETO', 'CREDIT'] as const;
+interface CreditCardSubItem {
+  id: string;
+  description: string;
+  amount: string;
+  category: string;
+  date: string;
+}
 
-const CURRENCY_SYMBOLS: Record<Currency, string> = { BRL: 'R$', USD: '$', EUR: '€', CLP: '$' };
+const TX_TYPES = ['DEBIT', 'PIX', 'TED', 'BOLETO', 'CREDIT_CARD', 'CREDIT'] as const;
+
+const CURRENCY_SYMBOLS: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£', CLP: '$' };
+
+const TRANSFER_CURRENCIES = [
+  { value: 'BRL', label: '🇧🇷 BRL (R$)' },
+  { value: 'EUR', label: '🇪🇺 EUR (€)' },
+  { value: 'USD', label: '🇺🇸 USD ($)' },
+  { value: 'GBP', label: '🇬🇧 GBP (£)' },
+  { value: 'CLP', label: '🇨🇱 CLP ($)' },
+] as const;
+
+function isTransferTransaction(tx?: Transaction | null): boolean {
+  if (!tx) return false;
+  return (
+    tx.transaction_type === 'TRANSFER' ||
+    tx.category === 'Transferências' ||
+    (tx.pluggy_transaction_id || '').startsWith('transfer_')
+  );
+}
+
+function isCreditCardTransaction(tx?: Transaction | null): boolean {
+  if (!tx) return false;
+  return (
+    tx.transaction_type === 'CREDIT_CARD' ||
+    tx.subcategory === 'CREDIT_CARD_BILL' ||
+    (tx.pluggy_transaction_id || '').startsWith('credit_card_') ||
+    Boolean(tx.sub_transactions && tx.sub_transactions.length > 0)
+  );
+}
+
+function isAutoTransferDescription(desc?: string | null): boolean {
+  if (!desc) return true;
+  return desc.startsWith('Transferência para ') || desc.startsWith('Transferência de ');
+}
 
 function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTriggerScan, transactionToEdit }: Props) {
+export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTriggerScan, transactionToEdit, preferredAccountId }: Props) {
   const { notify } = useToast();
-  const { currency, rate: currentContextRate } = useCurrency();
+  const { currency, rate: currentContextRate, convert } = useCurrency();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const amountInputRef = useRef<HTMLInputElement>(null);
@@ -63,23 +107,102 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
   const prevEditIdRef = useRef<string | null>(null);
 
   const [saving, setSaving] = useState(false);
-  const [savingAction, setSavingAction] = useState<'next' | 'close' | 'batch' | 'transfer' | null>(null);
+  const [savingAction, setSavingAction] = useState<'next' | 'close' | 'batch' | 'transfer' | 'credit_card' | null>(null);
   const [scanningReceipt, setScanningReceipt] = useState(false);
 
-  // Abas de Modo: Individual/Sequencial vs Transferência vs Em Lote
-  const [activeTab, setActiveTab] = useState<'SINGLE' | 'TRANSFER' | 'BATCH'>('SINGLE');
+  // Abas de Modo: Individual/Sequencial vs Cartão de Crédito vs Proventos vs Transferência vs Em Lote
+  const [activeTab, setActiveTab] = useState<'SINGLE' | 'CREDIT_CARD' | 'DIVIDEND' | 'TRANSFER' | 'BATCH'>('SINGLE');
+
+  // Estados do modo Lançar Provento / Dividendo
+  const [divTicker, setDivTicker] = useState('');
+  const [divAmount, setDivAmount] = useState('');
+  const [divDate, setDivDate] = useState(todayISO);
+  const [divType, setDivType] = useState<'DIVIDEND' | 'JCP' | 'FII' | 'OTHER'>('DIVIDEND');
+  const [divNotes, setDivNotes] = useState('');
+  const [divDepositAccount, setDivDepositAccount] = useState(true); // Se true, credita o saldo da conta selecionada
+  const [divSuggestions, setDivSuggestions] = useState<any[]>([]);
+  const [showDivSuggestions, setShowDivSuggestions] = useState(false);
+  const divSearchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (divSearchRef.current && !divSearchRef.current.contains(e.target as Node)) {
+        setShowDivSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleDivTickerChange = (val: string) => {
+    const clean = val.toUpperCase();
+    setDivTicker(clean);
+
+    if (clean.endsWith('11')) setDivType('FII');
+
+    if (clean.trim().length >= 1) {
+      const matches = rastroAssets.filter(
+        (a) =>
+          a.ticker.toUpperCase().includes(clean.trim()) ||
+          a.name.toUpperCase().includes(clean.trim())
+      ).slice(0, 8);
+      setDivSuggestions(matches);
+      setShowDivSuggestions(true);
+
+      const exact = rastroAssets.find((a) => a.ticker.toUpperCase() === clean.trim());
+      if (exact) {
+        if (exact.type === 'FIIs' || exact.ticker.endsWith('11')) setDivType('FII');
+        else if (exact.type === 'Ações') setDivType('DIVIDEND');
+      }
+    } else {
+      setDivSuggestions([]);
+      setShowDivSuggestions(false);
+    }
+  };
+
+  const handleSelectDivSuggestion = (item: (typeof rastroAssets)[0]) => {
+    setDivTicker(item.ticker);
+    setShowDivSuggestions(false);
+    if (item.type === 'FIIs' || item.ticker.endsWith('11')) {
+      setDivType('FII');
+    } else if (item.type === 'Ações') {
+      setDivType('DIVIDEND');
+    }
+  };
 
   // Modo Contínuo (Salvar e continuar adicionando)
   const [continuousMode, setContinuousMode] = useState(false);
   const [sessionSavedCount, setSessionSavedCount] = useState(0);
   const [sessionTotalAmount, setSessionTotalAmount] = useState(0);
 
+  // Estados do modo Cartão de Crédito (com Sub-transações)
+  const createEmptySubItem = (defDate = todayISO()): CreditCardSubItem => ({
+    id: Math.random().toString(36).substring(2, 9),
+    description: '',
+    amount: '',
+    category: '',
+    date: defDate,
+  });
+  const [ccDescription, setCcDescription] = useState('Fatura Cartão de Crédito');
+  const [ccTotalAmount, setCcTotalAmount] = useState('');
+  const [ccManualTotal, setCcManualTotal] = useState(false);
+  const [ccSubItems, setCcSubItems] = useState<CreditCardSubItem[]>(() => [
+    createEmptySubItem(),
+    createEmptySubItem(),
+    createEmptySubItem(),
+  ]);
+
   // Estados do modo Transferência entre Contas
   const [transferSourceAccountId, setTransferSourceAccountId] = useState('');
   const [transferDestAccountId, setTransferDestAccountId] = useState('');
+  const [transferSourceCurrency, setTransferSourceCurrency] = useState<string>('BRL');
+  const [transferDestCurrency, setTransferDestCurrency] = useState<string>('BRL');
   const [transferAmount, setTransferAmount] = useState('');
+  const [transferDestAmount, setTransferDestAmount] = useState('');
+  const [destAmountManuallyEdited, setDestAmountManuallyEdited] = useState(false);
   const [transferDate, setTransferDate] = useState(todayISO);
   const [transferDescription, setTransferDescription] = useState('');
+  const [loadingTransferPair, setLoadingTransferPair] = useState(false);
 
   // Campos do formulário individual
   const [isExpense, setIsExpense] = useState(true);
@@ -133,13 +256,14 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
   ]);
 
   const accountOptions = useMemo(() => {
-    const hasCash = accounts.some(
+    const activeAccounts = accounts.filter((a: ConnectedAccount) => a.is_active !== false);
+    const hasCash = activeAccounts.some(
       (a: ConnectedAccount) =>
         a.institution_name.toLowerCase() === 'dinheiro' ||
         a.account_name.toLowerCase().includes('dinheiro'),
     );
 
-    if (hasCash) return accounts;
+    if (hasCash) return activeAccounts;
 
     const cashFallback: ConnectedAccount = {
       id: 'cash_fallback',
@@ -157,7 +281,7 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
       created_at: new Date().toISOString(),
     };
 
-    return [cashFallback, ...accounts];
+    return [cashFallback, ...activeAccounts];
   }, [accounts]);
 
   useEffect(() => {
@@ -186,11 +310,139 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
       setIsRecurring(transactionToEdit.is_recurring ?? false);
       setSelectedCurrency((transactionToEdit.original_currency as Currency) ?? currency);
       setExchangeRate(transactionToEdit.exchange_rate ?? 1);
-      setActiveTab('SINGLE');
+
+      if (isTransferTransaction(transactionToEdit)) {
+        setActiveTab('TRANSFER');
+        setTransferDate(transactionToEdit.date);
+
+        const pluggyId = transactionToEdit.pluggy_transaction_id || '';
+        const isOut = pluggyId.startsWith('transfer_out_') || (!pluggyId.startsWith('transfer_in_') && transactionToEdit.amount < 0);
+        const txAccId = transactionToEdit.account_id || accountOptions[0]?.id || '';
+        const fallbackOtherAcc = accountOptions.find((a) => a.id !== txAccId);
+        const txCurr = (
+          transactionToEdit.original_currency ||
+          accountOptions.find((a) => a.id === txAccId)?.currency ||
+          currency ||
+          'BRL'
+        ).toUpperCase();
+        const txAmtStr = Math.abs(transactionToEdit.original_amount ?? transactionToEdit.amount).toString();
+
+        if (isOut) {
+          setTransferSourceAccountId(txAccId);
+          setTransferSourceCurrency(txCurr);
+          setTransferAmount(txAmtStr);
+          setTransferDestAccountId(fallbackOtherAcc?.id || '');
+          setTransferDestCurrency((fallbackOtherAcc?.currency || txCurr).toUpperCase());
+          setTransferDestAmount(txAmtStr);
+        } else {
+          setTransferDestAccountId(txAccId);
+          setTransferDestCurrency(txCurr);
+          setTransferDestAmount(txAmtStr);
+          setTransferSourceAccountId(fallbackOtherAcc?.id || '');
+          setTransferSourceCurrency((fallbackOtherAcc?.currency || txCurr).toUpperCase());
+          setTransferAmount(txAmtStr);
+        }
+        setDestAmountManuallyEdited(true);
+        setTransferDescription(isAutoTransferDescription(transactionToEdit.description) ? '' : transactionToEdit.description);
+
+        setLoadingTransferPair(true);
+        api
+          .getTransferPair(transactionToEdit.id)
+          .then(({ sourceTransaction, destinationTransaction }) => {
+            if (sourceTransaction) {
+              const sAccId = sourceTransaction.account_id || txAccId;
+              const sAcc = accountOptions.find((a) => a.id === sAccId);
+              const sCurr = (sourceTransaction.original_currency || sAcc?.currency || 'BRL').toUpperCase();
+              setTransferSourceAccountId(sAccId);
+              setTransferSourceCurrency(sCurr);
+              setTransferAmount(Math.abs(sourceTransaction.original_amount ?? sourceTransaction.amount).toString());
+              setTransferDate(sourceTransaction.date);
+            } else if (destinationTransaction) {
+              // Tenta inferir conta de origem pela descrição "Transferência de ..."
+              const desc = destinationTransaction.description || '';
+              if (desc.startsWith('Transferência de ')) {
+                const targetLabel = desc.replace('Transferência de ', '').trim().toLowerCase();
+                const matched = accountOptions.find((a) => {
+                  const label = a.institution_name === 'Dinheiro' ? 'dinheiro em espécie' : `${a.institution_name} — ${a.account_name}`.toLowerCase();
+                  return label === targetLabel || a.institution_name.toLowerCase() === targetLabel || a.account_name.toLowerCase() === targetLabel;
+                });
+                if (matched) {
+                  setTransferSourceAccountId(matched.id);
+                  setTransferSourceCurrency((matched.currency || 'BRL').toUpperCase());
+                }
+              }
+            }
+
+            if (destinationTransaction) {
+              const dAccId = destinationTransaction.account_id || fallbackOtherAcc?.id || '';
+              const dAcc = accountOptions.find((a) => a.id === dAccId);
+              const dCurr = (destinationTransaction.original_currency || dAcc?.currency || 'BRL').toUpperCase();
+              setTransferDestAccountId(dAccId);
+              setTransferDestCurrency(dCurr);
+              setTransferDestAmount(Math.abs(destinationTransaction.original_amount ?? destinationTransaction.amount).toString());
+            } else if (sourceTransaction) {
+              // Tenta inferir conta de destino pela descrição "Transferência para ..."
+              const desc = sourceTransaction.description || '';
+              if (desc.startsWith('Transferência para ')) {
+                const targetLabel = desc.replace('Transferência para ', '').trim().toLowerCase();
+                const matched = accountOptions.find((a) => {
+                  const label = a.institution_name === 'Dinheiro' ? 'dinheiro em espécie' : `${a.institution_name} — ${a.account_name}`.toLowerCase();
+                  return label === targetLabel || a.institution_name.toLowerCase() === targetLabel || a.account_name.toLowerCase() === targetLabel;
+                });
+                if (matched) {
+                  setTransferDestAccountId(matched.id);
+                  setTransferDestCurrency((matched.currency || 'BRL').toUpperCase());
+                }
+              }
+            }
+
+            const customDesc =
+              sourceTransaction && !isAutoTransferDescription(sourceTransaction.description)
+                ? sourceTransaction.description
+                : destinationTransaction && !isAutoTransferDescription(destinationTransaction.description)
+                  ? destinationTransaction.description
+                  : '';
+            setTransferDescription(customDesc);
+          })
+          .catch(() => {})
+          .finally(() => {
+            setLoadingTransferPair(false);
+          });
+      } else if (isCreditCardTransaction(transactionToEdit)) {
+        setActiveTab('CREDIT_CARD');
+        setCcDescription(transactionToEdit.description || 'Fatura Cartão de Crédito');
+        const txAbs = Math.abs(transactionToEdit.original_amount ?? transactionToEdit.amount);
+        const existingSubs = transactionToEdit.sub_transactions ?? [];
+        if (existingSubs.length > 0) {
+          setCcSubItems(
+            existingSubs.map((st) => ({
+              id: st.id || Math.random().toString(36).substring(2, 9),
+              description: st.description || '',
+              amount: String(Math.abs(Number(st.amount) || 0)),
+              category: st.category || '',
+              date: st.date || transactionToEdit.date || todayISO(),
+            })),
+          );
+          const subSum = existingSubs.reduce((acc, st) => acc + Math.abs(Number(st.amount) || 0), 0);
+          const hasCustomTotal = Math.abs(txAbs - subSum) > 0.01;
+          setCcManualTotal(hasCustomTotal);
+          setCcTotalAmount(txAbs.toString());
+        } else {
+          setCcSubItems([
+            createEmptySubItem(transactionToEdit.date || todayISO()),
+            createEmptySubItem(transactionToEdit.date || todayISO()),
+          ]);
+          setCcManualTotal(true);
+          setCcTotalAmount(txAbs.toString());
+        }
+      } else {
+        setActiveTab('SINGLE');
+      }
     } else {
       setSelectedCurrency(currency);
       setIsRecurring(false);
-      // Prioriza a conta marcada como padrão pelo usuário
+      // Prioriza a aba do banco ativa (preferredAccountId), depois a conta marcada como padrão pelo usuário
+      const hasPreferred = preferredAccountId && accountOptions.some((a) => a.id === preferredAccountId);
       const savedDefault = getDefaultAccountId();
       const hasSavedDefault = savedDefault && accountOptions.some((a) => a.id === savedDefault);
       const cashAcc = accountOptions.find(
@@ -198,21 +450,49 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
           a.institution_name.toLowerCase() === 'dinheiro' ||
           a.account_name.toLowerCase().includes('dinheiro'),
       );
-      const defAccId = hasSavedDefault
-        ? (savedDefault as string)
-        : cashAcc
-          ? cashAcc.id
-          : (accountOptions[0]?.id ?? '');
+      const defAccId = hasPreferred
+        ? (preferredAccountId as string)
+        : hasSavedDefault
+          ? (savedDefault as string)
+          : cashAcc
+            ? cashAcc.id
+            : (accountOptions[0]?.id ?? '');
 
       setAccountId(defAccId);
       setDefaultAccountIdState(savedDefault);
 
-      setTransferSourceAccountId(defAccId);
+      setCcDescription('Fatura Cartão de Crédito');
+      setCcTotalAmount('');
+      setCcManualTotal(false);
+      setCcSubItems([
+        createEmptySubItem(todayISO()),
+        createEmptySubItem(todayISO()),
+        createEmptySubItem(todayISO()),
+      ]);
+
+      const srcAcc = accountOptions.find((a) => a.id === defAccId);
+      if (hasPreferred && srcAcc?.currency) {
+        setSelectedCurrency((srcAcc.currency.toUpperCase() as Currency) || currency);
+      }
       const otherAcc = accountOptions.find((a) => a.id !== defAccId);
+      const srcCurr = (srcAcc?.currency || currency || 'BRL').toUpperCase();
+      const destCurr = (otherAcc?.currency || srcCurr).toUpperCase();
+
+      setTransferSourceAccountId(defAccId);
       setTransferDestAccountId(otherAcc?.id || '');
+      setTransferSourceCurrency(srcCurr);
+      setTransferDestCurrency(destCurr);
       setTransferAmount('');
+      setTransferDestAmount('');
+      setDestAmountManuallyEdited(false);
       setTransferDate(todayISO());
       setTransferDescription('');
+      setDivTicker('');
+      setDivAmount('');
+      setDivDate(todayISO());
+      setDivType('DIVIDEND');
+      setDivNotes('');
+      setDivDepositAccount(true);
 
       setBatchItems((prev) =>
         prev.map((item) => ({
@@ -225,7 +505,7 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
         setTimeout(() => fileInputRef.current?.click(), 150);
       }
     }
-  }, [open, currency, autoTriggerScan, transactionToEdit, accountOptions]);
+  }, [open, currency, autoTriggerScan, transactionToEdit, accountOptions, preferredAccountId]);
 
   useEffect(() => {
     if (!open) return;
@@ -279,6 +559,11 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
       setAccountId(transactionToEdit.account_id ?? '');
       setSelectedCurrency((transactionToEdit.original_currency as Currency) ?? currency);
       setExchangeRate(transactionToEdit.exchange_rate ?? 1);
+      if (isTransferTransaction(transactionToEdit)) {
+        setActiveTab('TRANSFER');
+      } else if (isCreditCardTransaction(transactionToEdit)) {
+        setActiveTab('CREDIT_CARD');
+      }
     } else {
       setIsExpense(true);
       setDate(todayISO());
@@ -303,6 +588,23 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
       setDefaultAccountIdState(savedDefault);
       setSelectedCurrency(currency);
       setExchangeRate(1);
+      setTransferAmount('');
+      setTransferDestAmount('');
+      setDestAmountManuallyEdited(false);
+      setDivTicker('');
+      setDivAmount('');
+      setDivDate(todayISO());
+      setDivType('DIVIDEND');
+      setDivNotes('');
+      setDivDepositAccount(true);
+      setCcDescription('Fatura Cartão de Crédito');
+      setCcTotalAmount('');
+      setCcManualTotal(false);
+      setCcSubItems([
+        createEmptySubItem(todayISO()),
+        createEmptySubItem(todayISO()),
+        createEmptySubItem(todayISO()),
+      ]);
       setBatchItems([
         createEmptyBatchItem(defAccId),
         createEmptyBatchItem(defAccId),
@@ -412,7 +714,26 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
         ? (accObj.institution_name === 'Dinheiro' ? 'Dinheiro' : `${accObj.institution_name} — ${accObj.account_name}`)
         : 'Banco selecionado';
 
-      if (scannedList.length > 1) {
+      if (activeTab === 'CREDIT_CARD' && scannedList.length >= 1) {
+        const newSubItems: CreditCardSubItem[] = scannedList.map((t) => ({
+          id: Math.random().toString(36).substring(2, 9),
+          description: t.description || t.merchant_name || 'Compra no Cartão',
+          amount: String(Math.abs(Number(t.amount) || 0)),
+          category: t.category || '',
+          date: t.date || date || todayISO(),
+        }));
+        setCcSubItems((prev) => {
+          const filled = prev.filter(
+            (it) => it.description.trim().length > 0 || (parseFloat(it.amount.replace(',', '.')) || 0) > 0,
+          );
+          return [...filled, ...newSubItems];
+        });
+        setCcManualTotal(false);
+        notify(
+          `✓ ${scannedList.length} sub-transaç${scannedList.length === 1 ? 'ão adicionada' : 'ões adicionadas'} na fatura do Cartão de Crédito!`,
+          'success',
+        );
+      } else if (scannedList.length > 1) {
         // MÚLTIPLAS TRANSAÇÕES NA FOTO: abre em Lote com todas as transações vinculadas ao banco
         setActiveTab('BATCH');
         const newBatchItems: BatchItem[] = scannedList.map((t) => ({
@@ -553,19 +874,184 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
     }
   };
 
+  // Funções do Modo Cartão de Crédito (com Sub-transações)
+  const addCcSubRow = () => {
+    setCcSubItems((prev) => [...prev, createEmptySubItem(date || todayISO())]);
+  };
+
+  const removeCcSubRow = (id: string) => {
+    if (ccSubItems.length <= 1) {
+      setCcSubItems([createEmptySubItem(date || todayISO())]);
+      return;
+    }
+    setCcSubItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const updateCcSubItem = (id: string, updates: Partial<CreditCardSubItem>) => {
+    setCcSubItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, ...updates } : item)),
+    );
+  };
+
+  const handleSubmitCreditCard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accountId) {
+      notify('Por favor, selecione a conta usada para pagar o cartão de crédito.', 'error');
+      return;
+    }
+
+    const validSubItems = ccSubItems.filter((item) => {
+      const num = parseFloat(item.amount.replace(',', '.'));
+      return (!isNaN(num) && num > 0) || item.description.trim().length > 0;
+    });
+
+    for (const item of validSubItems) {
+      const num = parseFloat(item.amount.replace(',', '.'));
+      if (isNaN(num) || num <= 0) {
+        notify(`Informe um valor maior que zero para a sub-transação "${item.description || 'sem descrição'}".`, 'error');
+        return;
+      }
+    }
+
+    const subItemsSum = validSubItems.reduce((acc, item) => {
+      const num = parseFloat(item.amount.replace(',', '.'));
+      return acc + (isNaN(num) ? 0 : Math.abs(num));
+    }, 0);
+
+    const parsedManualTotal = parseFloat(ccTotalAmount.replace(',', '.')) || 0;
+    const finalTotal =
+      ccManualTotal && parsedManualTotal > 0
+        ? parsedManualTotal
+        : subItemsSum > 0
+          ? subItemsSum
+          : parsedManualTotal;
+
+    if (!finalTotal || finalTotal <= 0) {
+      notify(
+        'Adicione pelo menos uma sub-transação com valor ou informe o valor total da fatura do cartão.',
+        'error',
+      );
+      return;
+    }
+
+    setSaving(true);
+    setSavingAction('credit_card');
+    try {
+      const subTransactionsPayload: SubTransaction[] = validSubItems.map((it) => ({
+        id: it.id,
+        description: it.description.trim() || it.category || 'Compra no Cartão',
+        amount: Math.abs(parseFloat(it.amount.replace(',', '.')) || 0),
+        category: it.category || undefined,
+        date: it.date || date,
+      }));
+
+      const baseBrlAmount = finalTotal * exchangeRate;
+      const billTitle = ccDescription.trim() || 'Fatura Cartão de Crédito';
+
+      const payload = {
+        date,
+        amount: -Math.abs(baseBrlAmount),
+        description: billTitle,
+        category: category || 'Cartão de Crédito',
+        subcategory: 'CREDIT_CARD_BILL',
+        transaction_type: 'CREDIT_CARD' as import('@/types/finance').TransactionType,
+        account_id: accountId,
+        is_recurring: isRecurring,
+        original_currency: selectedCurrency,
+        original_amount: -Math.abs(finalTotal),
+        exchange_rate: exchangeRate,
+        sub_transactions: subTransactionsPayload,
+      };
+
+      if (transactionToEdit) {
+        await api.updateTransaction(transactionToEdit.id, payload);
+        notify(
+          `✓ Cartão de Crédito atualizado (${subTransactionsPayload.length} sub-transaç${subTransactionsPayload.length === 1 ? 'ão' : 'ões'})!`,
+          'success',
+        );
+      } else {
+        await api.createTransaction(payload);
+        notify(
+          `✓ Pagamento de Cartão de Crédito salvo com ${subTransactionsPayload.length} sub-transaç${subTransactionsPayload.length === 1 ? 'ão' : 'ões'}!`,
+          'success',
+        );
+      }
+
+      onCreated();
+      window.dispatchEvent(new Event('transactions:changed'));
+      handleClose();
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Falha ao salvar transação de cartão de crédito.', 'error');
+    } finally {
+      setSaving(false);
+      setSavingAction(null);
+    }
+  };
+
   // Funções do Modo Transferência entre Contas
+  const handleSelectTransferSourceAccount = (newSrcId: string) => {
+    setTransferSourceAccountId(newSrcId);
+    const acc = accountOptions.find((a) => a.id === newSrcId);
+    if (acc?.currency) {
+      const nextCurr = acc.currency.toUpperCase();
+      setTransferSourceCurrency(nextCurr);
+      if (nextCurr === transferDestCurrency && !destAmountManuallyEdited && transferAmount) {
+        setTransferDestAmount(transferAmount);
+      }
+    }
+  };
+
+  const handleSelectTransferDestAccount = (newDestId: string) => {
+    setTransferDestAccountId(newDestId);
+    const acc = accountOptions.find((a) => a.id === newDestId);
+    if (acc?.currency) {
+      const nextCurr = acc.currency.toUpperCase();
+      setTransferDestCurrency(nextCurr);
+      if (nextCurr === transferSourceCurrency && !destAmountManuallyEdited && transferAmount) {
+        setTransferDestAmount(transferAmount);
+      }
+    }
+  };
+
   const handleInvertTransferAccounts = () => {
-    setTransferSourceAccountId(transferDestAccountId);
-    setTransferDestAccountId(transferSourceAccountId);
+    const prevSrcAcc = transferSourceAccountId;
+    const prevDestAcc = transferDestAccountId;
+    const prevSrcCurr = transferSourceCurrency;
+    const prevDestCurr = transferDestCurrency;
+    const prevSrcAmt = transferAmount;
+    const prevDestAmt = transferDestAmount;
+
+    setTransferSourceAccountId(prevDestAcc);
+    setTransferDestAccountId(prevSrcAcc);
+    setTransferSourceCurrency(prevDestCurr);
+    setTransferDestCurrency(prevSrcCurr);
+    if (prevDestAmt) {
+      setTransferAmount(prevDestAmt);
+      setTransferDestAmount(prevSrcAmt);
+    }
   };
 
   const handleSubmitTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
-    const num = parseFloat(transferAmount.replace(',', '.'));
-    if (!num || num <= 0) {
-      notify('Por favor, informe um valor maior que zero para a transferência.', 'error');
+    const numSent = parseFloat(transferAmount.replace(',', '.'));
+    if (!numSent || numSent <= 0) {
+      notify('Por favor, informe um valor enviado maior que zero.', 'error');
       return;
     }
+
+    const isDiffCurrency = transferSourceCurrency.toUpperCase() !== transferDestCurrency.toUpperCase();
+    const rawDest = transferDestAmount.trim() ? parseFloat(transferDestAmount.replace(',', '.')) : (isDiffCurrency ? 0 : numSent);
+
+    if (!rawDest || rawDest <= 0) {
+      notify(
+        isDiffCurrency
+          ? `Por favor, informe o valor recebido em ${transferDestCurrency} (já descontando as taxas).`
+          : 'Por favor, informe um valor recebido maior que zero.',
+        'error',
+      );
+      return;
+    }
+
     if (!transferSourceAccountId || !transferDestAccountId) {
       notify('Selecione a conta de origem e a conta de destino.', 'error');
       return;
@@ -580,25 +1066,109 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
     try {
       const srcAcc = accountOptions.find((a) => a.id === transferSourceAccountId);
       const destAcc = accountOptions.find((a) => a.id === transferDestAccountId);
+      const srcCurr = (transferSourceCurrency || srcAcc?.currency || 'BRL').toUpperCase();
+      const destCurr = (transferDestCurrency || destAcc?.currency || srcCurr).toUpperCase();
 
-      await api.createTransfer({
+      const payload = {
         sourceAccountId: transferSourceAccountId,
         destinationAccountId: transferDestAccountId,
-        amount: num,
+        amount: numSent,
         date: transferDate,
         description: transferDescription.trim() || undefined,
-        currency: (srcAcc?.currency as Currency) || selectedCurrency,
-      });
+        currency: srcCurr,
+        destinationAmount: rawDest,
+        destinationCurrency: destCurr,
+      };
 
       const srcName = srcAcc?.institution_name === 'Dinheiro' ? 'Dinheiro' : (srcAcc?.account_name || 'Conta de Origem');
       const destName = destAcc?.institution_name === 'Dinheiro' ? 'Dinheiro' : (destAcc?.account_name || 'Conta de Destino');
+      const symSent = CURRENCY_SYMBOLS[srcCurr] || srcCurr;
+      const symDest = CURRENCY_SYMBOLS[destCurr] || destCurr;
 
-      notify(`✓ Transferência de ${CURRENCY_SYMBOLS[selectedCurrency]} ${num.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de "${srcName}" para "${destName}" realizada com sucesso!`, 'success');
+      if (transactionToEdit) {
+        await api.updateTransfer(transactionToEdit.id, payload);
+        notify(
+          `✓ Transferência atualizada: ${symSent} ${numSent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${srcName}) → ${symDest} ${rawDest.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${destName})!`,
+          'success',
+        );
+      } else {
+        await api.createTransfer(payload);
+        notify(
+          srcCurr !== destCurr || numSent !== rawDest
+            ? `✓ Transferência de ${symSent} ${numSent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de "${srcName}" → ${symDest} ${rawDest.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em "${destName}" realizada com sucesso!`
+            : `✓ Transferência de ${symSent} ${numSent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de "${srcName}" para "${destName}" realizada com sucesso!`,
+          'success',
+        );
+      }
+
       onCreated();
       window.dispatchEvent(new Event('transactions:changed'));
       handleClose();
     } catch (err: any) {
-      notify(err.message || 'Falha ao realizar transferência.', 'error');
+      notify(err.message || 'Falha ao salvar transferência.', 'error');
+    } finally {
+      setSaving(false);
+      setSavingAction(null);
+    }
+  };
+
+  // Funções do Modo Lançar Provento / Dividendo
+  const handleSubmitDividend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanTicker = divTicker.trim().toUpperCase();
+    if (!cleanTicker) {
+      notify('Por favor, informe o ticker ou código do ativo.', 'error');
+      return;
+    }
+    const val = parseFloat(divAmount.replace(',', '.'));
+    if (isNaN(val) || val <= 0) {
+      notify('Informe um valor de provento maior que zero.', 'error');
+      return;
+    }
+
+    setSaving(true);
+    setSavingAction('close');
+    try {
+      const selectedAcc = accountOptions.find((a) => a.id === accountId);
+      const instName = selectedAcc?.institution_name || 'B3 / Corretora';
+
+      // 1. Cadastra o dividendo no backend de Investimentos -> reflete na aba de Proventos na hora!
+      await api.createDividend({
+        ticker: cleanTicker,
+        institution: instName,
+        date: divDate,
+        type: divType,
+        amount: val,
+        notes: divNotes.trim() || undefined,
+      });
+
+      // 2. Se a opção de creditar na conta estiver ativa, cria também a transação de RECEITA na conta do usuário
+      if (divDepositAccount && accountId) {
+        let provLabel = 'Dividendo';
+        if (divType === 'JCP') provLabel = 'JCP';
+        else if (divType === 'FII' || cleanTicker.endsWith('11')) provLabel = 'Rendimento FII';
+
+        await api.createTransaction({
+          date: divDate,
+          amount: Math.abs(val),
+          description: `Provento: ${provLabel} ${cleanTicker}`,
+          category: 'Investimentos / Proventos',
+          transaction_type: 'CREDIT',
+          account_id: accountId,
+          original_currency: 'BRL',
+          original_amount: Math.abs(val),
+          exchange_rate: 1,
+        });
+      }
+
+      notify(`✓ Provento de R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para ${cleanTicker} lançado com sucesso!`, 'success');
+      onCreated();
+      window.dispatchEvent(new Event('transactions:changed'));
+      window.dispatchEvent(new Event('dividends:changed'));
+      window.dispatchEvent(new Event('investments-updated'));
+      handleClose();
+    } catch (err: any) {
+      notify(err?.message || 'Falha ao lançar provento.', 'error');
     } finally {
       setSaving(false);
       setSavingAction(null);
@@ -694,14 +1264,22 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
       <div
         className={cn(
           'relative w-full rounded-t-3xl sm:rounded-2xl border border-border bg-bg-card shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden transition-all duration-200',
-          activeTab === 'BATCH' ? 'max-w-md sm:max-w-2xl' : 'max-w-md sm:max-w-lg',
+          activeTab === 'BATCH' || activeTab === 'CREDIT_CARD'
+            ? 'max-w-md sm:max-w-2xl'
+            : 'max-w-md sm:max-w-lg',
         )}
       >
         {/* Header Principal */}
         <div className="flex items-center justify-between border-b border-border/80 px-5 py-3.5 bg-bg-elevated/40 select-none">
           <div className="flex items-center gap-2">
             <h2 className="font-bold text-base text-text-primary tracking-tight">
-              {transactionToEdit ? 'Editar Transação' : 'Nova Transação'}
+              {transactionToEdit
+                ? activeTab === 'TRANSFER'
+                  ? 'Editar Transferência entre Contas'
+                  : activeTab === 'CREDIT_CARD'
+                    ? 'Editar Cartão de Crédito e Sub-transações'
+                    : 'Editar Transação'
+                : 'Nova Transação'}
             </h2>
             {sessionSavedCount > 0 && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[11px] font-semibold text-emerald-400">
@@ -719,41 +1297,69 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
           </button>
         </div>
 
-        {/* Abas de Modo: Individual vs Transferência vs Em Lote (apenas na criação) */}
-        {!transactionToEdit && (
-          <div className="flex border-b border-border/80 bg-bg-elevated/60 p-1.5 gap-1.5 select-none overflow-x-auto no-scrollbar">
-            <button
-              type="button"
-              onClick={() => setActiveTab('SINGLE')}
-              className={cn(
-                'flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
-                activeTab === 'SINGLE'
-                  ? 'bg-bg-card text-accent-gold shadow-sm border border-accent-gold/30'
-                  : 'text-text-muted hover:text-text-primary hover:bg-bg-card/50',
-              )}
-            >
-              <span>Lançamento</span>
-            </button>
+        {/* Abas de Modo: Individual vs Cartão de Crédito vs Transferência vs Em Lote */}
+        <div className="flex border-b border-border/80 bg-bg-elevated/60 p-1.5 gap-1.5 select-none overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={() => setActiveTab('SINGLE')}
+            className={cn(
+              'flex-1 min-w-[85px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+              activeTab === 'SINGLE'
+                ? 'bg-bg-card text-accent-gold shadow-sm border border-accent-gold/30'
+                : 'text-text-muted hover:text-text-primary hover:bg-bg-card/50',
+            )}
+          >
+            <span>Lançamento</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('TRANSFER')}
-              className={cn(
-                'flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
-                activeTab === 'TRANSFER'
-                  ? 'bg-bg-card text-accent-gold shadow-sm border border-accent-gold/30'
-                  : 'text-text-muted hover:text-text-primary hover:bg-bg-card/50',
-              )}
-            >
-              <ArrowLeftRight className="h-3.5 w-3.5" />
-              <span>Transferência</span>
-            </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('CREDIT_CARD')}
+            className={cn(
+              'flex-1 min-w-[125px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+              activeTab === 'CREDIT_CARD'
+                ? 'bg-bg-card text-accent-gold shadow-sm border border-accent-gold/30'
+                : 'text-text-muted hover:text-text-primary hover:bg-bg-card/50',
+            )}
+          >
+            <CreditCard className="h-3.5 w-3.5" />
+            <span>Cartão de Crédito</span>
+          </button>
 
+          <button
+            type="button"
+            onClick={() => setActiveTab('DIVIDEND')}
+            className={cn(
+              'flex-1 min-w-[95px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+              activeTab === 'DIVIDEND'
+                ? 'bg-bg-card text-accent-gold shadow-sm border border-accent-gold/30'
+                : 'text-text-muted hover:text-text-primary hover:bg-bg-card/50',
+            )}
+          >
+            <Coins className="h-3.5 w-3.5 text-amber-500" />
+            <span>Proventos</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('TRANSFER')}
+            className={cn(
+              'flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+              activeTab === 'TRANSFER'
+                ? 'bg-bg-card text-accent-gold shadow-sm border border-accent-gold/30'
+                : 'text-text-muted hover:text-text-primary hover:bg-bg-card/50',
+            )}
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" />
+            <span>Transferência</span>
+          </button>
+
+          {!transactionToEdit && (
             <button
               type="button"
               onClick={() => setActiveTab('BATCH')}
               className={cn(
-                'flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                'flex-1 min-w-[85px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                 activeTab === 'BATCH'
                   ? 'bg-bg-card text-accent-gold shadow-sm border border-accent-gold/30'
                   : 'text-text-muted hover:text-text-primary hover:bg-bg-card/50',
@@ -762,11 +1368,11 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
               <Layers className="h-3.5 w-3.5" />
               <span>Em Lote</span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Banner IA Escanear Foto/Comprovante - acessível para Lançamento Rápido e Em Lote */}
-        {!transactionToEdit && activeTab !== 'TRANSFER' && (
+        {/* Banner IA Escanear Foto/Comprovante - acessível para Lançamento Rápido, Cartão de Crédito e Em Lote */}
+        {(!transactionToEdit || activeTab === 'CREDIT_CARD') && activeTab !== 'TRANSFER' && activeTab !== 'DIVIDEND' && (
           <div className="border-b border-border/60 bg-accent-gold/5 px-4 sm:px-5 py-2.5 flex items-center justify-between gap-2 shrink-0">
             <div className="flex items-center gap-2 min-w-0">
               <Sparkles className="h-4 w-4 text-accent-gold shrink-0 animate-pulse" />
@@ -990,11 +1596,24 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                   </label>
                   <select
                     value={txType}
-                    onChange={(e) => setTxType(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setTxType(val);
+                      if (val === 'CREDIT_CARD') {
+                        if (description.trim()) setCcDescription(description.trim());
+                        if (amount.trim()) {
+                          setCcTotalAmount(amount);
+                          setCcManualTotal(true);
+                        }
+                        setActiveTab('CREDIT_CARD');
+                      }
+                    }}
                     className="input cursor-pointer"
                   >
                     {TX_TYPES.map((t) => (
-                      <option key={t} value={t}>{t}</option>
+                      <option key={t} value={t}>
+                        {t === 'CREDIT_CARD' ? 'CARTÃO DE CRÉDITO (c/ sub-transações)' : t}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -1136,35 +1755,648 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
         )}
 
         {/* ========================================================================= */}
-        {/* ABA 2: TRANSFERÊNCIA ENTRE CONTAS (MOVIMENTAÇÃO INTERNA)                  */}
+        {/* ABA CARTÃO DE CRÉDITO (COM SUB-TRANSAÇÕES DENTRO DA TRANSAÇÃO DO CARTÃO)    */}
         {/* ========================================================================= */}
-        {activeTab === 'TRANSFER' && !transactionToEdit && (() => {
-          const srcAccount = accountOptions.find((a) => a.id === transferSourceAccountId);
-          const destAccount = accountOptions.find((a) => a.id === transferDestAccountId);
-          const parsedTransferNum = parseFloat(transferAmount.replace(',', '.')) || 0;
-          const isSameAccount = transferSourceAccountId && transferDestAccountId && transferSourceAccountId === transferDestAccountId;
+        {activeTab === 'CREDIT_CARD' && (() => {
+          const validSubItems = ccSubItems.filter((item) => {
+            const num = parseFloat(item.amount.replace(',', '.'));
+            return (!isNaN(num) && num > 0) || item.description.trim().length > 0;
+          });
+          const subItemsSum = ccSubItems.reduce((acc, item) => {
+            const num = parseFloat(item.amount.replace(',', '.'));
+            return acc + (isNaN(num) || num <= 0 ? 0 : num);
+          }, 0);
+          const parsedManualTotal = parseFloat(ccTotalAmount.replace(',', '.')) || 0;
+          const displayTotal =
+            ccManualTotal && parsedManualTotal > 0
+              ? parsedManualTotal
+              : subItemsSum > 0
+                ? subItemsSum
+                : parsedManualTotal;
+          const sym = CURRENCY_SYMBOLS[selectedCurrency] || selectedCurrency;
 
           return (
-            <form onSubmit={handleSubmitTransfer} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1 flex flex-col justify-between">
+            <form
+              onSubmit={handleSubmitCreditCard}
+              className="flex-1 flex flex-col min-h-0 overflow-hidden"
+            >
+              {/* Cabeçalho da Fatura / Pagamento do Cartão */}
+              <div className="border-b border-border/80 bg-bg-elevated/40 p-4 space-y-3 shrink-0">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-300">
+                      <CreditCard className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-xs font-bold text-text-primary">
+                        Pagamento de Cartão de Crédito
+                      </p>
+                      <p className="text-[10px] text-text-secondary">
+                        Lance a fatura e adicione as compras individuais como sub-transações dentro do cartão
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-purple-500/15 border border-purple-500/30 px-2.5 py-0.5 text-[10px] font-bold text-purple-300">
+                    {validSubItems.length} sub-transaç{validSubItems.length === 1 ? 'ão' : 'ões'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                  {/* Nome / Identificação do Cartão */}
+                  <div className="sm:col-span-5">
+                    <label className="mb-1 block text-[11px] font-semibold text-text-secondary uppercase tracking-wide">
+                      Identificação do Cartão / Fatura
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={ccDescription}
+                      onChange={(e) => setCcDescription(e.target.value)}
+                      placeholder="Ex: Fatura Cartão Nubank, Cartão Inter..."
+                      className="input py-1.5 text-xs"
+                    />
+                  </div>
+
+                  {/* Conta de onde sai o pagamento */}
+                  <div className="sm:col-span-4">
+                    <div className="mb-1 flex items-center justify-between gap-1">
+                      <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wide">
+                        Pagar com a Conta
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        {(() => {
+                          const selAcc = accountOptions.find((a) => a.id === accountId);
+                          if (!selAcc) return null;
+                          const accCurr = (selAcc.currency || 'BRL').toUpperCase();
+                          const accSym = CURRENCY_SYMBOLS[accCurr] || accCurr;
+                          return (
+                            <span className="text-[10px] font-mono text-text-muted">
+                              Saldo: {accSym} {Number(selAcc.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          );
+                        })()}
+                        {accountId && !transactionToEdit && (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleDefaultAccount(accountId)}
+                            className={cn(
+                              'text-[10px] font-semibold flex items-center gap-0.5 transition-colors cursor-pointer',
+                              defaultAccountId === accountId
+                                ? 'text-accent-gold'
+                                : 'text-text-muted hover:text-accent-gold',
+                            )}
+                            title="Definir como conta padrão"
+                          >
+                            <Star className={cn('h-2.5 w-2.5', defaultAccountId === accountId && 'fill-accent-gold')} />
+                            <span>{defaultAccountId === accountId ? 'Padrão' : 'Fixar'}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <select
+                      required
+                      value={accountId}
+                      onChange={(e) => {
+                        const nextAccId = e.target.value;
+                        setAccountId(nextAccId);
+                        const nextAcc = accountOptions.find((a) => a.id === nextAccId);
+                        if (nextAcc?.currency && !transactionToEdit) {
+                          setSelectedCurrency((nextAcc.currency.toUpperCase() as Currency) || currency);
+                        }
+                      }}
+                      className="input py-1.5 text-xs cursor-pointer"
+                    >
+                      <option value="" disabled>Selecione a conta...</option>
+                      {accountOptions.map((a: ConnectedAccount) => {
+                        const accCurr = (a.currency || 'BRL').toUpperCase();
+                        const accSym = CURRENCY_SYMBOLS[accCurr] || accCurr;
+                        const balFmt = Number(a.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                        return (
+                          <option key={a.id} value={a.id}>
+                            {defaultAccountId === a.id ? '⭐ ' : ''}
+                            {a.institution_name === 'Dinheiro'
+                              ? `💵 Dinheiro (Espécie) — ${accSym} ${balFmt}`
+                              : `${a.institution_name} — ${a.account_name} (${accSym} ${balFmt})`}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  {/* Data do Pagamento */}
+                  <div className="sm:col-span-3">
+                    <label className="mb-1 block text-[11px] font-semibold text-text-secondary uppercase tracking-wide">
+                      Data do Pagamento
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="input py-1.5 text-xs cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Linha 2: Moeda + Valor Total da Fatura (Automático pelas Sub-transações ou Manual) */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end pt-0.5">
+                  <div className="sm:col-span-3">
+                    <label className="mb-1 block text-[11px] font-semibold text-text-secondary uppercase tracking-wide">
+                      Moeda da Fatura
+                    </label>
+                    <select
+                      value={selectedCurrency}
+                      onChange={(e) => setSelectedCurrency(e.target.value as Currency)}
+                      className="input py-1.5 text-xs cursor-pointer"
+                    >
+                      <option value="BRL">🇧🇷 Real (BRL)</option>
+                      <option value="USD">🇺🇸 Dólar (USD)</option>
+                      <option value="EUR">🇪🇺 Euro (EUR)</option>
+                      <option value="CLP">🇨🇱 Peso Chileno (CLP)</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-9">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wide">
+                        Valor Total a Pagar ({selectedCurrency})
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (ccManualTotal) {
+                            setCcManualTotal(false);
+                            setCcTotalAmount('');
+                          } else {
+                            setCcManualTotal(true);
+                            setCcTotalAmount(subItemsSum > 0 ? subItemsSum.toFixed(2) : '');
+                          }
+                        }}
+                        className="text-[10px] font-semibold text-accent-gold hover:underline cursor-pointer"
+                      >
+                        {ccManualTotal
+                          ? `Usar soma automática das sub-transações (${sym} ${subItemsSum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`
+                          : 'Informar valor total diferente (taxas/IOF/outros)'}
+                      </button>
+                    </div>
+
+                    {ccManualTotal ? (
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-text-muted">
+                          {sym}
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={ccTotalAmount}
+                          onChange={(e) => setCcTotalAmount(e.target.value)}
+                          placeholder="Valor total da fatura"
+                          className="input pl-9 py-1.5 text-sm font-mono font-bold"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between rounded-xl border border-purple-500/30 bg-bg-card px-3 py-1.5">
+                        <span className="text-xs text-text-secondary">
+                          Soma das sub-transações lançadas abaixo:
+                        </span>
+                        <span className="font-mono text-sm font-bold text-accent-red">
+                          {sym} {subItemsSum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Lista de Sub-transações dentro do Cartão de Crédito */}
+              <div className="p-4 space-y-2.5 flex-1 overflow-y-auto">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-text-secondary">
+                    Sub-transações dentro do Cartão ({ccSubItems.length})
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setManageCatOpen(true)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-accent-gold/30 bg-accent-gold/10 px-2 py-1 text-[10px] font-semibold text-accent-gold hover:bg-accent-gold hover:text-black transition-colors cursor-pointer"
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>Gerenciar Categorias</span>
+                  </button>
+                </div>
+
+                {ccSubItems.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className="rounded-xl border border-border/80 bg-bg-elevated/30 p-2.5 space-y-2 transition-all hover:border-purple-500/40"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                      {/* Número + Descrição da compra no cartão */}
+                      <div className="sm:col-span-4 flex items-center gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-500/15 border border-purple-500/30 text-[10px] font-mono font-bold text-purple-300">
+                          {index + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => updateCcSubItem(item.id, { description: e.target.value })}
+                          placeholder="Compra (ex: Mercado, Uber, Netflix)"
+                          className="input py-1.5 text-xs flex-1 min-w-0"
+                        />
+                      </div>
+
+                      {/* Valor da sub-transação */}
+                      <div className="sm:col-span-3">
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono text-[11px] text-text-muted">
+                            {sym}
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={item.amount}
+                            onChange={(e) => updateCcSubItem(item.id, { amount: e.target.value })}
+                            placeholder="0,00"
+                            className="input pl-8 py-1.5 text-xs font-mono font-semibold"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Categoria da sub-transação */}
+                      <div className="sm:col-span-3">
+                        <select
+                          value={item.category}
+                          onChange={(e) => updateCcSubItem(item.id, { category: e.target.value })}
+                          className="input py-1.5 text-xs cursor-pointer"
+                        >
+                          <option value="">Categoria da compra...</option>
+                          {categoryNames.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Data da compra + Botão Remover */}
+                      <div className="sm:col-span-2 flex items-center gap-1">
+                        <input
+                          type="date"
+                          value={item.date}
+                          onChange={(e) => updateCcSubItem(item.id, { date: e.target.value })}
+                          className="input py-1.5 px-2 text-[11px] cursor-pointer flex-1 min-w-0"
+                          title="Data da compra no cartão"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeCcSubRow(item.id)}
+                          className="rounded-lg p-1.5 text-text-muted hover:bg-red-500/15 hover:text-red-400 transition-colors cursor-pointer shrink-0"
+                          title="Remover sub-transação"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Botão para adicionar nova sub-transação */}
+                <button
+                  type="button"
+                  onClick={addCcSubRow}
+                  className="w-full py-2.5 rounded-xl border border-dashed border-purple-500/40 bg-purple-500/5 hover:bg-purple-500/10 text-purple-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Adicionar sub-transação dentro do cartão (+ compra)</span>
+                </button>
+              </div>
+
+              {/* Rodapé do modo Cartão de Crédito */}
+              <div className="border-t border-border/80 bg-bg-card p-4 space-y-3 shrink-0 select-none">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="text-text-muted">
+                    <strong>{validSubItems.length}</strong> sub-transaç{validSubItems.length === 1 ? 'ão lançada' : 'ões lançadas'} dentro do cartão
+                  </span>
+                  <div className="flex items-center gap-3">
+                    {ccManualTotal && subItemsSum > 0 && Math.abs(displayTotal - subItemsSum) > 0.01 && (
+                      <span className="text-[11px] text-text-secondary">
+                        Sub-transações: {sym} {subItemsSum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    )}
+                    <span className="font-semibold text-text-primary">
+                      Total do Cartão:{' '}
+                      <span className="font-mono font-bold text-accent-red">
+                        - {sym} {displayTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex-1 text-xs cursor-pointer"
+                    onClick={handleClose}
+                    disabled={saving}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-2 text-xs font-bold gap-2 cursor-pointer"
+                    disabled={saving || displayTotal <= 0 || !accountId}
+                  >
+                    {saving && savingAction === 'credit_card' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4" />
+                    )}
+                    <span>
+                      {transactionToEdit
+                        ? 'Salvar Alterações do Cartão'
+                        : `Salvar Pagamento do Cartão (${validSubItems.length} sub-transaç${validSubItems.length === 1 ? 'ão' : 'ões'})`}
+                    </span>
+                  </Button>
+                </div>
+              </div>
+            </form>
+          );
+        })()}
+
+        {/* ========================================================================= */}
+        {/* ABA PROVENTOS / DIVIDENDOS (ATUALIZA INVESTIMENTOS & TRANSAÇÕES NA HORA)  */}
+        {/* ========================================================================= */}
+        {activeTab === 'DIVIDEND' && (
+          <form onSubmit={handleSubmitDividend} className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 flex items-start gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+                <Coins className="h-4 w-4" />
+              </span>
+              <div className="text-xs space-y-1">
+                <p className="font-bold text-amber-300">
+                  Lançamento de Dividendos / Proventos
+                </p>
+                <p className="text-text-secondary leading-relaxed">
+                  Lançar aqui atualiza na hora a aba <strong>Proventos</strong> dos seus <strong>Investimentos</strong> e, opcionalmente, credita o saldo da sua conta bancária.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative" ref={divSearchRef}>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                  Código / Ticker do Ativo *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={divTicker}
+                  onChange={(e) => handleDivTickerChange(e.target.value)}
+                  onFocus={() => {
+                    if (divSuggestions.length > 0) setShowDivSuggestions(true);
+                  }}
+                  placeholder="Ex: PETR4, MXRF11, MAXR11..."
+                  className="input font-mono font-bold text-accent-gold uppercase"
+                />
+
+                {showDivSuggestions && divSuggestions.length > 0 && (
+                  <div
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-xl border border-border bg-bg-card p-1.5 shadow-2xl z-50 animate-fade-in space-y-1"
+                  >
+                    {divSuggestions.map((item) => (
+                      <button
+                        key={item.ticker}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleSelectDivSuggestion(item);
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleSelectDivSuggestion(item);
+                        }}
+                        className="w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-left hover:bg-bg-elevated transition-colors cursor-pointer group"
+                      >
+                        <div className="flex flex-col truncate">
+                          <span className="font-bold font-mono text-accent-gold group-hover:text-amber-300">
+                            {item.ticker}
+                          </span>
+                          <span className="text-[11px] text-text-secondary truncate">
+                            {item.name}
+                          </span>
+                        </div>
+                        <span className="shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full bg-bg-primary text-text-secondary border border-border">
+                          {item.type || 'B3'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                  Tipo de Provento *
+                </label>
+                <select
+                  value={divType}
+                  onChange={(e) => setDivType(e.target.value as any)}
+                  className="input cursor-pointer"
+                >
+                  <option value="DIVIDEND">Dividendo</option>
+                  <option value="JCP">JCP (Juros s/ Capital)</option>
+                  <option value="FII">Rendimento FII</option>
+                  <option value="OTHER">Outro Provento</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                  Valor Recebido (R$) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm font-bold text-accent-gold">
+                    R$
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    value={divAmount}
+                    onChange={(e) => setDivAmount(e.target.value)}
+                    placeholder="0,00"
+                    className="input pl-9 font-mono text-base font-bold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                  Data do Recebimento *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={divDate}
+                  onChange={(e) => setDivDate(e.target.value)}
+                  className="input cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Conta onde caiu o dinheiro */}
+            <div>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                  Conta que recebeu o provento
+                </label>
+                {accountId && (
+                  <span className="text-[11px] font-mono text-emerald-400">
+                    Saldo atual:{' '}
+                    {(() => {
+                      const acc = accountOptions.find((a) => a.id === accountId);
+                      if (!acc) return '-';
+                      return `${CURRENCY_SYMBOLS[acc.currency?.toUpperCase() || 'BRL'] || ''} ${(acc.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                    })()}
+                  </span>
+                )}
+              </div>
+              <select
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                className="input cursor-pointer"
+              >
+                {accountOptions.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.institution_name === 'Dinheiro' ? 'Dinheiro (Espécie)' : a.account_name}
+                    {a.currency && a.currency !== 'BRL' ? ` (${a.currency.toUpperCase()})` : ''}
+                    {' — Saldo: '}
+                    {CURRENCY_SYMBOLS[a.currency?.toUpperCase() || 'BRL'] || ''}{' '}
+                    {(a.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </option>
+                ))}
+              </select>
+
+              <label className="mt-2.5 flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={divDepositAccount}
+                  onChange={(e) => setDivDepositAccount(e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-accent-gold focus:ring-accent-gold cursor-pointer"
+                />
+                <span>Creditar valor no saldo desta conta (cria entrada de provento nas transações)</span>
+              </label>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                Observações (opcional)
+              </label>
+              <input
+                type="text"
+                value={divNotes}
+                onChange={(e) => setDivNotes(e.target.value)}
+                placeholder="Ex: Pagamento referente ao exercício..."
+                className="input text-xs"
+              />
+            </div>
+
+            {/* Barra de Ações */}
+            <div className="flex gap-2 pt-3 border-t border-border/80 mt-auto">
+              <Button
+                type="button"
+                variant="ghost"
+                className="flex-1 text-xs cursor-pointer"
+                onClick={handleClose}
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="flex-2 text-xs font-bold gap-2 cursor-pointer bg-accent-gold text-slate-950 hover:bg-accent-gold/90"
+                disabled={saving || !divTicker.trim() || !divAmount || parseFloat(divAmount) <= 0}
+              >
+                {saving && savingAction === 'close' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Coins className="h-4 w-4" />
+                )}
+                <span>Salvar Provento</span>
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {/* ========================================================================= */}
+        {/* ABA 2: TRANSFERÊNCIA ENTRE CONTAS (MOVIMENTAÇÃO INTERNA & MULTI-MOEDA)    */}
+        {/* ========================================================================= */}
+        {activeTab === 'TRANSFER' && (() => {
+          const srcAccount = accountOptions.find((a) => a.id === transferSourceAccountId);
+          const destAccount = accountOptions.find((a) => a.id === transferDestAccountId);
+          const srcCurr = (transferSourceCurrency || srcAccount?.currency || 'BRL').toUpperCase();
+          const destCurr = (transferDestCurrency || destAccount?.currency || srcCurr).toUpperCase();
+          const isDiffCurrency = srcCurr !== destCurr;
+
+          const parsedTransferNum = parseFloat(transferAmount.replace(',', '.')) || 0;
+          const parsedDestNum = transferDestAmount.trim()
+            ? (parseFloat(transferDestAmount.replace(',', '.')) || 0)
+            : (isDiffCurrency ? 0 : parsedTransferNum);
+
+          const isSameAccount = transferSourceAccountId && transferDestAccountId && transferSourceAccountId === transferDestAccountId;
+          const symSent = CURRENCY_SYMBOLS[srcCurr] || srcCurr;
+          const symDest = CURRENCY_SYMBOLS[destCurr] || destCurr;
+
+          const estimatedCommercialDest =
+            isDiffCurrency && parsedTransferNum > 0
+              ? convert(parsedTransferNum, srcCurr, destCurr)
+              : 0;
+
+          // Calcula cotação efetiva paga (com taxas/IOF)
+          const effectiveRateText = (() => {
+            if (!isDiffCurrency || parsedTransferNum <= 0 || parsedDestNum <= 0) return null;
+            if (srcCurr === 'BRL') {
+              return `1 ${destCurr} = R$ ${(parsedTransferNum / parsedDestNum).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
+            }
+            if (destCurr === 'BRL') {
+              return `1 ${srcCurr} = R$ ${(parsedDestNum / parsedTransferNum).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
+            }
+            return `1 ${srcCurr} = ${(parsedDestNum / parsedTransferNum).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} ${destCurr}`;
+          })();
+
+          return (
+            <form onSubmit={handleSubmitTransfer} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 flex flex-col justify-between">
               <div className="space-y-4">
+                {loadingTransferPair && (
+                  <div className="flex items-center gap-2 rounded-xl border border-accent-gold/30 bg-accent-gold/5 px-3 py-2 text-xs text-accent-gold">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                    <span>Carregando dados das duas pontas da transferência...</span>
+                  </div>
+                )}
+
                 {/* Seletor Visual de Contas (Origem ⇄ Destino) */}
                 <div className="rounded-2xl border border-border/80 bg-bg-elevated/40 p-3 sm:p-4 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,1fr] gap-2 items-center">
                     {/* Conta de Origem */}
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-1">
                         <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
                           De (Origem / Saída)
                         </label>
                         {srcAccount && (
                           <span className="text-[11px] font-mono text-text-muted">
-                            Saldo: {CURRENCY_SYMBOLS[srcAccount.currency as Currency || 'BRL']} {Number(srcAccount.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            Saldo: {CURRENCY_SYMBOLS[(srcAccount.currency || 'BRL').toUpperCase()] || srcAccount.currency}{' '}
+                            {Number(srcAccount.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                         )}
                       </div>
                       <select
                         value={transferSourceAccountId}
-                        onChange={(e) => setTransferSourceAccountId(e.target.value)}
+                        onChange={(e) => handleSelectTransferSourceAccount(e.target.value)}
                         className="input py-2 text-xs cursor-pointer w-full"
                         required
                       >
@@ -1173,7 +2405,7 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                           <option key={a.id} value={a.id} disabled={a.id === transferDestAccountId}>
                             {a.institution_name === 'Dinheiro'
                               ? '💵 Dinheiro em Espécie'
-                              : `${a.institution_name} — ${a.account_name}`}
+                              : `${a.institution_name} — ${a.account_name} (${(a.currency || 'BRL').toUpperCase()})`}
                           </option>
                         ))}
                       </select>
@@ -1193,19 +2425,20 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
 
                     {/* Conta de Destino */}
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-1">
                         <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
                           Para (Destino / Entrada)
                         </label>
                         {destAccount && (
                           <span className="text-[11px] font-mono text-text-muted">
-                            Saldo: {CURRENCY_SYMBOLS[destAccount.currency as Currency || 'BRL']} {Number(destAccount.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            Saldo: {CURRENCY_SYMBOLS[(destAccount.currency || 'BRL').toUpperCase()] || destAccount.currency}{' '}
+                            {Number(destAccount.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                         )}
                       </div>
                       <select
                         value={transferDestAccountId}
-                        onChange={(e) => setTransferDestAccountId(e.target.value)}
+                        onChange={(e) => handleSelectTransferDestAccount(e.target.value)}
                         className="input py-2 text-xs cursor-pointer w-full"
                         required
                       >
@@ -1214,7 +2447,7 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                           <option key={a.id} value={a.id} disabled={a.id === transferSourceAccountId}>
                             {a.institution_name === 'Dinheiro'
                               ? '💵 Dinheiro em Espécie'
-                              : `${a.institution_name} — ${a.account_name}`}
+                              : `${a.institution_name} — ${a.account_name} (${(a.currency || 'BRL').toUpperCase()})`}
                           </option>
                         ))}
                       </select>
@@ -1228,29 +2461,163 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                   )}
                 </div>
 
-                {/* Valor e Data */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-text-secondary mb-1">
-                      Valor da Transferência
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-text-muted">
-                        {CURRENCY_SYMBOLS[selectedCurrency]}
+                {/* Valores e Moedas: Valor Enviado (Saída) vs Valor Recebido (Entrada líquida após taxas) */}
+                <div className="rounded-2xl border border-border/80 bg-bg-elevated/25 p-3 sm:p-4 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                      <ArrowLeftRight className="h-3.5 w-3.5 text-accent-gold" />
+                      <span>Valores da Transferência {isDiffCurrency ? `(${srcCurr} → ${destCurr})` : ''}</span>
+                    </span>
+                    {isDiffCurrency && (
+                      <span className="rounded-full bg-accent-gold/15 border border-accent-gold/30 px-2.5 py-0.5 text-[10px] font-bold text-accent-gold">
+                        Moedas diferentes · Informe valor enviado e recebido (c/ taxas)
                       </span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={transferAmount}
-                        onChange={(e) => setTransferAmount(e.target.value)}
-                        placeholder="0,00"
-                        className="input pl-9 text-base font-mono font-bold"
-                        required
-                      />
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Coluna 1: Valor e Moeda que Enviei */}
+                    <div className="rounded-xl border border-accent-red/25 bg-bg-card/80 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-[11px] font-bold text-accent-red uppercase tracking-wide">
+                          Valor que Enviei (Saída)
+                        </label>
+                        <select
+                          value={srcCurr}
+                          onChange={(e) => {
+                            const next = e.target.value;
+                            setTransferSourceCurrency(next);
+                            if (next === destCurr && !destAmountManuallyEdited && transferAmount) {
+                              setTransferDestAmount(transferAmount);
+                            }
+                          }}
+                          className="h-7 rounded-lg border border-border bg-bg-elevated px-2 text-[11px] font-bold text-text-primary cursor-pointer focus:border-accent-gold outline-none"
+                          title="Moeda enviada"
+                        >
+                          {TRANSFER_CURRENCIES.map((c) => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-text-muted">
+                          {symSent}
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={transferAmount}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setTransferAmount(val);
+                            if (!isDiffCurrency && !destAmountManuallyEdited) {
+                              setTransferDestAmount(val);
+                            }
+                          }}
+                          placeholder="0,00"
+                          className="input pl-9 text-base font-mono font-bold"
+                          required
+                        />
+                      </div>
+                      <p className="text-[10px] text-text-muted">
+                        Total debitado na origem (já incluindo IOF / taxas)
+                      </p>
+                    </div>
+
+                    {/* Coluna 2: Valor e Moeda que Recebi */}
+                    <div className="rounded-xl border border-accent-green/25 bg-bg-card/80 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-[11px] font-bold text-accent-green uppercase tracking-wide">
+                          Valor que Recebi (Entrada)
+                        </label>
+                        <select
+                          value={destCurr}
+                          onChange={(e) => {
+                            const next = e.target.value;
+                            setTransferDestCurrency(next);
+                            if (next === srcCurr && !destAmountManuallyEdited && transferAmount) {
+                              setTransferDestAmount(transferAmount);
+                            }
+                          }}
+                          className="h-7 rounded-lg border border-border bg-bg-elevated px-2 text-[11px] font-bold text-text-primary cursor-pointer focus:border-accent-gold outline-none"
+                          title="Moeda recebida"
+                        >
+                          {TRANSFER_CURRENCIES.map((c) => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-text-muted">
+                          {symDest}
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={transferDestAmount}
+                          onChange={(e) => {
+                            setDestAmountManuallyEdited(true);
+                            setTransferDestAmount(e.target.value);
+                          }}
+                          placeholder={isDiffCurrency ? 'Valor líquido recebido' : (transferAmount || '0,00')}
+                          className="input pl-9 text-base font-mono font-bold"
+                          required={isDiffCurrency}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-[10px] text-text-muted">
+                          Valor líquido creditado na conta de destino
+                        </p>
+                        {isDiffCurrency && estimatedCommercialDest > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDestAmountManuallyEdited(true);
+                              setTransferDestAmount(estimatedCommercialDest.toFixed(2));
+                            }}
+                            className="text-[10px] font-semibold text-accent-gold hover:underline cursor-pointer shrink-0"
+                            title="Preencher com estimativa pelo câmbio comercial"
+                          >
+                            Ref: ~{symDest} {estimatedCommercialDest.toFixed(2)}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
+                  {/* Resumo de Câmbio Efetivo / Taxas */}
+                  {parsedTransferNum > 0 && parsedDestNum > 0 && (isDiffCurrency || parsedTransferNum !== parsedDestNum) && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent-gold/30 bg-accent-gold/10 px-3 py-2 text-xs">
+                      {isDiffCurrency ? (
+                        <>
+                          <span className="text-text-secondary font-medium">
+                            Cotação efetiva (c/ taxas): <strong className="text-accent-gold font-mono">{effectiveRateText}</strong>
+                          </span>
+                          <span className="font-mono text-[11px] text-text-primary">
+                            -{symSent} {parsedTransferNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} → +{symDest} {parsedDestNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-text-secondary font-medium">
+                            Diferença / Taxas bancárias:
+                          </span>
+                          <span className="font-mono font-semibold text-accent-gold">
+                            {symSent} {Math.abs(parsedTransferNum - parsedDestNum).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Data e Descrição Opcional */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-text-secondary mb-1">
                       Data da Movimentação
@@ -1263,51 +2630,62 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                       required
                     />
                   </div>
-                </div>
 
-                {/* Descrição Opcional */}
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary mb-1">
-                    Descrição / Motivo <span className="text-[11px] font-normal text-text-muted">(opcional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={transferDescription}
-                    onChange={(e) => setTransferDescription(e.target.value)}
-                    placeholder={
-                      srcAccount && destAccount
-                        ? `Ex: Transferência de ${srcAccount.institution_name} para ${destAccount.institution_name}`
-                        : 'Ex: Envio para reserva, saque de dinheiro, etc.'
-                    }
-                    className="input text-xs"
-                  />
+                  <div>
+                    <label className="block text-xs font-semibold text-text-secondary mb-1">
+                      Descrição / Motivo <span className="text-[11px] font-normal text-text-muted">(opcional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={transferDescription}
+                      onChange={(e) => setTransferDescription(e.target.value)}
+                      placeholder={
+                        srcAccount && destAccount
+                          ? `Ex: Transferência de ${srcAccount.institution_name} para ${destAccount.institution_name}`
+                          : 'Ex: Câmbio Wise, envio internacional, reserva...'
+                      }
+                      className="input text-xs"
+                    />
+                  </div>
                 </div>
 
                 {/* Resumo do Impacto nos Saldos */}
-                {parsedTransferNum > 0 && srcAccount && destAccount && !isSameAccount && (
+                {parsedTransferNum > 0 && parsedDestNum > 0 && srcAccount && destAccount && !isSameAccount && (
                   <div className="rounded-xl border border-accent-gold/20 bg-accent-gold/5 p-3 space-y-1.5 animate-in fade-in duration-150">
                     <p className="text-[11px] font-semibold text-accent-gold flex items-center gap-1.5">
                       <Sparkles className="h-3 w-3" />
-                      <span>Impacto nos saldos após a transferência:</span>
+                      <span>Resumo da movimentação nas contas:</span>
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       <div className="rounded-lg bg-bg-card/70 border border-border/60 p-2">
                         <p className="text-[10px] text-text-muted truncate">{srcAccount.institution_name} ({srcAccount.account_name})</p>
                         <p className="font-mono text-xs font-semibold text-accent-red">
-                          - {CURRENCY_SYMBOLS[selectedCurrency]} {parsedTransferNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          - {symSent} {parsedTransferNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({srcCurr})
                         </p>
-                        <p className="text-[10px] text-text-secondary">
-                          Novo saldo: {CURRENCY_SYMBOLS[selectedCurrency]} {(Number(srcAccount.balance || 0) - parsedTransferNum).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
+                        {!transactionToEdit && (
+                          <p className="text-[10px] text-text-secondary">
+                            Saldo estimado: {CURRENCY_SYMBOLS[(srcAccount.currency || 'BRL').toUpperCase()] || srcAccount.currency}{' '}
+                            {(
+                              Number(srcAccount.balance || 0) -
+                              convert(parsedTransferNum, srcCurr, (srcAccount.currency || 'BRL').toUpperCase())
+                            ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        )}
                       </div>
                       <div className="rounded-lg bg-bg-card/70 border border-border/60 p-2">
                         <p className="text-[10px] text-text-muted truncate">{destAccount.institution_name} ({destAccount.account_name})</p>
                         <p className="font-mono text-xs font-semibold text-accent-green">
-                          + {CURRENCY_SYMBOLS[selectedCurrency]} {parsedTransferNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          + {symDest} {parsedDestNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({destCurr})
                         </p>
-                        <p className="text-[10px] text-text-secondary">
-                          Novo saldo: {CURRENCY_SYMBOLS[selectedCurrency]} {(Number(destAccount.balance || 0) + parsedTransferNum).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
+                        {!transactionToEdit && (
+                          <p className="text-[10px] text-text-secondary">
+                            Saldo estimado: {CURRENCY_SYMBOLS[(destAccount.currency || 'BRL').toUpperCase()] || destAccount.currency}{' '}
+                            {(
+                              Number(destAccount.balance || 0) +
+                              convert(parsedDestNum, destCurr, (destAccount.currency || 'BRL').toUpperCase())
+                            ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1328,14 +2706,21 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                 <Button
                   type="submit"
                   className="flex-2 text-xs font-bold gap-2 cursor-pointer"
-                  disabled={Boolean(saving || !parsedTransferNum || !transferSourceAccountId || !transferDestAccountId || isSameAccount)}
+                  disabled={Boolean(
+                    saving ||
+                    !parsedTransferNum ||
+                    !parsedDestNum ||
+                    !transferSourceAccountId ||
+                    !transferDestAccountId ||
+                    isSameAccount
+                  )}
                 >
                   {saving && savingAction === 'transfer' ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <ArrowRight className="h-4 w-4" />
                   )}
-                  <span>Confirmar Transferência</span>
+                  <span>{transactionToEdit ? 'Salvar Alterações da Transferência' : 'Confirmar Transferência'}</span>
                 </Button>
               </div>
             </form>

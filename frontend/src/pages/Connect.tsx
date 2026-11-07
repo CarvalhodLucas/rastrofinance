@@ -110,10 +110,10 @@ export function Connect() {
                 <Wallet className="h-5 w-5" />
               </div>
               <h4 className="font-semibold text-text-primary mb-1">
-                Cadastrar Saldo / Conta Manual
+                Adicionar Banco e Moeda
               </h4>
               <p className="text-xs text-text-secondary mb-4">
-                Digite seu saldo direto (Wise USD, Wise EUR, Caixinhas ou Dinheiro Físico) sem precisar de extrato.
+                Cadastre qualquer banco, corretora ou carteira que você usa, escolha a moeda (BRL, EUR, USD, GBP, CLP) e informe o saldo.
               </p>
             </div>
             <div className="pt-2">
@@ -124,7 +124,7 @@ export function Connect() {
                 className="w-full gap-1.5 font-bold text-xs"
               >
                 <Plus className="h-4 w-4" />
-                <span>Digitar Saldo Manual</span>
+                <span>Adicionar Banco / Conta</span>
               </Button>
             </div>
           </CardContent>
@@ -215,7 +215,7 @@ export function Connect() {
                 <div className="flex items-center gap-2">
                   <Button variant="primary" size="sm" onClick={handleOpenAddManual} className="h-8 gap-1 text-xs font-bold flex-1 sm:flex-initial">
                     <Plus className="h-4 w-4" />
-                    <span>Digitar Saldo</span>
+                    <span>Adicionar Banco / Conta</span>
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleSync} disabled={syncing} className="h-8 flex-1 sm:flex-initial">
                     <RefreshCw className={syncing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
@@ -287,9 +287,14 @@ export function Connect() {
                                     <span className="text-xs font-normal text-text-secondary">
                                       ({TYPE_LABEL[acc.account_type] ?? acc.account_type})
                                     </span>
-                                    <span className="rounded bg-accent-gold/15 px-1.5 py-0.5 text-[10px] font-bold text-accent-gold border border-accent-gold/30">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEdit(acc)}
+                                      title="Clique para alterar a moeda ou dados do banco"
+                                      className="rounded bg-accent-gold/15 px-1.5 py-0.5 text-[10px] font-bold text-accent-gold border border-accent-gold/30 hover:bg-accent-gold/25 transition-colors cursor-pointer"
+                                    >
                                       {accountCurrency}
-                                    </span>
+                                    </button>
                                     {defaultAccountId === acc.id && (
                                       <span className="inline-flex items-center gap-1 rounded-full bg-accent-gold/15 border border-accent-gold/40 px-2 py-0.5 text-[10px] font-bold text-accent-gold shadow-xs">
                                         <Star className="h-2.5 w-2.5 fill-accent-gold text-accent-gold" />
@@ -362,10 +367,10 @@ export function Connect() {
                             size="sm"
                             onClick={() => handleOpenEdit(acc)}
                             className="h-8 gap-1 text-xs border-border hover:border-accent-gold/40 flex-1 sm:flex-initial"
-                            title="Editar Saldo"
+                            title="Editar banco, moeda ou saldo"
                           >
                             <Edit2 className="h-3.5 w-3.5" />
-                            <span>Editar Saldo</span>
+                            <span>Editar Banco / Moeda</span>
                           </Button>
 
                           <Button

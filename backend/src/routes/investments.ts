@@ -8,7 +8,7 @@ import {
 } from '../services/supabaseService.js';
 import { getBinanceTradeHistory, syncBinancePortfolio } from '../services/binanceService.js';
 import { syncAllPluggyInvestments } from '../services/pluggyService.js';
-import { getDividendsFromReport, syncDividendsToTransactions } from '../services/dividendService.js';
+import { getDividendsFromReport, syncDividendsToTransactions, recordManualDividend } from '../services/dividendService.js';
 import {
   getUsdBrlRate,
   getEurBrlRate,
@@ -170,32 +170,89 @@ investmentsRouter.post('/', async (req, res) => {
     const qty = parseFloat(quantity) || 0;
     const avgPrice = parseFloat(average_price) || 0;
     const curPrice = parseFloat(current_price) || avgPrice;
-    const totalVal = qty * curPrice;
+    const cleanTicker = code_ticker.trim().toUpperCase();
     const tradeDate = date ? new Date(date).toISOString() : new Date().toISOString();
 
     const user = (req as AuthenticatedRequest).user;
-    const investment = await upsertInvestment({
-      name,
-      code_ticker: code_ticker.toUpperCase(),
-      asset_type,
-      institution: institution || 'Manual',
-      quantity: qty,
-      average_price: avgPrice,
-      current_price: curPrice,
-      total_value: totalVal,
-      currency: currency || 'BRL',
-      sync_source: 'MANUAL',
-      yield_rate: yield_rate !== undefined && yield_rate !== '' ? parseFloat(yield_rate) : undefined,
-      yield_frequency: yield_frequency || 'MONTHLY',
-      last_synced_at: new Date().toISOString(),
-      created_at: tradeDate,
-    }, user);
+    const allInvestments = await getAllInvestments(user);
 
-    // Registrar no histórico de transações unificado
+    // Verifica se o usuário já possui uma posição ativa deste mesmo ativo para somar a compra e recalcular o Preço Médio
+    const existingActive = allInvestments.find(
+      (i) =>
+        (i.code_ticker || '').trim().toUpperCase() === cleanTicker &&
+        i.quantity > 0 &&
+        i.sync_source !== 'GORILA_CLOSED' &&
+        i.sync_source !== 'MANUAL_CLOSED',
+    );
+
+    let investment: Investment;
+
+    if (existingActive) {
+      const oldQty = Number(existingActive.quantity) || 0;
+      const oldAvg = Number(existingActive.average_price) || Number(existingActive.current_price) || avgPrice;
+      const purchasePrice = avgPrice || curPrice || oldAvg;
+      const newTotalQty = Number((oldQty + qty).toFixed(8));
+      const newWeightedAvg =
+        newTotalQty > 0
+          ? Number((((oldQty * oldAvg) + (qty * purchasePrice)) / newTotalQty).toFixed(8))
+          : purchasePrice;
+      const finalCurPrice = curPrice || Number(existingActive.current_price) || newWeightedAvg;
+      const newTotalVal = newTotalQty * finalCurPrice;
+
+      const srcPrefix = (existingActive.sync_source || 'MANUAL').split('#')[0];
+      const updatedSyncSource = `${srcPrefix}#${newWeightedAvg}#${finalCurPrice}`;
+
+      investment = await upsertInvestment(
+        {
+          id: existingActive.id,
+          name: name || existingActive.name,
+          code_ticker: cleanTicker,
+          asset_type: asset_type || existingActive.asset_type,
+          institution: institution || existingActive.institution || 'Manual',
+          quantity: newTotalQty,
+          average_price: newWeightedAvg,
+          current_price: finalCurPrice,
+          total_value: newTotalVal,
+          currency: existingActive.currency || currency || (asset_type === 'CRYPTO' ? 'USD' : 'BRL'),
+          sync_source: updatedSyncSource as any,
+          yield_rate:
+            yield_rate !== undefined && yield_rate !== ''
+              ? parseFloat(yield_rate)
+              : existingActive.yield_rate,
+          yield_frequency: yield_frequency || existingActive.yield_frequency || 'MONTHLY',
+          last_synced_at: new Date().toISOString(),
+        },
+        user,
+      );
+    } else {
+      const totalVal = qty * curPrice;
+      const syncSourceWithPrices = `MANUAL#${avgPrice}#${curPrice}`;
+      investment = await upsertInvestment(
+        {
+          name,
+          code_ticker: cleanTicker,
+          asset_type,
+          institution: institution || 'Manual',
+          quantity: qty,
+          average_price: avgPrice,
+          current_price: curPrice,
+          total_value: totalVal,
+          currency: currency || (asset_type === 'CRYPTO' ? 'USD' : 'BRL'),
+          sync_source: syncSourceWithPrices as any,
+          yield_rate: yield_rate !== undefined && yield_rate !== '' ? parseFloat(yield_rate) : undefined,
+          yield_frequency: yield_frequency || 'MONTHLY',
+          last_synced_at: new Date().toISOString(),
+          created_at: tradeDate,
+        },
+        user,
+      );
+    }
+
+    // Registrar a nova compra no histórico de transações unificado
     await recordInvestmentTrade({
       trade_type: 'BUY',
       asset_type,
-      ticker: code_ticker.toUpperCase(),
+      ticker: cleanTicker,
       asset_name: name,
       institution: institution || 'Manual',
       quantity: qty,
@@ -203,10 +260,10 @@ investmentsRouter.post('/', async (req, res) => {
       total_value: qty * (avgPrice || curPrice),
       date: tradeDate,
       source: 'MANUAL',
-      notes: 'Aporte manual cadastrado',
+      notes: existingActive ? 'Nova compra somada à posição existente' : 'Aporte manual cadastrado',
     }, user);
 
-    res.json({ investment });
+    res.json({ investment, merged: !!existingActive });
   } catch (err) {
     console.error('[investments] POST error:', err);
     res.status(500).json({ error: 'Falha ao criar/atualizar investimento.' });
@@ -733,6 +790,37 @@ investmentsRouter.get('/dividends', async (req, res) => {
   } catch (err) {
     console.error('[investments] GET dividends error:', err);
     res.status(500).json({ error: 'Falha ao buscar dividendos e proventos.' });
+  }
+});
+
+/**
+ * POST /api/investments/dividends — Cadastra um provento/dividendo manualmente e reflete na aba de proventos.
+ */
+investmentsRouter.post('/dividends', async (req, res) => {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const { ticker, institution, date, type, amount, notes } = req.body;
+    if (!ticker || !amount) {
+      res.status(400).json({ error: 'Ticker e Valor do provento são obrigatórios.' });
+      return;
+    }
+
+    const item = await recordManualDividend(
+      {
+        ticker: String(ticker).trim().toUpperCase(),
+        institution: institution ? String(institution).trim() : undefined,
+        date: date ? String(date) : new Date().toISOString().substring(0, 10),
+        type: type || 'DIVIDEND',
+        amount: parseFloat(amount) || 0,
+        notes: notes ? String(notes) : undefined,
+      },
+      user,
+    );
+
+    res.json({ ok: true, item });
+  } catch (err: any) {
+    console.error('[investments] POST dividends error:', err);
+    res.status(500).json({ error: err?.message || 'Falha ao cadastrar dividendo.' });
   }
 });
 

@@ -268,11 +268,14 @@ export const api = {
     amount: number;
     description: string;
     category?: string;
+    subcategory?: string;
     transaction_type: string;
     account_id?: string;
+    is_recurring?: boolean;
     original_currency?: string;
     original_amount?: number;
     exchange_rate?: number;
+    sub_transactions?: import('@/types/finance').SubTransaction[];
   }) =>
     request<{ transaction: Transaction }>('/api/transactions', {
       method: 'POST',
@@ -295,6 +298,34 @@ export const api = {
       destinationTransaction: Transaction;
     }>('/api/transactions/transfer', {
       method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getTransferPair: (id: string) =>
+    request<{
+      sourceTransaction: Transaction | null;
+      destinationTransaction: Transaction | null;
+    }>(`/api/transactions/${id}/transfer-pair`),
+
+  updateTransfer: (
+    id: string,
+    payload: {
+      sourceAccountId: string;
+      destinationAccountId: string;
+      amount: number;
+      date?: string;
+      description?: string;
+      currency?: string;
+      destinationAmount?: number;
+      destinationCurrency?: string;
+    },
+  ) =>
+    request<{
+      success: boolean;
+      sourceTransaction: Transaction;
+      destinationTransaction: Transaction;
+    }>(`/api/transactions/transfer/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(payload),
     }),
 
@@ -559,6 +590,19 @@ export const api = {
 
   getDividends: () =>
     request<DividendsSummary>('/api/investments/dividends'),
+
+  createDividend: (data: {
+    ticker: string;
+    institution?: string;
+    date: string;
+    type?: 'DIVIDEND' | 'JCP' | 'FII' | 'OTHER';
+    amount: number;
+    notes?: string;
+  }) =>
+    request<{ ok: boolean; item: any }>('/api/investments/dividends', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
   syncDividendsToTransactions: () =>
     request<{

@@ -115,30 +115,36 @@ transactionsRouter.post('/', async (req, res) => {
     amount?: number;
     description?: string;
     category?: string;
+    subcategory?: string;
     transaction_type?: string;
     account_id?: string;
     is_recurring?: boolean;
     original_currency?: string;
     original_amount?: number;
     exchange_rate?: number;
+    sub_transactions?: import('../types.js').SubTransaction[];
   };
   if (!body.date || body.amount === undefined || !body.description) {
     res.status(400).json({ error: 'date, amount e description são obrigatórios.' });
     return;
   }
   try {
+    const isCreditCard = body.transaction_type === 'CREDIT_CARD' || Array.isArray(body.sub_transactions);
+    const prefix = isCreditCard ? 'credit_card' : 'manual';
     const tx = await insertManualTransaction({
-      pluggy_transaction_id: `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      pluggy_transaction_id: `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       account_id: body.account_id ?? null,
       date: body.date,
       amount: Number(body.amount),
       description: body.description,
       transaction_type: body.transaction_type ?? 'DEBIT',
       category: body.category ?? null,
+      subcategory: body.subcategory ?? null,
       is_recurring: body.is_recurring ?? false,
       original_currency: body.original_currency,
       original_amount: body.original_amount !== undefined ? Number(body.original_amount) : undefined,
       exchange_rate: body.exchange_rate !== undefined ? Number(body.exchange_rate) : undefined,
+      sub_transactions: body.sub_transactions,
     }, user);
     res.status(201).json({ transaction: tx });
   } catch (err) {
@@ -146,6 +152,127 @@ transactionsRouter.post('/', async (req, res) => {
     res.status(500).json({ error: 'Falha ao criar transação.' });
   }
 });
+
+const APPROX_BRL_PER_UNIT: Record<string, number> = {
+  BRL: 1.0,
+  USD: 5.5,
+  EUR: 6.0,
+  GBP: 7.0,
+  CLP: 0.0057,
+};
+
+function computeTransferBrlAndRates(
+  numAmount: number,
+  srcCurrRaw: string,
+  numDestAmount: number,
+  destCurrRaw: string,
+) {
+  const srcCurr = (srcCurrRaw || 'BRL').toUpperCase();
+  const destCurr = (destCurrRaw || srcCurr).toUpperCase();
+
+  let outExchangeRate = APPROX_BRL_PER_UNIT[srcCurr] ?? 1.0;
+  let inExchangeRate = APPROX_BRL_PER_UNIT[destCurr] ?? 1.0;
+  let outBrlAmount = numAmount * outExchangeRate;
+  let inBrlAmount = numDestAmount * inExchangeRate;
+
+  if (srcCurr === 'BRL' && destCurr === 'BRL') {
+    outExchangeRate = 1.0;
+    inExchangeRate = 1.0;
+    outBrlAmount = numAmount;
+    inBrlAmount = numDestAmount;
+  } else if (srcCurr === 'BRL' && destCurr !== 'BRL') {
+    outExchangeRate = 1.0;
+    outBrlAmount = numAmount;
+    inExchangeRate = numDestAmount > 0 ? Number((numAmount / numDestAmount).toFixed(6)) : (APPROX_BRL_PER_UNIT[destCurr] ?? 1.0);
+    inBrlAmount = numAmount;
+  } else if (srcCurr !== 'BRL' && destCurr === 'BRL') {
+    outExchangeRate = numAmount > 0 ? Number((numDestAmount / numAmount).toFixed(6)) : (APPROX_BRL_PER_UNIT[srcCurr] ?? 1.0);
+    outBrlAmount = numDestAmount;
+    inExchangeRate = 1.0;
+    inBrlAmount = numDestAmount;
+  }
+
+  return {
+    srcCurr,
+    destCurr,
+    outBrlAmount: Number(outBrlAmount.toFixed(2)),
+    outExchangeRate,
+    inBrlAmount: Number(inBrlAmount.toFixed(2)),
+    inExchangeRate,
+  };
+}
+
+async function findTransferPairById(txId: string): Promise<{
+  sourceTransaction: Transaction | null;
+  destinationTransaction: Transaction | null;
+}> {
+  const { data: txData, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('id', txId)
+    .single();
+
+  if (error || !txData) {
+    return { sourceTransaction: null, destinationTransaction: null };
+  }
+
+  const tx = txData as Transaction;
+  const pluggyId = tx.pluggy_transaction_id || '';
+  const isOut = pluggyId.startsWith('transfer_out_') || (!pluggyId.startsWith('transfer_in_') && tx.amount < 0);
+
+  let pairTx: Transaction | null = null;
+
+  if (pluggyId.startsWith('transfer_out_')) {
+    const suffix = pluggyId.slice('transfer_out_'.length);
+    const { data: exact } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('pluggy_transaction_id', `transfer_in_${suffix}`)
+      .maybeSingle();
+    if (exact) pairTx = exact as Transaction;
+  } else if (pluggyId.startsWith('transfer_in_')) {
+    const suffix = pluggyId.slice('transfer_in_'.length);
+    const { data: exact } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('pluggy_transaction_id', `transfer_out_${suffix}`)
+      .maybeSingle();
+    if (exact) pairTx = exact as Transaction;
+  }
+
+  if (!pairTx) {
+    const { data: sameDayTxs } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('date', tx.date)
+      .neq('id', tx.id);
+
+    const candidates = ((sameDayTxs ?? []) as Transaction[]).filter((c) => {
+      const cIsTransfer =
+        c.transaction_type === 'TRANSFER' ||
+        c.category === 'Transferências' ||
+        (c.pluggy_transaction_id || '').startsWith('transfer_');
+      if (!cIsTransfer) return false;
+      return isOut ? c.amount > 0 : c.amount < 0;
+    });
+
+    if (candidates.length === 1) {
+      pairTx = candidates[0] ?? null;
+    } else if (candidates.length > 1) {
+      const txTime = tx.created_at ? new Date(tx.created_at).getTime() : 0;
+      candidates.sort((a, b) => {
+        const diffA = Math.abs((a.created_at ? new Date(a.created_at).getTime() : 0) - txTime);
+        const diffB = Math.abs((b.created_at ? new Date(b.created_at).getTime() : 0) - txTime);
+        return diffA - diffB;
+      });
+      pairTx = candidates[0] ?? null;
+    }
+  }
+
+  return isOut
+    ? { sourceTransaction: tx, destinationTransaction: pairTx }
+    : { sourceTransaction: pairTx, destinationTransaction: tx };
+}
 
 /** POST /api/transactions/transfer — transfere valor entre duas contas do usuário. */
 transactionsRouter.post('/transfer', async (req, res) => {
@@ -188,9 +315,18 @@ transactionsRouter.post('/transfer', async (req, res) => {
     }
 
     const txDate: string = date || new Date().toISOString().slice(0, 10);
-    const srcCurr = currency || 'BRL';
-    const destCurr = destinationCurrency || srcCurr;
-    const numDestAmount = destinationAmount !== undefined ? Number(destinationAmount) : numAmount;
+    const numDestAmount = destinationAmount !== undefined && Number(destinationAmount) > 0
+      ? Number(destinationAmount)
+      : numAmount;
+
+    const {
+      srcCurr,
+      destCurr,
+      outBrlAmount,
+      outExchangeRate,
+      inBrlAmount,
+      inExchangeRate,
+    } = computeTransferBrlAndRates(numAmount, currency || 'BRL', numDestAmount, destinationCurrency || currency || 'BRL');
 
     // Busca dados das contas para compor as descrições automáticas
     const allAccs = await getAllAccounts(user);
@@ -203,19 +339,21 @@ transactionsRouter.post('/transfer', async (req, res) => {
     const descOut = description?.trim() || `Transferência para ${destName}`;
     const descIn = description?.trim() || `Transferência de ${srcName}`;
 
+    const transferGroupId = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
     // 1. Saída da conta de origem (débito)
     const outTx = await insertManualTransaction(
       {
-        pluggy_transaction_id: `transfer_out_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        pluggy_transaction_id: `transfer_out_${transferGroupId}`,
         account_id: sourceAccountId,
         date: txDate,
-        amount: -Math.abs(numAmount),
+        amount: -Math.abs(outBrlAmount),
         description: descOut,
         category: 'Transferências',
         transaction_type: 'TRANSFER',
         original_currency: srcCurr,
         original_amount: -Math.abs(numAmount),
-        exchange_rate: 1.0,
+        exchange_rate: outExchangeRate,
       },
       user,
     );
@@ -223,16 +361,16 @@ transactionsRouter.post('/transfer', async (req, res) => {
     // 2. Entrada na conta de destino (crédito)
     const inTx = await insertManualTransaction(
       {
-        pluggy_transaction_id: `transfer_in_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        pluggy_transaction_id: `transfer_in_${transferGroupId}`,
         account_id: destinationAccountId,
         date: txDate,
-        amount: Math.abs(numDestAmount),
+        amount: Math.abs(inBrlAmount),
         description: descIn,
         category: 'Transferências',
         transaction_type: 'TRANSFER',
         original_currency: destCurr,
         original_amount: Math.abs(numDestAmount),
-        exchange_rate: 1.0,
+        exchange_rate: inExchangeRate,
       },
       user,
     );
@@ -245,6 +383,160 @@ transactionsRouter.post('/transfer', async (req, res) => {
   } catch (err: any) {
     console.error('[transactions] transfer error:', err);
     res.status(500).json({ error: err.message || 'Falha ao realizar transferência entre contas.' });
+  }
+});
+
+/** GET /api/transactions/:id/transfer-pair — retorna as duas pontas (origem e destino) de uma transferência. */
+transactionsRouter.get('/:id/transfer-pair', async (req, res) => {
+  try {
+    const pair = await findTransferPairById(req.params.id);
+    res.json(pair);
+  } catch (err: any) {
+    console.error('[transactions] get transfer pair error:', err);
+    res.status(500).json({ error: err.message || 'Falha ao buscar dados da transferência.' });
+  }
+});
+
+/** PUT /api/transactions/transfer/:id — atualiza uma transferência entre contas (ambas as pontas e saldos). */
+transactionsRouter.put('/transfer/:id', async (req, res) => {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const {
+      sourceAccountId,
+      destinationAccountId,
+      amount,
+      date,
+      description,
+      currency,
+      destinationAmount,
+      destinationCurrency,
+    } = req.body as {
+      sourceAccountId: string;
+      destinationAccountId: string;
+      amount: number;
+      date?: string;
+      description?: string;
+      currency?: string;
+      destinationAmount?: number;
+      destinationCurrency?: string;
+    };
+
+    if (!sourceAccountId || !destinationAccountId) {
+      res.status(400).json({ error: 'Conta de origem e conta de destino são obrigatórias.' });
+      return;
+    }
+
+    if (sourceAccountId === destinationAccountId) {
+      res.status(400).json({ error: 'A conta de origem e destino não podem ser a mesma.' });
+      return;
+    }
+
+    const numAmount = Number(amount);
+    if (!numAmount || numAmount <= 0) {
+      res.status(400).json({ error: 'O valor enviado deve ser maior que zero.' });
+      return;
+    }
+
+    const numDestAmount = destinationAmount !== undefined && Number(destinationAmount) > 0
+      ? Number(destinationAmount)
+      : numAmount;
+
+    const txDate: string = date || new Date().toISOString().slice(0, 10);
+    const {
+      srcCurr,
+      destCurr,
+      outBrlAmount,
+      outExchangeRate,
+      inBrlAmount,
+      inExchangeRate,
+    } = computeTransferBrlAndRates(numAmount, currency || 'BRL', numDestAmount, destinationCurrency || currency || 'BRL');
+
+    const allAccs = await getAllAccounts(user);
+    const srcAcc = allAccs.find((a) => a.id === sourceAccountId);
+    const destAcc = allAccs.find((a) => a.id === destinationAccountId);
+
+    const srcName = srcAcc?.institution_name === 'Dinheiro' ? 'Dinheiro em Espécie' : `${srcAcc?.institution_name} — ${srcAcc?.account_name}`;
+    const destName = destAcc?.institution_name === 'Dinheiro' ? 'Dinheiro em Espécie' : `${destAcc?.institution_name} — ${destAcc?.account_name}`;
+
+    const descOut = description?.trim() || `Transferência para ${destName}`;
+    const descIn = description?.trim() || `Transferência de ${srcName}`;
+
+    const { sourceTransaction, destinationTransaction } = await findTransferPairById(req.params.id);
+
+    const transferGroupId = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+    let updatedOutTx: Transaction;
+    if (sourceTransaction) {
+      updatedOutTx = await updateTransactionById(sourceTransaction.id, {
+        account_id: sourceAccountId,
+        date: txDate,
+        amount: -Math.abs(outBrlAmount),
+        description: descOut,
+        raw_description: descOut,
+        category: 'Transferências',
+        transaction_type: 'TRANSFER',
+        original_currency: srcCurr,
+        original_amount: -Math.abs(numAmount),
+        exchange_rate: outExchangeRate,
+      });
+    } else {
+      updatedOutTx = await insertManualTransaction(
+        {
+          pluggy_transaction_id: `transfer_out_${transferGroupId}`,
+          account_id: sourceAccountId,
+          date: txDate,
+          amount: -Math.abs(outBrlAmount),
+          description: descOut,
+          category: 'Transferências',
+          transaction_type: 'TRANSFER',
+          original_currency: srcCurr,
+          original_amount: -Math.abs(numAmount),
+          exchange_rate: outExchangeRate,
+        },
+        user,
+      );
+    }
+
+    let updatedInTx: Transaction;
+    if (destinationTransaction) {
+      updatedInTx = await updateTransactionById(destinationTransaction.id, {
+        account_id: destinationAccountId,
+        date: txDate,
+        amount: Math.abs(inBrlAmount),
+        description: descIn,
+        raw_description: descIn,
+        category: 'Transferências',
+        transaction_type: 'TRANSFER',
+        original_currency: destCurr,
+        original_amount: Math.abs(numDestAmount),
+        exchange_rate: inExchangeRate,
+      });
+    } else {
+      updatedInTx = await insertManualTransaction(
+        {
+          pluggy_transaction_id: `transfer_in_${transferGroupId}`,
+          account_id: destinationAccountId,
+          date: txDate,
+          amount: Math.abs(inBrlAmount),
+          description: descIn,
+          category: 'Transferências',
+          transaction_type: 'TRANSFER',
+          original_currency: destCurr,
+          original_amount: Math.abs(numDestAmount),
+          exchange_rate: inExchangeRate,
+        },
+        user,
+      );
+    }
+
+    res.json({
+      success: true,
+      sourceTransaction: updatedOutTx,
+      destinationTransaction: updatedInTx,
+    });
+  } catch (err: any) {
+    console.error('[transactions] update transfer error:', err);
+    res.status(500).json({ error: err.message || 'Falha ao atualizar a transferência.' });
   }
 });
 
@@ -283,8 +575,24 @@ transactionsRouter.get('/summary', async (req, res) => {
       }
       if (t.amount < 0) {
         totalSpent += Math.abs(t.amount);
-        const cat = t.category ?? 'Outros';
-        byCategory.set(cat, (byCategory.get(cat) ?? 0) + Math.abs(t.amount));
+        if (t.sub_transactions && t.sub_transactions.length > 0) {
+          const rate = t.exchange_rate ?? 1;
+          let allocatedBrl = 0;
+          for (const sub of t.sub_transactions) {
+            const subBrl = Math.abs(Number(sub.amount) || 0) * rate;
+            allocatedBrl += subBrl;
+            const subCat = sub.category || t.category || 'Cartão de Crédito';
+            byCategory.set(subCat, (byCategory.get(subCat) ?? 0) + subBrl);
+          }
+          const diff = Math.abs(t.amount) - allocatedBrl;
+          if (diff > 0.01) {
+            const fallbackCat = t.category ?? 'Cartão de Crédito';
+            byCategory.set(fallbackCat, (byCategory.get(fallbackCat) ?? 0) + diff);
+          }
+        } else {
+          const cat = t.category ?? 'Outros';
+          byCategory.set(cat, (byCategory.get(cat) ?? 0) + Math.abs(t.amount));
+        }
       } else {
         totalIncome += t.amount;
       }

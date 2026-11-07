@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { X, Sparkles, Loader2, Trash2, Edit2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, Sparkles, Loader2, Trash2, Edit2, ArrowLeftRight, CreditCard, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import { api } from '@/services/api';
 import { CATEGORY_NAMES, categoryMeta } from '@/lib/categories';
 import { formatDateFull, getAmountColor } from '@/lib/format';
-import { useFmt } from '@/contexts/CurrencyContext';
+import { useFmt, useFmtRaw } from '@/contexts/CurrencyContext';
 import { cn } from '@/lib/utils';
 import type { Transaction } from '@/types/finance';
 
@@ -21,9 +21,48 @@ interface Props {
 export function TransactionDrawer({ transaction, onClose, onUpdated, onEdit, onDeleted }: Props) {
   const { notify } = useToast();
   const fmt = useFmt();
+  const fmtRaw = useFmtRaw();
   const [saving, setSaving] = useState(false);
   const [recategorizing, setRecategorizing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [transferPair, setTransferPair] = useState<{
+    sourceTransaction: Transaction | null;
+    destinationTransaction: Transaction | null;
+  } | null>(null);
+
+  const isTransfer = Boolean(
+    transaction &&
+      (transaction.transaction_type === 'TRANSFER' ||
+        transaction.category === 'Transferências' ||
+        (transaction.pluggy_transaction_id || '').startsWith('transfer_')),
+  );
+
+  const isCreditCard = Boolean(
+    transaction &&
+      (transaction.transaction_type === 'CREDIT_CARD' ||
+        transaction.subcategory === 'CREDIT_CARD_BILL' ||
+        (transaction.pluggy_transaction_id || '').startsWith('credit_card_') ||
+        (transaction.sub_transactions && transaction.sub_transactions.length > 0)),
+  );
+
+  useEffect(() => {
+    if (!transaction || !isTransfer) {
+      setTransferPair(null);
+      return;
+    }
+    let active = true;
+    api
+      .getTransferPair(transaction.id)
+      .then((pair) => {
+        if (active) setTransferPair(pair);
+      })
+      .catch(() => {
+        if (active) setTransferPair(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [transaction, isTransfer]);
 
   if (!transaction) return null;
   const tx = transaction;
@@ -61,6 +100,7 @@ export function TransactionDrawer({ transaction, onClose, onUpdated, onEdit, onD
     try {
       await api.deleteTransaction(tx.id);
       notify('Transação excluída.', 'success');
+      window.dispatchEvent(new Event('transactions:changed'));
       onDeleted();
       onClose();
     } catch (err) {
@@ -126,8 +166,94 @@ export function TransactionDrawer({ transaction, onClose, onUpdated, onEdit, onD
             )}
           </div>
 
+          {isTransfer && (transferPair?.sourceTransaction || transferPair?.destinationTransaction) && (
+            <div className="rounded-xl border border-accent-gold/30 bg-accent-gold/5 p-3.5 space-y-2">
+              <p className="flex items-center gap-1.5 text-xs font-bold text-accent-gold uppercase tracking-wide">
+                <ArrowLeftRight className="h-3.5 w-3.5" />
+                <span>Resumo da Transferência entre Contas</span>
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {transferPair.sourceTransaction && (
+                  <div className="rounded-lg bg-bg-card/80 border border-border/60 p-2">
+                    <span className="block text-[10px] text-text-muted uppercase">Valor Enviado</span>
+                    <span className="font-mono font-bold text-accent-red">
+                      -{fmtRaw(
+                        Math.abs(transferPair.sourceTransaction.original_amount ?? transferPair.sourceTransaction.amount),
+                        transferPair.sourceTransaction.original_currency || 'BRL',
+                      )}
+                    </span>
+                  </div>
+                )}
+                {transferPair.destinationTransaction && (
+                  <div className="rounded-lg bg-bg-card/80 border border-border/60 p-2">
+                    <span className="block text-[10px] text-text-muted uppercase">Valor Recebido</span>
+                    <span className="font-mono font-bold text-accent-green">
+                      +{fmtRaw(
+                        Math.abs(transferPair.destinationTransaction.original_amount ?? transferPair.destinationTransaction.amount),
+                        transferPair.destinationTransaction.original_currency || 'BRL',
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isCreditCard && (
+            <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-1.5 text-xs font-bold text-purple-300 uppercase tracking-wide">
+                  <CreditCard className="h-3.5 w-3.5" />
+                  <span>
+                    Sub-transações do Cartão ({tx.sub_transactions?.length ?? 0})
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onEdit(tx)}
+                  className="inline-flex items-center gap-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 px-2 py-1 text-[11px] font-semibold text-purple-200 transition-colors cursor-pointer"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>Gerenciar Sub-transações</span>
+                </button>
+              </div>
+
+              {tx.sub_transactions && tx.sub_transactions.length > 0 ? (
+                <div className="divide-y divide-border/50 rounded-lg border border-border/60 bg-bg-card/80 overflow-hidden">
+                  {tx.sub_transactions.map((st, idx) => {
+                    const stMeta = categoryMeta(st.category || null);
+                    const txCurr = (tx.original_currency || 'BRL').toUpperCase();
+                    return (
+                      <div key={st.id || idx} className="flex items-center justify-between gap-2 px-3 py-2 text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-bg-elevated text-sm">
+                            {stMeta.icon}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-text-primary">{st.description}</p>
+                            <p className="text-[10px] text-text-muted">
+                              {st.category || 'Sem categoria'}
+                              {st.date ? ` · ${st.date.split('-').reverse().join('/')}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="font-mono font-semibold text-accent-red shrink-0">
+                          -{fmtRaw(Math.abs(Number(st.amount) || 0), txCurr)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-text-muted">
+                  Nenhuma sub-transação detalhada neste cartão ainda. Clique em &ldquo;Gerenciar Sub-transações&rdquo; para lançar as compras da fatura.
+                </p>
+              )}
+            </div>
+          )}
+
           <Detail label="Descrição original" value={tx.raw_description ?? '—'} />
-          <Detail label="Tipo" value={tx.transaction_type} />
+          <Detail label="Tipo" value={isCreditCard ? 'CARTÃO DE CRÉDITO' : tx.transaction_type} />
           {tx.subcategory && (
             <Detail label="Subcategoria" value={tx.subcategory} />
           )}
@@ -201,7 +327,11 @@ export function TransactionDrawer({ transaction, onClose, onUpdated, onEdit, onD
               onClick={() => onEdit(tx)}
             >
               <Edit2 className="h-4 w-4" />
-              Editar
+              {isTransfer
+                ? 'Editar Transferência'
+                : isCreditCard
+                  ? 'Editar Cartão / Sub-transações'
+                  : 'Editar'}
             </Button>
             <Button
               variant="secondary"

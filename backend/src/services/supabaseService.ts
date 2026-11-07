@@ -7,6 +7,7 @@ import type {
   InsightType,
   Investment,
   SpendingPattern,
+  SubTransaction,
   Transaction,
   TransactionUpsert,
 } from '../types.js';
@@ -55,7 +56,7 @@ export async function ensureCashAccount(user?: UserSessionPayload | null): Promi
 
   const isLucas = isLucasUser(user);
   const pluggyAccId = isLucas || !user ? 'manual_cash_account' : `manual_cash_account_${user.id}`;
-  const pluggyItemId = isLucas || !user ? 'manual_item_cash' : `manual_item_cash_${user.id}`;
+  const pluggyItemId = isLucas || !user ? 'manual_item_cash' : `USER:${user.id}#manual_item_cash`;
 
   const payload: any = {
     pluggy_item_id: pluggyItemId,
@@ -71,10 +72,6 @@ export async function ensureCashAccount(user?: UserSessionPayload | null): Promi
     last_synced_at: new Date().toISOString(),
   };
 
-  if (!isLucas && user) {
-    payload.user_id = user.id;
-  }
-
   return await upsertAccount(payload);
 }
 
@@ -89,20 +86,42 @@ export async function getAllAccounts(user?: UserSessionPayload | null): Promise<
   // Se não for o Lucas, retorna apenas as contas explicitamente associadas a este usuário
   if (!isLucasUser(user)) {
     if (!user?.id) return [];
-    return allAccounts.filter(
+    const userAccounts = allAccounts.filter(
       (a: any) =>
-        a.user_id === user.id ||
-        (a.provider && a.provider.startsWith(`USER:${user.id}#`)) ||
-        (a.pluggy_item_id && a.pluggy_item_id.startsWith(`USER:${user.id}#`)),
+        a.is_active !== false &&
+        (a.user_id === user.id ||
+          (a.provider && a.provider.startsWith(`USER:${user.id}#`)) ||
+          (a.pluggy_item_id && a.pluggy_item_id.startsWith(`USER:${user.id}#`)) ||
+          (a.pluggy_account_id && a.pluggy_account_id.endsWith(`_${user.id}`))),
     );
+
+    const hasCash = userAccounts.some(
+      (a) =>
+        a.is_active !== false &&
+        (a.institution_name.toLowerCase() === 'dinheiro' ||
+          a.account_name.toLowerCase().includes('dinheiro')),
+    );
+    if (!hasCash) {
+      try {
+        const cashAcc = await ensureCashAccount(user);
+        userAccounts.push(cashAcc);
+      } catch (e) {
+        console.error('Erro ao criar conta de Dinheiro para usuário:', e);
+      }
+    }
+
+    return userAccounts;
   }
 
-  // Para o Lucas, retorna as contas legadas da plataforma
+  // Para o Lucas, retorna apenas as contas ATIVAS legadas da plataforma
   const accounts = allAccounts.filter(
     (a: any) =>
-      !a.user_id ||
-      a.user_id === user?.id ||
-      (!a.provider?.startsWith('USER:') && !a.pluggy_item_id?.startsWith('USER:')),
+      a.is_active !== false &&
+      (!a.user_id ||
+        a.user_id === user?.id ||
+        (!a.provider?.startsWith('USER:') &&
+          !a.pluggy_item_id?.startsWith('USER:') &&
+          !a.pluggy_account_id?.startsWith('manual_cash_account_'))),
   );
 
   // Garante que a conta de Dinheiro esteja cadastrada para o Lucas
@@ -165,6 +184,7 @@ export async function getAllAccounts(user?: UserSessionPayload | null): Promise<
         const { data: updatedData } = await supabase
           .from('connected_accounts')
           .select('*')
+          .neq('is_active', false)
           .order('created_at', { ascending: false });
         return (updatedData ?? []) as ConnectedAccount[];
       }
@@ -212,22 +232,16 @@ export async function ensureAccountForInstitution(
 export async function upsertAccount(
   account: Omit<ConnectedAccount, 'id' | 'created_at'> & { user_id?: string },
 ): Promise<ConnectedAccount> {
-  let { data, error } = await supabase
+  const { user_id, ...cleanPayload } = account as any;
+  if (user_id && cleanPayload.pluggy_item_id && !cleanPayload.pluggy_item_id.startsWith(`USER:${user_id}#`)) {
+    cleanPayload.pluggy_item_id = `USER:${user_id}#${cleanPayload.pluggy_item_id}`;
+  }
+
+  const { data, error } = await supabase
     .from('connected_accounts')
-    .upsert(account, { onConflict: 'pluggy_account_id' })
+    .upsert(cleanPayload, { onConflict: 'pluggy_account_id' })
     .select()
     .single();
-
-  if (error && (account as any).user_id && error.message?.includes('user_id')) {
-    const { user_id, ...fallback } = account as any;
-    const retry = await supabase
-      .from('connected_accounts')
-      .upsert(fallback, { onConflict: 'pluggy_account_id' })
-      .select()
-      .single();
-    data = retry.data;
-    error = retry.error;
-  }
 
   if (error) throw error;
   return data as ConnectedAccount;
@@ -249,6 +263,33 @@ export async function deactivateAccount(accountId: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function resolveActiveAccountId(
+  accountId: string | null | undefined,
+): Promise<string | null> {
+  if (!accountId) return null;
+  const { data: acc } = await supabase
+    .from('connected_accounts')
+    .select('id, institution_name, is_active')
+    .eq('id', accountId)
+    .maybeSingle();
+
+  if (!acc) return accountId;
+  if (acc.is_active !== false) return acc.id;
+
+  // Se a conta selecionada estava desativada (is_active = false), redireciona para a conta ativa da mesma instituição
+  const { data: activeMatches } = await supabase
+    .from('connected_accounts')
+    .select('id, institution_name, is_active')
+    .neq('is_active', false)
+    .ilike('institution_name', acc.institution_name);
+
+  if (activeMatches && activeMatches.length > 0 && activeMatches[0]) {
+    return activeMatches[0].id;
+  }
+
+  return acc.id;
+}
+
 export async function updateAccountBalanceDelta(
   accountId: string | null | undefined,
   delta: number,
@@ -256,10 +297,12 @@ export async function updateAccountBalanceDelta(
 ): Promise<void> {
   if (!accountId || !delta || isNaN(delta)) return;
 
+  const targetAccountId = (await resolveActiveAccountId(accountId)) ?? accountId;
+
   const { data: acc, error: fetchErr } = await supabase
     .from('connected_accounts')
-    .select('id, balance, currency')
-    .eq('id', accountId)
+    .select('id, balance, currency, account_number')
+    .eq('id', targetAccountId)
     .single();
 
   if (fetchErr || !acc) return;
@@ -268,7 +311,7 @@ export async function updateAccountBalanceDelta(
   let adjustedDelta = delta;
 
   if (currency.toUpperCase() !== accCurr.toUpperCase()) {
-    const rates: Record<string, number> = { brl: 1.0, usd: 0.18, eur: 0.17, clp: 175.0 };
+    const rates: Record<string, number> = { brl: 1.0, usd: 0.18, eur: 0.17, gbp: 0.14, clp: 175.0 };
     const fromKey = currency.toLowerCase();
     const toKey = accCurr.toLowerCase();
     const rFrom = rates[fromKey] ?? 1;
@@ -280,16 +323,59 @@ export async function updateAccountBalanceDelta(
   const currentBal = Number(acc.balance || 0);
   const newBalance = Number((currentBal + adjustedDelta).toFixed(2));
 
+  const updatePayload: Record<string, unknown> = {
+    balance: newBalance,
+    last_synced_at: new Date().toISOString(),
+  };
+
+  if (acc.account_number && typeof acc.account_number === 'string' && acc.account_number.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(acc.account_number);
+      if (parsed && typeof parsed === 'object') {
+        const currKey = currency.toUpperCase();
+        const prevSub = Number(parsed[currKey] || 0);
+        parsed[currKey] = Number((prevSub + delta).toFixed(2));
+        updatePayload.account_number = JSON.stringify(parsed);
+      }
+    } catch {}
+  }
+
   await supabase
     .from('connected_accounts')
-    .update({
-      balance: newBalance,
-      last_synced_at: new Date().toISOString(),
-    })
-    .eq('id', accountId);
+    .update(updatePayload)
+    .eq('id', targetAccountId);
 }
 
 // --- Transações ---
+
+const SUB_TX_PREFIX = '__CC_SUBTX__:';
+
+export function enrichTransactionWithSubTransactions(tx: Transaction): Transaction {
+  const raw = tx.raw_description || '';
+  if (raw.startsWith(SUB_TX_PREFIX)) {
+    try {
+      const parsed = JSON.parse(raw.slice(SUB_TX_PREFIX.length));
+      if (Array.isArray(parsed)) {
+        return {
+          ...tx,
+          transaction_type: 'CREDIT_CARD',
+          sub_transactions: parsed as SubTransaction[],
+          raw_description: tx.description,
+        };
+      }
+    } catch {}
+  }
+
+  if (tx.subcategory === 'CREDIT_CARD_BILL' || (tx.pluggy_transaction_id || '').startsWith('credit_card_')) {
+    return {
+      ...tx,
+      transaction_type: 'CREDIT_CARD',
+      sub_transactions: tx.sub_transactions ?? [],
+    };
+  }
+
+  return tx;
+}
 
 export interface ManualTransactionInsert {
   pluggy_transaction_id: string;
@@ -299,10 +385,12 @@ export interface ManualTransactionInsert {
   description: string;
   transaction_type: string;
   category: string | null;
+  subcategory?: string | null;
   is_recurring?: boolean;
   original_currency?: string;
   original_amount?: number;
   exchange_rate?: number;
+  sub_transactions?: SubTransaction[];
 }
 
 export async function insertManualTransaction(
@@ -312,11 +400,23 @@ export async function insertManualTransaction(
   if (!row.account_id || row.account_id === 'cash' || row.account_id === 'cash_fallback') {
     const cashAcc = await ensureCashAccount(user);
     row.account_id = cashAcc.id;
+  } else {
+    row.account_id = await resolveActiveAccountId(row.account_id);
   }
 
+  const isCreditCard =
+    row.transaction_type === 'CREDIT_CARD' ||
+    row.subcategory === 'CREDIT_CARD_BILL' ||
+    Array.isArray(row.sub_transactions);
+
+  const subTxs = Array.isArray(row.sub_transactions) ? row.sub_transactions : undefined;
+  const { sub_transactions: _omitSub, ...dbRow } = row;
+
   const payload: any = {
-    ...row,
-    raw_description: row.description,
+    ...dbRow,
+    transaction_type: isCreditCard ? 'CREDIT_CARD' : row.transaction_type,
+    subcategory: isCreditCard ? 'CREDIT_CARD_BILL' : (row.subcategory ?? null),
+    raw_description: isCreditCard && subTxs ? `${SUB_TX_PREFIX}${JSON.stringify(subTxs)}` : row.description,
     is_recurring: row.is_recurring ?? false,
     is_anomaly: false,
     original_currency: row.original_currency ?? 'BRL',
@@ -342,9 +442,17 @@ export async function insertManualTransaction(
     error = retry.error;
   }
 
+  // Caso o banco tenha constraint em transaction_type não aceitando CREDIT_CARD, salva como DEBIT mantendo subcategory/raw_description
+  if (error && payload.transaction_type === 'CREDIT_CARD') {
+    payload.transaction_type = 'DEBIT';
+    const retry = await supabase.from('transactions').insert(payload).select().single();
+    data = retry.data;
+    error = retry.error;
+  }
+
   if (error) throw error;
 
-  const tx = data as Transaction;
+  const tx = enrichTransactionWithSubTransactions(data as Transaction);
   if (tx.account_id) {
     const delta = tx.original_amount ?? tx.amount;
     await updateAccountBalanceDelta(tx.account_id, delta, tx.original_currency || 'BRL');
@@ -369,6 +477,8 @@ export async function insertManualTransactionsBatch(
           fallbackCashAccId = cashAcc.id;
         }
         accId = fallbackCashAccId;
+      } else {
+        accId = await resolveActiveAccountId(accId);
       }
 
       const item: any = {
@@ -465,14 +575,17 @@ export async function setTransactionCategoryById(
   category: string,
   subcategory: string | null = null,
 ): Promise<Transaction> {
+  const { data: existing } = await supabase.from('transactions').select('subcategory').eq('id', id).maybeSingle();
+  const nextSubcategory = existing?.subcategory === 'CREDIT_CARD_BILL' ? 'CREDIT_CARD_BILL' : subcategory;
+
   const { data, error } = await supabase
     .from('transactions')
-    .update({ category, subcategory, updated_at: new Date().toISOString() })
+    .update({ category, subcategory: nextSubcategory, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single();
   if (error) throw error;
-  return data as Transaction;
+  return enrichTransactionWithSubTransactions(data as Transaction);
 }
 
 export async function updateTransactionById(
@@ -482,6 +595,8 @@ export async function updateTransactionById(
   if (fields.account_id === 'cash' || fields.account_id === 'cash_fallback') {
     const cashAcc = await ensureCashAccount();
     fields.account_id = cashAcc.id;
+  } else if (fields.account_id) {
+    fields.account_id = await resolveActiveAccountId(fields.account_id);
   }
 
   const { data: oldTx } = await supabase
@@ -490,15 +605,41 @@ export async function updateTransactionById(
     .eq('id', id)
     .single();
 
-  const { data: newTx, error } = await supabase
+  const { sub_transactions, ...dbFields } = fields;
+  const updatePayload: any = {
+    ...dbFields,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (Array.isArray(sub_transactions)) {
+    updatePayload.raw_description = `${SUB_TX_PREFIX}${JSON.stringify(sub_transactions)}`;
+    updatePayload.subcategory = 'CREDIT_CARD_BILL';
+    if (!updatePayload.transaction_type) {
+      updatePayload.transaction_type = 'CREDIT_CARD';
+    }
+  }
+
+  let { data: newTx, error } = await supabase
     .from('transactions')
-    .update({ ...fields, updated_at: new Date().toISOString() })
+    .update(updatePayload)
     .eq('id', id)
     .select()
     .single();
 
+  if (error && updatePayload.transaction_type === 'CREDIT_CARD') {
+    updatePayload.transaction_type = 'DEBIT';
+    const retry = await supabase
+      .from('transactions')
+      .update(updatePayload)
+      .eq('id', id)
+      .select()
+      .single();
+    newTx = retry.data;
+    error = retry.error;
+  }
+
   if (error) throw error;
-  const updated = newTx as Transaction;
+  const updated = enrichTransactionWithSubTransactions(newTx as Transaction);
 
   if (oldTx && oldTx.account_id) {
     const oldDelta = oldTx.original_amount ?? oldTx.amount;
@@ -568,14 +709,21 @@ export async function getTransactions(
       const end = endOfMonth(filter.month);
       query = query.gte('date', start).lte('date', end);
     }
-    if (filter.category) query = query.eq('category', filter.category);
     if (filter.accountId) query = query.eq('account_id', filter.accountId);
 
     const { data, error } = await query
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return (data ?? []) as Transaction[];
+    const enriched = ((data ?? []) as Transaction[]).map(enrichTransactionWithSubTransactions);
+    if (filter.category) {
+      return enriched.filter(
+        (t) =>
+          t.category === filter.category ||
+          (t.sub_transactions && t.sub_transactions.some((s) => s.category === filter.category)),
+      );
+    }
+    return enriched;
   }
 
   // Para o Lucas (ou contexto global):
@@ -586,14 +734,21 @@ export async function getTransactions(
     const end = endOfMonth(filter.month);
     query = query.gte('date', start).lte('date', end);
   }
-  if (filter.category) query = query.eq('category', filter.category);
   if (filter.accountId) query = query.eq('account_id', filter.accountId);
 
   const { data, error } = await query
     .order('date', { ascending: false })
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []) as Transaction[];
+  const enriched = ((data ?? []) as Transaction[]).map(enrichTransactionWithSubTransactions);
+  if (filter.category) {
+    return enriched.filter(
+      (t) =>
+        t.category === filter.category ||
+        (t.sub_transactions && t.sub_transactions.some((s) => s.category === filter.category)),
+    );
+  }
+  return enriched;
 }
 
 export async function getTransactionsBetween(
@@ -608,7 +763,7 @@ export async function getTransactionsBetween(
     .order('date', { ascending: false })
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []) as Transaction[];
+  return ((data ?? []) as Transaction[]).map(enrichTransactionWithSubTransactions);
 }
 
 export async function getRecentTransactions(limit = 20): Promise<Transaction[]> {
@@ -619,7 +774,7 @@ export async function getRecentTransactions(limit = 20): Promise<Transaction[]> 
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as Transaction[];
+  return ((data ?? []) as Transaction[]).map(enrichTransactionWithSubTransactions);
 }
 
 export async function getAnomalies(limit = 50): Promise<Transaction[]> {

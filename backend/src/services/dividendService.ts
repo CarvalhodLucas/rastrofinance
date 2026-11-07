@@ -1,13 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import xlsx from 'xlsx';
-import { supabase, type ManualTransactionInsert } from './supabaseService.js';
+import { supabase, type ManualTransactionInsert, getSetting, updateSetting } from './supabaseService.js';
 import type { DividendItem, DividendsSummary } from '../types.js';
 import type { UserSessionPayload } from './authService.js';
-import { isLucasUser } from './userScopeService.js';
+import { isLucasUser, getUserSettingKey } from './userScopeService.js';
 
 const B3_MOVIMENTACAO_PREFIX = 'movimentacao-';
 const GORILA_REPORT_FILENAME = 'relatorio_Lucas-Carvalho_23-07-2025_11-08-2026.xlsx';
+const MANUAL_DIVIDENDS_SETTING_KEY = 'manual_dividends_history';
 
 function getB3FilePath(): string | null {
   let rootDir = process.cwd();
@@ -146,6 +147,21 @@ export async function getDividendsFromReport(user?: UserSessionPayload | null): 
   // Ordenar por data mais recente primeiro
   items.sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime());
 
+  // 2. Mesclar com proventos cadastrados manualmente
+  const manualKey = getUserSettingKey(MANUAL_DIVIDENDS_SETTING_KEY, user);
+  const manualDividends = (await getSetting<DividendItem[]>(manualKey)) || [];
+
+  if (Array.isArray(manualDividends) && manualDividends.length > 0) {
+    for (const m of manualDividends) {
+      totalDiv += Number(m.dividends || 0);
+      totalJcp += Number(m.jcp || 0);
+      totalFii += Number(m.fii_earnings || 0);
+      items.push(m);
+    }
+    // Reordenar após mesclar
+    items.sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime());
+  }
+
   const totalOverall = totalDiv + totalJcp + totalFii;
 
   return {
@@ -155,6 +171,49 @@ export async function getDividendsFromReport(user?: UserSessionPayload | null): 
     total_overall: Number(totalOverall.toFixed(2)),
     items,
   };
+}
+
+/**
+ * Registra um novo dividendo / provento manualmente (via modal de Nova Transação ou Proventos).
+ */
+export async function recordManualDividend(
+  dividend: {
+    ticker: string;
+    institution?: string;
+    date: string;
+    type: 'DIVIDEND' | 'JCP' | 'FII' | 'OTHER';
+    amount: number;
+    notes?: string;
+  },
+  user?: UserSessionPayload | null,
+): Promise<DividendItem> {
+  const manualKey = getUserSettingKey(MANUAL_DIVIDENDS_SETTING_KEY, user);
+  const current = (await getSetting<DividendItem[]>(manualKey)) || [];
+
+  const cleanTicker = (dividend.ticker || '').trim().toUpperCase();
+  const amt = Number(dividend.amount) || 0;
+  const isJcp = dividend.type === 'JCP';
+  const isFii = dividend.type === 'FII' || (dividend.type !== 'JCP' && cleanTicker.endsWith('11'));
+  const isDividend = !isJcp && !isFii;
+
+  const newItem: DividendItem = {
+    id: `div_manual_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    ticker: cleanTicker,
+    institution: dividend.institution?.trim() || 'Manual',
+    sub_category: isFii ? 'FIIs' : 'Ações',
+    asset_class: isFii ? 'Fundos Imobiliários' : 'Renda Variável',
+    date: dividend.date ? dividend.date.substring(0, 10) : new Date().toISOString().substring(0, 10),
+    dividends: isDividend ? amt : 0,
+    jcp: isJcp ? amt : 0,
+    bonification: 0,
+    fii_earnings: isFii ? amt : 0,
+    amortization: 0,
+    total_earnings: Number(amt.toFixed(2)),
+  };
+
+  const updated = [newItem, ...current];
+  await updateSetting(manualKey, updated);
+  return newItem;
 }
 
 /**

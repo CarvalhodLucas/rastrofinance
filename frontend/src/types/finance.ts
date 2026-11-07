@@ -8,7 +8,15 @@ export interface AuthUser {
 
 export type AccountType = 'CHECKING' | 'SAVINGS' | 'CREDIT' | 'INVESTMENT';
 
-export type TransactionType = 'DEBIT' | 'CREDIT' | 'PIX' | 'TED' | 'BOLETO' | 'TRANSFER';
+export type TransactionType = 'DEBIT' | 'CREDIT' | 'PIX' | 'TED' | 'BOLETO' | 'TRANSFER' | 'CREDIT_CARD';
+
+export interface SubTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  category?: string | null;
+  date?: string;
+}
 
 export type InsightType =
   | 'DAILY_SUMMARY'
@@ -54,6 +62,7 @@ export interface Transaction {
   original_currency?: string;
   original_amount?: number;
   exchange_rate?: number;
+  sub_transactions?: SubTransaction[];
   created_at: string;
   updated_at: string;
 }

@@ -12,8 +12,10 @@ import { AIInsightPanel } from '@/components/dashboard/AIInsightPanel';
 import { AnomalyAlerts } from '@/components/dashboard/AnomalyAlerts';
 import { TransactionList } from '@/components/dashboard/TransactionList';
 import { TransactionDrawer } from '@/components/transactions/TransactionDrawer';
+import { AddTransactionModal } from '@/components/transactions/AddTransactionModal';
 import { useSummary, useAnomalies } from '@/hooks/useTransactions';
 import { useLatestInsights } from '@/hooks/useInsights';
+import { useAccounts } from '@/hooks/usePluggy';
 import { api } from '@/services/api';
 import { Link } from 'react-router-dom';
 import type { Transaction } from '@/types/finance';
@@ -29,11 +31,14 @@ export function Dashboard() {
   const { summary, loading: summaryLoading, error, reload } = useSummary(month);
   const { byType, loading: insightsLoading } = useLatestInsights();
   const { anomalies } = useAnomalies();
+  const { accounts } = useAccounts();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [txLoading, setTxLoading] = useState(true);
   const [prevSpent, setPrevSpent] = useState<number | undefined>();
   const [selected, setSelected] = useState<Transaction | null>(null);
+  const [txToEdit, setTxToEdit] = useState<Transaction | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -155,11 +160,23 @@ export function Dashboard() {
           );
           setSelected(tx);
         }}
-        onEdit={() => {}}
+        onEdit={(tx) => {
+          setSelected(null);
+          setTxToEdit(tx);
+          setEditOpen(true);
+        }}
         onDeleted={() => {
           setSelected(null);
           void reload();
         }}
+      />
+
+      <AddTransactionModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        onCreated={() => void reload()}
+        accounts={accounts}
+        transactionToEdit={txToEdit}
       />
     </div>
   );

@@ -44,10 +44,17 @@ pluggyRouter.post('/item', async (req, res) => {
       getAccounts(itemId),
     ]);
 
+    const user = (req as AuthenticatedRequest).user;
     const saved = [];
     for (const acc of accounts) {
+      const baseItemId = itemId;
+      const scopedItemId =
+        !isLucasUser(user) && user?.id
+          ? `USER:${user.id}#${baseItemId}`
+          : baseItemId;
+
       const row = await upsertAccount({
-        pluggy_item_id: itemId,
+        pluggy_item_id: scopedItemId,
         pluggy_account_id: acc.pluggy_account_id,
         institution_name: institution.name,
         institution_logo: institution.logo,
@@ -120,8 +127,12 @@ pluggyRouter.post('/manual-account', async (req, res) => {
     subBalances?: Record<string, number>;
   };
 
-  if (!accountName || balance === undefined || balance === null) {
-    res.status(400).json({ error: 'Nome da conta e saldo são obrigatórios.' });
+  const cleanAccountName = (accountName || institutionName || '').trim();
+  const cleanInstitutionName = (institutionName || cleanAccountName || 'Banco').trim();
+  const numericBalance = balance !== undefined && balance !== null && String(balance) !== '' ? Number(balance) : 0;
+
+  if (!cleanAccountName || isNaN(numericBalance)) {
+    res.status(400).json({ error: 'Nome do banco/conta é obrigatório.' });
     return;
   }
 
@@ -132,11 +143,11 @@ pluggyRouter.post('/manual-account', async (req, res) => {
     if (id) {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
       const updatePayload: any = {
-        account_name: accountName,
-        institution_name: institutionName || 'Wise',
+        account_name: cleanAccountName,
+        institution_name: cleanInstitutionName,
         account_type: (accountType as any) || 'CHECKING',
-        balance: Number(balance),
-        currency: currency || 'BRL',
+        balance: numericBalance,
+        currency: (currency || 'BRL').toUpperCase(),
         last_synced_at: new Date().toISOString(),
       };
       if (accNumVal !== undefined) {
@@ -155,26 +166,27 @@ pluggyRouter.post('/manual-account', async (req, res) => {
       }
     }
 
-    // 2. Se for uma nova conta manual
-    const pluggyAccountId = id || `manual-acc-${Date.now()}`;
-    const pluggyItemId = `manual-item-${pluggyAccountId}`;
+    // 2. Se for uma nova conta manual (escopada por usuário)
+    const pluggyAccountId = id || `manual-acc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const baseItemId = `manual-item-${pluggyAccountId}`;
+    const scopedItemId =
+      !isLucasUser(user) && user?.id
+        ? `USER:${user.id}#${baseItemId}`
+        : baseItemId;
+
     const newAccountData: any = {
-      pluggy_item_id: pluggyItemId,
+      pluggy_item_id: scopedItemId,
       pluggy_account_id: pluggyAccountId,
-      institution_name: institutionName || 'Wise',
+      institution_name: cleanInstitutionName,
       institution_logo: null,
       account_type: (accountType as any) || 'CHECKING',
-      account_name: accountName,
+      account_name: cleanAccountName,
       account_number: accNumVal ?? null,
-      balance: Number(balance),
-      currency: currency || 'BRL',
+      balance: numericBalance,
+      currency: (currency || 'BRL').toUpperCase(),
       is_active: true,
       last_synced_at: new Date().toISOString(),
     };
-
-    if (!isLucasUser(user) && user) {
-      newAccountData.user_id = user.id;
-    }
 
     const row = await upsertAccount(newAccountData);
 

@@ -51,6 +51,16 @@ export function useAccounts() {
 
   useEffect(() => {
     void load();
+
+    const handleChanged = () => {
+      void load();
+    };
+    window.addEventListener('transactions:changed', handleChanged);
+    window.addEventListener('transactions-updated', handleChanged);
+    return () => {
+      window.removeEventListener('transactions:changed', handleChanged);
+      window.removeEventListener('transactions-updated', handleChanged);
+    };
   }, [load]);
 
   return { accounts, loading, error, reload: load };

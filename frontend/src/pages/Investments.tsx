@@ -56,6 +56,7 @@ import { usePluggyConnect } from '@/hooks/usePluggy';
 import type { AssetType, DividendsSummary, Investment, InvestmentSummary, InvestmentTrade, RealizedOperation } from '@/types/finance';
 import { ImportB3Modal } from '@/components/investments/ImportB3Modal';
 import { AddInvestmentModal } from '@/components/investments/AddInvestmentModal';
+import { AddDividendModal } from '@/components/investments/AddDividendModal';
 import { BinanceHistoryModal } from '@/components/investments/BinanceHistoryModal';
 import { SellInvestmentModal } from '@/components/investments/SellInvestmentModal';
 import { EditTradeModal } from '@/components/investments/EditTradeModal';
@@ -378,9 +379,11 @@ export function Investments() {
   // Modais
   const [showB3Modal, setShowB3Modal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDividendModal, setShowDividendModal] = useState(false);
   const [selectedAssetTypeForAdd, setSelectedAssetTypeForAdd] = useState<AssetType>('STOCK');
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
+  const [prefillAssetForBuy, setPrefillAssetForBuy] = useState<Investment | null>(null);
   const [sellingInvestment, setSellingInvestment] = useState<Investment | null>(null);
   const [showSellModal, setShowSellModal] = useState<boolean>(false);
   const [sellModalInitialTab, setSellModalInitialTab] = useState<'SELL' | 'EDIT'>('SELL');
@@ -391,6 +394,7 @@ export function Investments() {
 
   const handleOpenAddModal = (type?: AssetType) => {
     setEditingInvestment(null);
+    setPrefillAssetForBuy(null);
     if (type) {
       setSelectedAssetTypeForAdd(type);
     } else if (activeTab === 'STOCK' || activeTab === 'FII' || activeTab === 'FIXED_INCOME' || activeTab === 'CRYPTO') {
@@ -464,10 +468,12 @@ export function Investments() {
     };
 
     window.addEventListener('investments-updated', handleUpdateEvent);
+    window.addEventListener('dividends:changed', handleUpdateEvent);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       clearInterval(hourlyInterval);
       window.removeEventListener('investments-updated', handleUpdateEvent);
+      window.removeEventListener('dividends:changed', handleUpdateEvent);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
@@ -1448,16 +1454,31 @@ export function Investments() {
               <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Sincronize com seu fluxo de caixa ou ordene pelo valor acumulado.
               </div>
-              <button
-                onClick={handleSyncDividends}
-                disabled={syncingDividends}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs font-semibold transition-colors shadow-xs ${
-                  isDark ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                {syncingDividends ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Coins className="h-3.5 w-3.5 text-amber-500" />}
-                <span>Sincronizar com Transações</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDividendModal(true)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all shadow-xs ${
+                    isDark
+                      ? 'bg-accent-gold text-slate-950 font-bold hover:bg-accent-gold/90'
+                      : 'bg-accent-gold text-slate-950 font-bold hover:bg-accent-gold/90'
+                  }`}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Lançar Provento</span>
+                </button>
+
+                <button
+                  onClick={handleSyncDividends}
+                  disabled={syncingDividends}
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs font-semibold transition-colors shadow-xs ${
+                    isDark ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {syncingDividends ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Coins className="h-3.5 w-3.5 text-amber-500" />}
+                  <span>Sincronizar com Transações</span>
+                </button>
+              </div>
             </div>
 
             <div className={`overflow-x-auto rounded-xl border ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
@@ -2419,7 +2440,27 @@ export function Investments() {
                                       className="pr-4 sm:pr-5 pl-2 py-3 text-right relative"
                                       onClick={(e) => e.stopPropagation()}
                                     >
-                                      <div className="inline-flex items-center justify-end gap-1.5">
+                                      <div className="inline-flex items-center justify-end gap-1">
+                                        {!isCaixinha && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setOpenOptionMenuId(null);
+                                              setEditingInvestment(null);
+                                              setPrefillAssetForBuy(inv);
+                                              setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
+                                              setShowAddModal(true);
+                                            }}
+                                            className={`p-1 rounded transition-colors ${
+                                              isDark
+                                                ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/15'
+                                                : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                                            }`}
+                                            title={`Registrar nova compra de ${inv.code_ticker}`}
+                                          >
+                                            <Plus className="h-4 w-4" />
+                                          </button>
+                                        )}
                                         <button
                                           type="button"
                                           onClick={() => setOpenOptionMenuId(isOptionOpen ? null : inv.id)}
@@ -2433,12 +2474,30 @@ export function Investments() {
                                       </div>
 
                                       {isOptionOpen && (
-                                        <div className={`absolute right-4 top-8 w-44 rounded-xl border p-1.5 z-50 text-left space-y-0.5 animate-fade-in ${
+                                        <div className={`absolute right-4 top-8 w-48 rounded-xl border p-1.5 z-50 text-left space-y-0.5 animate-fade-in ${
                                           isDark ? 'bg-[#1F2937] border-slate-700 text-slate-200 shadow-2xl' : 'bg-white border-slate-100 text-slate-700 shadow-xl'
                                         }`}>
+                                          {!isCaixinha && (
+                                            <button
+                                              onClick={() => {
+                                                setOpenOptionMenuId(null);
+                                                setEditingInvestment(null);
+                                                setPrefillAssetForBuy(inv);
+                                                setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
+                                                setShowAddModal(true);
+                                              }}
+                                              className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                                                isDark ? 'text-emerald-400 hover:bg-slate-800' : 'text-emerald-600 hover:bg-emerald-50'
+                                              }`}
+                                            >
+                                              <Plus className="h-3.5 w-3.5 text-emerald-500" />
+                                              <span>Comprar Mais ({inv.code_ticker})</span>
+                                            </button>
+                                          )}
                                           <button
                                             onClick={() => {
                                               setOpenOptionMenuId(null);
+                                              setPrefillAssetForBuy(null);
                                               setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
                                               setEditingInvestment(inv);
                                               setShowAddModal(true);
@@ -2448,7 +2507,7 @@ export function Investments() {
                                             }`}
                                           >
                                             <Edit2 className="h-3.5 w-3.5 text-slate-400" />
-                                            <span>Editar Ativo</span>
+                                            <span>Editar Saldo / PM</span>
                                           </button>
                                           {inv.yield_rate !== undefined && inv.yield_rate > 0 && (
                                             <button
@@ -2625,11 +2684,20 @@ export function Investments() {
       <AddInvestmentModal
         open={showAddModal}
         investmentToEdit={editingInvestment}
+        prefillAssetForBuy={prefillAssetForBuy}
+        existingInvestments={investments}
         initialAssetType={selectedAssetTypeForAdd}
         onClose={() => {
           setShowAddModal(false);
           setEditingInvestment(null);
+          setPrefillAssetForBuy(null);
         }}
+        onSuccess={fetchInvestments}
+      />
+
+      <AddDividendModal
+        open={showDividendModal}
+        onClose={() => setShowDividendModal(false)}
         onSuccess={fetchInvestments}
       />
 

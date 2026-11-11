@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Save, Loader2, Landmark, Globe, Layers, Check } from 'lucide-react';
+import { X, Save, Loader2, Landmark, Globe, Layers, Check, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { api } from '@/services/api';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { getBankLogo } from '@/utils/assetLogos';
 import type { ConnectedAccount } from '@/types/finance';
 
 interface Props {
@@ -26,6 +27,7 @@ const BANK_PRESETS: Array<{ name: string; defaultCurrency: string; type?: string
   { name: 'XP Investimentos', defaultCurrency: 'BRL', type: 'INVESTMENT' },
   { name: 'Wise', defaultCurrency: 'EUR' },
   { name: 'Revolut', defaultCurrency: 'EUR' },
+  { name: 'Revolut X', defaultCurrency: 'USD', type: 'INVESTMENT' },
   { name: 'N26', defaultCurrency: 'EUR' },
   { name: 'CaixaBank', defaultCurrency: 'EUR' },
   { name: 'BBVA', defaultCurrency: 'EUR' },
@@ -247,8 +249,17 @@ export function AddManualAccountModal({ open, accountToEdit, onClose, onSuccess 
         {/* Cabeçalho */}
         <div className="flex items-center justify-between border-b border-border pb-3.5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-gold/15 text-accent-gold border border-accent-gold/30">
-              <Landmark className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-gold/15 text-accent-gold border border-accent-gold/30 overflow-hidden p-1.5">
+              {(() => {
+                const headerLogo = getBankLogo(institutionName || accountName, accountToEdit?.institution_logo);
+                if (headerLogo) {
+                  return <img src={headerLogo} alt={institutionName} className="h-full w-full rounded object-contain" />;
+                }
+                if ((institutionName || '').toLowerCase().includes('dinheiro')) {
+                  return <Wallet className="h-5 w-5 text-emerald-400" />;
+                }
+                return <Landmark className="h-5 w-5" />;
+              })()}
             </div>
             <div>
               <h3 className="text-base font-bold text-text-primary">
@@ -278,17 +289,30 @@ export function AddManualAccountModal({ open, accountToEdit, onClose, onSuccess 
             <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1 py-0.5">
               {BANK_PRESETS.map((preset) => {
                 const isSelected = institutionName.trim().toLowerCase() === preset.name.toLowerCase();
+                const presetLogo = getBankLogo(preset.name);
+                const isCashPreset = preset.name.toLowerCase() === 'dinheiro';
                 return (
                   <button
                     key={preset.name}
                     type="button"
                     onClick={() => handleSelectBankPreset(preset)}
-                    className={`px-2.5 py-1 rounded-lg border text-xs transition-all cursor-pointer flex items-center gap-1 ${
+                    className={`px-2.5 py-1 rounded-lg border text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                       isSelected
                         ? 'border-accent-gold bg-accent-gold/20 text-accent-gold font-bold shadow-xs'
                         : 'border-border/70 bg-bg-elevated/50 text-text-secondary hover:text-text-primary hover:border-border'
                     }`}
                   >
+                    {presetLogo ? (
+                      <img
+                        src={presetLogo}
+                        alt={preset.name}
+                        className="h-3.5 w-3.5 rounded-full object-contain shrink-0 bg-white/90 p-0.2"
+                      />
+                    ) : isCashPreset ? (
+                      <Wallet className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    ) : (
+                      <Landmark className="h-3.5 w-3.5 text-accent-gold shrink-0" />
+                    )}
                     <span>{preset.name}</span>
                     <span className="text-[10px] opacity-65">({preset.defaultCurrency})</span>
                   </button>

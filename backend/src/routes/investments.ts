@@ -73,16 +73,21 @@ investmentsRouter.get('/', async (req, res) => {
       if (inv.quantity <= 0 || inv.sync_source === 'GORILA_CLOSED') continue;
 
       const ticker = (inv.code_ticker || '').toUpperCase();
-      const isUsd =
-        inv.currency === 'USD' ||
-        inv.currency === 'USDT' ||
-        inv.asset_type === 'CRYPTO' ||
-        inv.institution?.toUpperCase() === 'BINANCE' ||
-        ticker.includes('WISE_USD');
+      const instUpper = (inv.institution || '').toUpperCase();
+      const explicitCurr = (inv.currency || '').toUpperCase();
 
       const isEur =
-        inv.currency === 'EUR' ||
-        ticker.includes('WISE_EUR');
+        explicitCurr === 'EUR' ||
+        (!explicitCurr && (ticker.includes('WISE_EUR') || ticker.includes('REVOLUT_EUR')));
+
+      const isUsd =
+        !isEur &&
+        (explicitCurr === 'USD' ||
+          explicitCurr === 'USDT' ||
+          inv.asset_type === 'CRYPTO' ||
+          instUpper.includes('BINANCE') ||
+          instUpper.includes('REVOLUT X') ||
+          (!explicitCurr && (ticker.includes('WISE_USD') || ticker.includes('REVOLUT_USD'))));
 
       const currencyMultiplier = isUsd ? usdBrlRate : isEur ? eurBrlRate : 1.0;
 
@@ -202,13 +207,22 @@ investmentsRouter.post('/', async (req, res) => {
       const srcPrefix = (existingActive.sync_source || 'MANUAL').split('#')[0];
       const updatedSyncSource = `${srcPrefix}#${newWeightedAvg}#${finalCurPrice}`;
 
+      const prevInst = (existingActive.institution || '').trim();
+      const newInst = (institution || '').trim();
+      let combinedInstitution = newInst || prevInst || 'Manual';
+      if (prevInst && newInst && !prevInst.toLowerCase().includes(newInst.toLowerCase())) {
+        combinedInstitution = `${prevInst}, ${newInst}`;
+      } else if (prevInst) {
+        combinedInstitution = prevInst;
+      }
+
       investment = await upsertInvestment(
         {
           id: existingActive.id,
           name: name || existingActive.name,
           code_ticker: cleanTicker,
           asset_type: asset_type || existingActive.asset_type,
-          institution: institution || existingActive.institution || 'Manual',
+          institution: combinedInstitution,
           quantity: newTotalQty,
           average_price: newWeightedAvg,
           current_price: finalCurPrice,

@@ -34,6 +34,7 @@ import { useAccounts } from '@/hooks/usePluggy';
 import { useCategories } from '@/hooks/useCategories';
 import { dateGroupLabel } from '@/lib/format';
 import { useFmt, useFmtRaw } from '@/contexts/CurrencyContext';
+import { getBankLogo } from '@/utils/assetLogos';
 import { cn } from '@/lib/utils';
 import type { ConnectedAccount, Transaction } from '@/types/finance';
 
@@ -419,6 +420,7 @@ export function Transactions() {
                   const label = isAll ? 'Todos os Bancos' : getBankTabLabel(acc!, accounts);
                   const accCurr = acc ? (acc.currency || 'BRL').toUpperCase() : 'BRL';
                   const isCash = acc?.institution_name.toLowerCase() === 'dinheiro';
+                  const bankLogo = acc ? getBankLogo(acc.institution_name || acc.account_name, acc.institution_logo) : null;
                   const isBeingDragged = draggedTabId === tabId;
                   const isDragTarget = dragOverTabId === tabId && draggedTabId !== tabId;
 
@@ -486,11 +488,11 @@ export function Transactions() {
                           <Layers className="h-3.5 w-3.5 shrink-0 text-accent-gold" />
                         ) : isCash ? (
                           <Wallet className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                        ) : acc?.institution_logo ? (
+                        ) : bankLogo ? (
                           <img
-                            src={acc.institution_logo}
-                            alt={acc.institution_name}
-                            className="h-4 w-4 rounded-full object-contain shrink-0"
+                            src={bankLogo}
+                            alt={acc?.institution_name}
+                            className="h-4 w-4 rounded-full object-contain shrink-0 bg-white/90 p-0.5"
                           />
                         ) : (
                           <Landmark className="h-3.5 w-3.5 shrink-0 text-accent-gold" />
@@ -588,6 +590,18 @@ export function Transactions() {
                             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-gold/15 border border-accent-gold/30 font-mono text-[10px] font-bold text-accent-gold">
                               {idx + 1}º
                             </span>
+                            {isAll ? (
+                              <Layers className="h-3.5 w-3.5 shrink-0 text-accent-gold" />
+                            ) : acc?.institution_name.toLowerCase() === 'dinheiro' ? (
+                              <Wallet className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                            ) : (() => {
+                              const orgLogo = acc ? getBankLogo(acc.institution_name || acc.account_name, acc.institution_logo) : null;
+                              return orgLogo ? (
+                                <img src={orgLogo} alt={acc?.institution_name} className="h-4 w-4 rounded-full object-contain shrink-0 bg-white/90 p-0.5" />
+                              ) : (
+                                <Landmark className="h-3.5 w-3.5 shrink-0 text-accent-gold" />
+                              );
+                            })()}
                             <span className="truncate font-semibold text-text-primary">{label}</span>
                           </div>
 
@@ -642,12 +656,24 @@ export function Transactions() {
               const validSubs = subBalances
                 ? Object.entries(subBalances).filter(([, amt]) => typeof amt === 'number' && amt !== 0)
                 : [];
+              const selLogo = getBankLogo(selectedAccountObj.institution_name || selectedAccountObj.account_name, selectedAccountObj.institution_logo);
+              const isSelectedCash = selectedAccountObj.institution_name.toLowerCase().includes('dinheiro');
 
               return (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-xs">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bg-card border border-accent-gold/30 text-accent-gold">
-                      <Landmark className="h-4 w-4" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bg-card border border-accent-gold/30 text-accent-gold overflow-hidden p-1">
+                      {selLogo ? (
+                        <img
+                          src={selLogo}
+                          alt={selectedAccountObj.institution_name}
+                          className="h-full w-full rounded object-contain"
+                        />
+                      ) : isSelectedCash ? (
+                        <Wallet className="h-4 w-4 text-emerald-400" />
+                      ) : (
+                        <Landmark className="h-4 w-4" />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">

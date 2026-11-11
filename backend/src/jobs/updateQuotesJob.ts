@@ -18,7 +18,8 @@ export async function runUpdateQuotesJob(user?: UserSessionPayload | null): Prom
         !i.code_ticker.startsWith('CDB') &&
         !i.code_ticker.startsWith('LCI') &&
         !i.code_ticker.startsWith('LCA') &&
-        !i.code_ticker.startsWith('WISE')
+        !i.code_ticker.startsWith('WISE') &&
+        !i.code_ticker.startsWith('REVOLUT_')
     );
 
     const usdRate = await getUsdBrlRate();
@@ -45,11 +46,13 @@ export async function runUpdateQuotesJob(user?: UserSessionPayload | null): Prom
             if (quote && quote.price && quote.price > 0 && !quote.error) {
               const rawPrice = Number(quote.price);
 
+              const instUpper = (inv.institution || '').toUpperCase();
               const isCryptoAsset =
                 inv.asset_type === 'CRYPTO' ||
                 inv.currency === 'USD' ||
                 inv.currency === 'USDT' ||
-                inv.institution === 'Binance' ||
+                instUpper.includes('BINANCE') ||
+                instUpper.includes('REVOLUT X') ||
                 KNOWN_CRYPTOS.has(rawTicker);
 
               const isQuoteUsd = quote.currency === 'USD';

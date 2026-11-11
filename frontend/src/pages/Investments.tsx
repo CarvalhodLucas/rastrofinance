@@ -35,6 +35,7 @@ import {
   X,
 } from 'lucide-react';
 import { AssetLogo } from '@/components/investments/AssetLogo';
+import { getBankLogo } from '@/utils/assetLogos';
 import {
   PieChart,
   Pie,
@@ -60,6 +61,7 @@ import { AddDividendModal } from '@/components/investments/AddDividendModal';
 import { BinanceHistoryModal } from '@/components/investments/BinanceHistoryModal';
 import { SellInvestmentModal } from '@/components/investments/SellInvestmentModal';
 import { EditTradeModal } from '@/components/investments/EditTradeModal';
+import { AssetTradesModal } from '@/components/investments/AssetTradesModal';
 import { ImportarExtrato } from './Carteira/ImportarExtrato';
 import { UnifiedWatchlist } from '@/components/investments/UnifiedWatchlist';
 
@@ -91,7 +93,7 @@ const ASSET_TYPE_COLORS: Record<AssetType, string> = {
   OTHER: '#64748B',
 };
 
-export const DISPLAY_CATEGORY_LABELS: Record<string, string> = {
+const DISPLAY_CATEGORY_LABELS: Record<string, string> = {
   STOCK: 'Ações',
   FII: 'Fundos Imobiliários',
   CRYPTO: 'Criptomoedas',
@@ -101,12 +103,14 @@ export const DISPLAY_CATEGORY_LABELS: Record<string, string> = {
   OTHER: 'Outros / Internacional',
 };
 
-export const CATEGORY_DISPLAY_ORDER = ['STOCK', 'FII', 'CRYPTO', 'TREASURY', 'FIXED_INCOME', 'ETF', 'OTHER'];
+const CATEGORY_DISPLAY_ORDER = ['STOCK', 'FII', 'CRYPTO', 'TREASURY', 'FIXED_INCOME', 'ETF', 'OTHER'];
 
-export const getAssetCategoryKey = (inv: Investment): string => {
+const getAssetCategoryKey = (inv: Investment): string => {
+  const instUpper = (inv.institution || '').toUpperCase();
   const isCrypto =
     inv.asset_type === 'CRYPTO' ||
-    inv.institution === 'Binance' ||
+    instUpper.includes('BINANCE') ||
+    instUpper.includes('REVOLUT X') ||
     ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(inv.code_ticker?.toUpperCase() || '');
   if (isCrypto) return 'CRYPTO';
 
@@ -116,10 +120,11 @@ export const getAssetCategoryKey = (inv: Investment): string => {
   const cleanName = (inv.name || '').toUpperCase();
   const cleanTicker = (inv.code_ticker || '').toUpperCase();
 
-  // Caixinhas e Contas remuneradas (Wise, etc.) agrupadas em FIXED_INCOME / Caixinhas
+  // Caixinhas e Contas remuneradas (Wise, Revolut, etc.) agrupadas em FIXED_INCOME / Caixinhas
   if (
     cleanTicker.includes('WISE') ||
     cleanName.includes('WISE') ||
+    cleanTicker.includes('REVOLUT_') ||
     cleanName.includes('CAIXINHA') ||
     cleanTicker.includes('CAIXINHA')
   ) {
@@ -237,21 +242,30 @@ export function Investments() {
    * - Wise CLP -> Sempre em Peso Chileno ($)
    */
   const getNativeCurrency = (inv: Partial<Investment>): Currency => {
+    const explicitCurr = (inv.currency || '').toUpperCase();
     const inst = (inv.institution || '').toUpperCase();
     const name = (inv.name || '').toUpperCase();
     const ticker = (inv.code_ticker || '').toUpperCase();
 
-    // Moeda explícita da caixinha/ativo ou nome
-    if (inv.currency === 'USD' || inv.currency === 'USDT' || ticker.includes('WISE_USD') || name.includes('WISE DÓLAR') || name.includes('WISE DOLAR')) return 'USD';
-    if (inv.currency === 'EUR' || ticker.includes('WISE_EUR') || name.includes('WISE EURO')) return 'EUR';
-    if (inv.currency === 'CLP' || ticker.includes('WISE_CLP')) return 'CLP';
+    // 1. Prioridade absoluta para a moeda explícita definida pelo usuário no ativo/caixinha
+    if (explicitCurr === 'EUR') return 'EUR';
+    if (explicitCurr === 'USD' || explicitCurr === 'USDT') return 'USD';
+    if (explicitCurr === 'CLP') return 'CLP';
 
     const isCrypto =
       inv.asset_type === 'CRYPTO' ||
       inst.includes('BINANCE') ||
+      inst.includes('REVOLUT X') ||
       ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(ticker);
 
     if (isCrypto) return 'USD';
+    if (explicitCurr === 'BRL') return 'BRL';
+
+    // 2. Fallback por nome/ticker caso currency esteja vazio
+    if (ticker.includes('WISE_EUR') || ticker.includes('REVOLUT_EUR') || name.includes('WISE EURO') || name.includes('REVOLUT EURO')) return 'EUR';
+    if (ticker.includes('WISE_USD') || ticker.includes('REVOLUT_USD') || name.includes('WISE DÓLAR') || name.includes('WISE DOLAR')) return 'USD';
+    if (ticker.includes('WISE_CLP')) return 'CLP';
+
     return 'BRL';
   };
 
@@ -388,6 +402,16 @@ export function Investments() {
   const [showSellModal, setShowSellModal] = useState<boolean>(false);
   const [sellModalInitialTab, setSellModalInitialTab] = useState<'SELL' | 'EDIT'>('SELL');
   const [editingTrade, setEditingTrade] = useState<InvestmentTrade | null>(null);
+  const [viewingAssetTrades, setViewingAssetTrades] = useState<Investment | null>(null);
+
+  const handleOpenAssetTrades = (inv: Investment, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setOpenOptionMenuId(null);
+    setViewingAssetTrades(inv);
+  };
   const [editingRealizedOp, setEditingRealizedOp] = useState<RealizedOperation | null>(null);
   const [realizedOpNewDate, setRealizedOpNewDate] = useState<string>('');
   const [savingRealizedDate, setSavingRealizedDate] = useState<boolean>(false);
@@ -425,27 +449,98 @@ export function Investments() {
       setLoading(true);
     }
     try {
-      // 1. Busca os investimentos e resumo primeiro para renderizar a tabela na hora
-      const invData = await api.getInvestments();
+      // 1. Busca os investimentos, resumo e lançamentos juntos para renderizar tudo atualizado na hora
+      const [invData, tradeRes] = await Promise.all([
+        api.getInvestments(),
+        api.getTrades().catch(() => null),
+      ]);
       setInvestments(invData.investments);
       setSummary(invData.summary);
+      if (tradeRes?.trades) setTradesData(tradeRes.trades);
       setLoading(false);
 
-      // 2. Busca proventos, histórico e evolução em paralelo sem travar a interface
+      // 2. Busca proventos, evolução e histórico realizado em paralelo sem travar a interface
       Promise.all([
         api.getDividends().catch(() => null),
-        api.getTrades().catch(() => null),
         api.getInvestmentEvolution().catch(() => null),
         api.getRealizedOperations().catch(() => null),
-      ]).then(([divData, tradeRes, evolutionRes, realizedRes]) => {
+      ]).then(([divData, evolutionRes, realizedRes]) => {
         if (divData) setDividendsData(divData);
-        if (tradeRes?.trades) setTradesData(tradeRes.trades);
         if (evolutionRes?.evolution) setEvolutionData(evolutionRes.evolution);
         if (realizedRes?.operations) setRealizedOperations(realizedRes.operations);
       });
     } catch (err) {
       notify('Falha ao carregar investimentos.', 'error');
       setLoading(false);
+    }
+  };
+
+  const handleQuickCaixinhaCurrencyChange = async (inv: Investment, nextCurr: Currency) => {
+    try {
+      const currLabels: Record<string, string> = {
+        USD: 'Dólar (USD)',
+        EUR: 'Euro (EUR)',
+        BRL: 'Real (BRL)',
+        CLP: 'Peso (CLP)',
+      };
+      const targetLabel = currLabels[nextCurr] || nextCurr;
+      let updatedName = inv.name || '';
+      const currencyPatterns = [
+        /D[óo]lar\s*\(USD\)/i,
+        /Euro\s*\(EUR\)/i,
+        /Real\s*\(BRL\)/i,
+        /Peso\s*\(CLP\)/i,
+        /\(USD\)/i,
+        /\(EUR\)/i,
+        /\(BRL\)/i,
+        /\(CLP\)/i,
+        /\bD[óo]lar\b/i,
+        /\bEuro\b/i,
+      ];
+      for (const pat of currencyPatterns) {
+        if (pat.test(updatedName)) {
+          updatedName = updatedName.replace(pat, targetLabel);
+          break;
+        }
+      }
+
+      const instUpper = (inv.institution || '').toUpperCase();
+      let updatedTicker = (inv.code_ticker || '').toUpperCase();
+      if (instUpper.includes('WISE')) {
+        updatedTicker = `WISE_${nextCurr}`;
+      } else if (instUpper.includes('REVOLUT')) {
+        updatedTicker = `REVOLUT_${nextCurr}`;
+      } else if (
+        updatedTicker.startsWith('WISE_') ||
+        updatedTicker.startsWith('REVOLUT_') ||
+        updatedTicker.startsWith('CAIXINHA_') ||
+        /_(USD|EUR|BRL|CLP)$/.test(updatedTicker)
+      ) {
+        const base = updatedTicker.replace(/_(USD|EUR|BRL|CLP)$/, '');
+        updatedTicker = `${base}_${nextCurr}`;
+      }
+
+      const srcPrefix = (inv.sync_source || 'MANUAL').split('#')[0];
+      await api.updateInvestment(inv.id, {
+        name: updatedName,
+        code_ticker: updatedTicker,
+        asset_type: inv.asset_type || 'FIXED_INCOME',
+        institution: inv.institution || 'Wise',
+        quantity: inv.quantity,
+        average_price: 1,
+        current_price: 1,
+        currency: nextCurr,
+        sync_source: `${srcPrefix}#1#1` as any,
+        yield_rate: inv.yield_rate,
+        yield_frequency: inv.yield_frequency,
+      });
+
+      // Garante que a tabela de Renda Fixa exiba a moeda nativa da própria caixinha
+      updateCategoryCurrency(inv.asset_type || 'FIXED_INCOME', 'AUTO');
+      notify(`Caixinha alterada para ${nextCurr} (${nextCurr === 'EUR' ? '€' : nextCurr === 'USD' ? '$' : 'R$'})!`, 'success');
+      void fetchInvestments();
+    } catch (err: any) {
+      notify(err?.message || 'Erro ao alterar moeda da caixinha.', 'error');
     }
   };
 
@@ -1521,7 +1616,17 @@ export function Investments() {
                       <tr key={item.id} className={`transition-colors ${isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/60'}`}>
                         <td className={`px-4 py-2.5 font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.date?.substring(0, 10)}</td>
                         <td className={`px-4 py-2.5 font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{item.ticker}</td>
-                        <td className={`px-4 py-2.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.institution}</td>
+                        <td className={`px-4 py-2.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          <span className="inline-flex items-center gap-1.5">
+                            {(() => {
+                              const bLogo = getBankLogo(item.institution);
+                              return bLogo ? (
+                                <img src={bLogo} alt={item.institution} className="h-3.5 w-3.5 rounded-full object-contain shrink-0 bg-white/90 p-0.2" />
+                              ) : null;
+                            })()}
+                            <span>{item.institution}</span>
+                          </span>
+                        </td>
                         <td className={`px-4 py-2.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.asset_class}</td>
                         <td className="px-4 py-2.5 text-right font-mono">{item.dividends > 0 ? fmt(item.dividends) : '-'}</td>
                         <td className="px-4 py-2.5 text-right font-mono">{item.jcp > 0 ? fmt(item.jcp) : '-'}</td>
@@ -1726,7 +1831,17 @@ export function Investments() {
                         <td className={`px-4 py-2.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                           {ASSET_TYPE_LABELS[op.asset_type as AssetType] || op.asset_type}
                         </td>
-                        <td className={`px-4 py-2.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{op.institution}</td>
+                        <td className={`px-4 py-2.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          <span className="inline-flex items-center gap-1.5">
+                            {(() => {
+                              const bLogo = getBankLogo(op.institution);
+                              return bLogo ? (
+                                <img src={bLogo} alt={op.institution} className="h-3.5 w-3.5 rounded-full object-contain shrink-0 bg-white/90 p-0.2" />
+                              ) : null;
+                            })()}
+                            <span>{op.institution}</span>
+                          </span>
+                        </td>
                         <td className="px-4 py-2.5 font-mono">
                           {op.currency === 'USD' ? `$ ${op.avg_cost.toFixed(op.avg_cost < 1 ? 4 : 2)}` : fmt(op.avg_cost || 0)}
                         </td>
@@ -1942,11 +2057,23 @@ export function Investments() {
                   const isCollapsed = !!collapsedCategories[categoryKey];
                   const activeCategoryCurr = categoryCurrencies[categoryKey] || 'AUTO';
 
-                  // Valor total somado e convertido para a moeda selecionada da categoria
+                  const uniqueNativeCurrencies = Array.from(new Set(groupInvestments.map((inv) => getNativeCurrency(inv))));
+                  const defaultCategoryCurr: Currency =
+                    uniqueNativeCurrencies.length === 1
+                      ? uniqueNativeCurrencies[0]
+                      : (categoryKey === 'CRYPTO' ? 'USD' : 'BRL');
+                  const headerDisplayCurrency: Currency =
+                    activeCategoryCurr !== 'AUTO'
+                      ? activeCategoryCurr
+                      : defaultCategoryCurr;
+
+                  // Valor total somado e convertido para a moeda do cabeçalho da categoria
                   const groupDisplayTotalNetWorth = groupInvestments.reduce((sum, inv) => {
+                    const instUpper = (inv.institution || '').toUpperCase();
                     const isCrypto =
                       inv.asset_type === 'CRYPTO' ||
-                      inv.institution === 'Binance' ||
+                      instUpper.includes('BINANCE') ||
+                      instUpper.includes('REVOLUT X') ||
                       ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(inv.code_ticker?.toUpperCase() || '');
 
                     let curPrice = inv.current_price || inv.average_price || 0;
@@ -1966,15 +2093,16 @@ export function Investments() {
 
                     const nativeCurr = getNativeCurrency(inv);
                     const totalVal = inv.quantity > 0 ? inv.quantity * curPrice : (inv.total_value || 0);
-                    const targetCurr = activeCategoryCurr !== 'AUTO' ? activeCategoryCurr : nativeCurr;
 
-                    return sum + convertAmount(totalVal, nativeCurr, targetCurr, rates);
+                    return sum + convertAmount(totalVal, nativeCurr, headerDisplayCurrency, rates);
                   }, 0);
 
                   const groupDisplayTotalInvested = groupInvestments.reduce((sum, inv) => {
+                    const instUpper = (inv.institution || '').toUpperCase();
                     const isCrypto =
                       inv.asset_type === 'CRYPTO' ||
-                      inv.institution === 'Binance' ||
+                      instUpper.includes('BINANCE') ||
+                      instUpper.includes('REVOLUT X') ||
                       ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(inv.code_ticker?.toUpperCase() || '');
 
                     let avgPrice = inv.average_price || inv.current_price || 0;
@@ -1992,17 +2120,11 @@ export function Investments() {
 
                     const nativeCurr = getNativeCurrency(inv);
                     const totalInv = inv.quantity > 0 ? inv.quantity * avgPrice : (inv.total_value || 0);
-                    const targetCurr = activeCategoryCurr !== 'AUTO' ? activeCategoryCurr : nativeCurr;
 
-                    return sum + convertAmount(totalInv, nativeCurr, targetCurr, rates);
+                    return sum + convertAmount(totalInv, nativeCurr, headerDisplayCurrency, rates);
                   }, 0);
 
                   const groupDisplayProfitLoss = groupDisplayTotalNetWorth - groupDisplayTotalInvested;
-
-                  const headerDisplayCurrency: Currency =
-                    activeCategoryCurr !== 'AUTO'
-                      ? activeCategoryCurr
-                      : (categoryKey === 'CRYPTO' ? 'USD' : 'BRL');
 
                   const localeMap: Record<Currency, string> = {
                     BRL: 'pt-BR',
@@ -2025,9 +2147,11 @@ export function Investments() {
                   const groupTotalNetWorthBrl = groupInvestments.reduce((sum, inv) => {
                     const nativeCurr = getNativeCurrency(inv);
                     let curPrice = inv.current_price || inv.average_price || 0;
+                    const instUpper = (inv.institution || '').toUpperCase();
                     const isCrypto =
                       inv.asset_type === 'CRYPTO' ||
-                      inv.institution === 'Binance' ||
+                      instUpper.includes('BINANCE') ||
+                      instUpper.includes('REVOLUT X') ||
                       ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(inv.code_ticker?.toUpperCase() || '');
                     if (isCrypto && inv.currency === 'BRL') {
                       curPrice = curPrice * (rates['usd'] ?? 0.1818);
@@ -2138,7 +2262,13 @@ export function Investments() {
                               title="Trocar moeda de visualização desta tabela"
                             >
                               <option value="AUTO">
-                                {categoryKey === 'CRYPTO' ? '🌐 Padrão (USD $)' : '🌐 Padrão (BRL R$)'}
+                                {defaultCategoryCurr === 'EUR'
+                                  ? '🌐 Padrão (EUR €)'
+                                  : defaultCategoryCurr === 'USD'
+                                  ? '🌐 Padrão (USD $)'
+                                  : defaultCategoryCurr === 'CLP'
+                                  ? '🌐 Padrão (CLP $)'
+                                  : '🌐 Padrão (BRL R$)'}
                               </option>
                               <option value="BRL">🇧🇷 BRL (R$)</option>
                               <option value="USD">🇺🇸 USD ($)</option>
@@ -2249,9 +2379,11 @@ export function Investments() {
                             </thead>
                             <tbody className={`divide-y ${isDark ? 'divide-slate-800/80' : 'divide-slate-100'}`}>
                               {consolidatedGroup.map((inv) => {
+                                const instUpper = (inv.institution || '').toUpperCase();
                                 const isCrypto =
                                   inv.asset_type === 'CRYPTO' ||
-                                  inv.institution === 'Binance' ||
+                                  instUpper.includes('BINANCE') ||
+                                  instUpper.includes('REVOLUT X') ||
                                   ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP', 'ADA', 'DOGE', 'PEPE', 'TAO', 'XLM', 'BNB', 'AVAX'].includes(inv.code_ticker?.toUpperCase() || '');
 
                                 const nativeCurr = getNativeCurrency(inv);
@@ -2289,6 +2421,7 @@ export function Investments() {
 
                                 const isCaixinha =
                                   inv.code_ticker?.toUpperCase().includes('WISE') ||
+                                  inv.code_ticker?.toUpperCase().includes('REVOLUT_') ||
                                   inv.name?.toUpperCase().includes('WISE') ||
                                   inv.name?.toUpperCase().includes('CAIXINHA') ||
                                   inv.institution?.toUpperCase().includes('WISE');
@@ -2300,14 +2433,11 @@ export function Investments() {
                                 return (
                                   <tr
                                     key={inv.id}
-                                    onDoubleClick={() => {
-                                      setSellingInvestment(inv);
-                                      setSellModalInitialTab('SELL');
-                                    }}
+                                    onClick={(e) => handleOpenAssetTrades(inv, e)}
                                     className={`transition-colors cursor-pointer select-none border-b ${
                                       isDark ? 'border-slate-800/80 hover:bg-slate-800/40' : 'border-slate-100 hover:bg-slate-50/70'
                                     }`}
-                                    title={isCaixinha ? "Dê 2 cliques para resgatar ou editar esta caixinha" : "Dê 2 cliques para vender ou editar este ativo"}
+                                    title={isCaixinha ? "Clique para ver lançamentos ou gerenciar esta caixinha" : `Clique para ver/editar todos os lançamentos de ${inv.code_ticker}`}
                                   >
                                     {/* Ativo com Foto Real + Nome / Ticker + Banco/Corretora */}
                                     <td className="pl-4 sm:pl-5 pr-2 py-3">
@@ -2323,10 +2453,32 @@ export function Investments() {
                                           <div className={`font-bold text-sm sm:text-[14.5px] truncate flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                                             <span className="truncate">{displayName}</span>
                                             {isCaixinha && (
-                                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
-                                                <Wallet className="h-2.5 w-2.5 text-emerald-400" />
-                                                Caixinha
-                                              </span>
+                                              <>
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                                                  <Wallet className="h-2.5 w-2.5 text-emerald-400" />
+                                                  Caixinha
+                                                </span>
+                                                <select
+                                                  value={nativeCurr}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  onDoubleClick={(e) => e.stopPropagation()}
+                                                  onChange={(e) => {
+                                                    e.stopPropagation();
+                                                    void handleQuickCaixinhaCurrencyChange(inv, e.target.value as Currency);
+                                                  }}
+                                                  title="Trocar moeda desta caixinha (EUR / USD / BRL / CLP)"
+                                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-pointer focus:outline-none transition-colors shrink-0 ${
+                                                    isDark
+                                                      ? 'bg-slate-800 text-amber-400 border-amber-500/40 hover:border-amber-400'
+                                                      : 'bg-amber-50 text-amber-700 border-amber-300 hover:border-amber-500'
+                                                  }`}
+                                                >
+                                                  <option value="EUR">🇪🇺 EUR (€)</option>
+                                                  <option value="USD">🇺🇸 USD ($)</option>
+                                                  <option value="BRL">🇧🇷 BRL (R$)</option>
+                                                  <option value="CLP">🇨🇱 CLP ($)</option>
+                                                </select>
+                                              </>
                                             )}
                                             {inv.yield_rate !== undefined && inv.yield_rate > 0 && (
                                               <span
@@ -2339,17 +2491,39 @@ export function Investments() {
                                             )}
                                           </div>
                                           {/* Banco / Corretora onde comprou as ações/ativos */}
-                                          <div className="flex items-center gap-1.5 mt-0.5">
-                                            <span className={`text-xs font-medium truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                                              {inv.institution || 'Geral'}
-                                            </span>
+                                          <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                            {(inv.institution || 'Geral')
+                                              .split(',')
+                                              .map((part) => part.trim())
+                                              .filter(Boolean)
+                                              .map((instPart) => {
+                                                const bLogo = getBankLogo(instPart);
+                                                return (
+                                                  <span key={instPart} className="inline-flex items-center gap-1">
+                                                    {bLogo && (
+                                                      <img
+                                                        src={bLogo}
+                                                        alt={instPart}
+                                                        className="h-3.5 w-3.5 rounded-full object-contain shrink-0 bg-white/90 p-0.2"
+                                                      />
+                                                    )}
+                                                    <span className={`text-xs font-medium truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                                      {instPart}
+                                                    </span>
+                                                  </span>
+                                                );
+                                              })}
                                           </div>
                                         </div>
                                       </div>
                                     </td>
 
-                                    {/* Quant. */}
-                                    <td className={`px-3 py-3 text-right text-xs sm:text-[13.5px] font-medium tabular-nums ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                                    {/* Quant. (Clicável para abrir os Lançamentos do Ativo) */}
+                                    <td
+                                      onClick={(e) => handleOpenAssetTrades(inv, e)}
+                                      title={`Clique para ver ou editar os lançamentos de ${inv.code_ticker}`}
+                                      className={`px-3 py-3 text-right text-xs sm:text-[13.5px] font-medium tabular-nums hover:underline decoration-accent-gold/60 underline-offset-4 ${isDark ? 'text-slate-200 hover:text-accent-gold' : 'text-slate-700 hover:text-amber-600'}`}
+                                    >
                                       {inv.quantity.toLocaleString('pt-BR', { minimumFractionDigits: isCaixinha ? 2 : 0, maximumFractionDigits: isCrypto ? 8 : 4 })}
                                     </td>
 
@@ -2435,32 +2609,43 @@ export function Investments() {
                                       {pctCarteira.toFixed(2)}%
                                     </td>
 
-                                    {/* Opções com Botão Direto de Vender e (...) */}
+                                    {/* Opções com Botão Direto de Lançamentos, Comprar e (...) */}
                                     <td
                                       className="pr-4 sm:pr-5 pl-2 py-3 text-right relative"
                                       onClick={(e) => e.stopPropagation()}
+                                      onMouseDown={(e) => e.stopPropagation()}
                                     >
                                       <div className="inline-flex items-center justify-end gap-1">
-                                        {!isCaixinha && (
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setOpenOptionMenuId(null);
-                                              setEditingInvestment(null);
-                                              setPrefillAssetForBuy(inv);
-                                              setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
-                                              setShowAddModal(true);
-                                            }}
-                                            className={`p-1 rounded transition-colors ${
-                                              isDark
-                                                ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/15'
-                                                : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
-                                            }`}
-                                            title={`Registrar nova compra de ${inv.code_ticker}`}
-                                          >
-                                            <Plus className="h-4 w-4" />
-                                          </button>
-                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleOpenAssetTrades(inv, e)}
+                                          className={`p-1 rounded transition-colors ${
+                                            isDark
+                                              ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/15'
+                                              : 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
+                                          }`}
+                                          title={`Ver / Editar lançamentos de ${inv.code_ticker}`}
+                                        >
+                                          <History className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setOpenOptionMenuId(null);
+                                            setEditingInvestment(null);
+                                            setPrefillAssetForBuy(inv);
+                                            setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
+                                            setShowAddModal(true);
+                                          }}
+                                          className={`p-1 rounded transition-colors ${
+                                            isDark
+                                              ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/15'
+                                              : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                                          }`}
+                                          title={isCaixinha ? `Guardar / Depositar mais em ${inv.name}` : `Registrar nova compra de ${inv.code_ticker}`}
+                                        >
+                                          <Plus className="h-4 w-4" />
+                                        </button>
                                         <button
                                           type="button"
                                           onClick={() => setOpenOptionMenuId(isOptionOpen ? null : inv.id)}
@@ -2474,40 +2659,56 @@ export function Investments() {
                                       </div>
 
                                       {isOptionOpen && (
-                                        <div className={`absolute right-4 top-8 w-48 rounded-xl border p-1.5 z-50 text-left space-y-0.5 animate-fade-in ${
-                                          isDark ? 'bg-[#1F2937] border-slate-700 text-slate-200 shadow-2xl' : 'bg-white border-slate-100 text-slate-700 shadow-xl'
-                                        }`}>
-                                          {!isCaixinha && (
-                                            <button
-                                              onClick={() => {
-                                                setOpenOptionMenuId(null);
-                                                setEditingInvestment(null);
-                                                setPrefillAssetForBuy(inv);
-                                                setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
-                                                setShowAddModal(true);
-                                              }}
-                                              className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                                                isDark ? 'text-emerald-400 hover:bg-slate-800' : 'text-emerald-600 hover:bg-emerald-50'
-                                              }`}
-                                            >
-                                              <Plus className="h-3.5 w-3.5 text-emerald-500" />
-                                              <span>Comprar Mais ({inv.code_ticker})</span>
-                                            </button>
-                                          )}
+                                        <div
+                                          onClick={(e) => e.stopPropagation()}
+                                          onMouseDown={(e) => e.stopPropagation()}
+                                          className={`absolute right-4 top-8 w-56 rounded-xl border p-1.5 z-50 text-left space-y-0.5 animate-fade-in ${
+                                            isDark ? 'bg-[#1F2937] border-slate-700 text-slate-200 shadow-2xl' : 'bg-white border-slate-100 text-slate-700 shadow-xl'
+                                          }`}
+                                        >
                                           <button
-                                            onClick={() => {
+                                            type="button"
+                                            onClick={(e) => handleOpenAssetTrades(inv, e)}
+                                            className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                                              isDark ? 'text-amber-400 hover:bg-slate-800' : 'text-amber-600 hover:bg-amber-50'
+                                            }`}
+                                          >
+                                            <History className="h-3.5 w-3.5 text-amber-500" />
+                                            <span>Ver / Editar Lançamentos</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setOpenOptionMenuId(null);
+                                              setEditingInvestment(null);
+                                              setPrefillAssetForBuy(inv);
+                                              setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
+                                              setShowAddModal(true);
+                                            }}
+                                            className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                                              isDark ? 'text-emerald-400 hover:bg-slate-800' : 'text-emerald-600 hover:bg-emerald-50'
+                                            }`}
+                                          >
+                                            <Plus className="h-3.5 w-3.5 text-emerald-500" />
+                                            <span>{isCaixinha ? 'Guardar / Depositar Mais' : `Comprar Mais (${inv.code_ticker})`}</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
                                               setOpenOptionMenuId(null);
                                               setPrefillAssetForBuy(null);
                                               setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
                                               setEditingInvestment(inv);
                                               setShowAddModal(true);
                                             }}
-                                            className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
+                                            className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors cursor-pointer ${
                                               isDark ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'
                                             }`}
                                           >
                                             <Edit2 className="h-3.5 w-3.5 text-slate-400" />
-                                            <span>Editar Saldo / PM</span>
+                                            <span>{isCaixinha ? 'Editar Caixinha (Moeda / Saldo)' : 'Editar Saldo / PM'}</span>
                                           </button>
                                           {inv.yield_rate !== undefined && inv.yield_rate > 0 && (
                                             <button
@@ -2535,11 +2736,13 @@ export function Investments() {
                                             </button>
                                           )}
                                           <button
-                                            onClick={() => {
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
                                               setOpenOptionMenuId(null);
                                               setSellingInvestment(inv);
                                             }}
-                                            className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
+                                            className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors cursor-pointer ${
                                               isDark ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'
                                             }`}
                                           >
@@ -2548,11 +2751,13 @@ export function Investments() {
                                           </button>
                                           <div className={`border-t my-1 ${isDark ? 'border-slate-700' : 'border-slate-100'}`} />
                                           <button
-                                            onClick={() => {
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
                                               setOpenOptionMenuId(null);
                                               handleDelete(inv.id, inv.code_ticker);
                                             }}
-                                            className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-rose-500 transition-colors ${
+                                            className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-rose-500 transition-colors cursor-pointer ${
                                               isDark ? 'hover:bg-rose-500/10' : 'hover:bg-rose-50'
                                             }`}
                                           >
@@ -2712,6 +2917,34 @@ export function Investments() {
           setSellModalInitialTab('SELL');
         }}
         onSuccess={fetchInvestments}
+        onOpenTrades={(inv) => {
+          setSellingInvestment(null);
+          setShowSellModal(false);
+          setViewingAssetTrades(inv);
+        }}
+      />
+
+      <AssetTradesModal
+        open={!!viewingAssetTrades}
+        investment={viewingAssetTrades}
+        trades={tradesData}
+        onClose={() => setViewingAssetTrades(null)}
+        onEditTrade={(trade) => setEditingTrade(trade)}
+        onAddBuy={(inv) => {
+          setViewingAssetTrades(null);
+          setEditingInvestment(null);
+          setPrefillAssetForBuy(inv);
+          setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
+          setShowAddModal(true);
+        }}
+        onEditPositionDirect={(inv) => {
+          setViewingAssetTrades(null);
+          setPrefillAssetForBuy(null);
+          setSelectedAssetTypeForAdd(inv.asset_type || 'STOCK');
+          setEditingInvestment(inv);
+          setShowAddModal(true);
+        }}
+        onRefresh={fetchInvestments}
       />
 
       <EditTradeModal

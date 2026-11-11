@@ -430,18 +430,23 @@ export async function syncBinanceExcelReport(filePath: string): Promise<Investme
       currentPrices[coin] || (existing?.current_price && existing.current_price > 0 ? existing.current_price : avgPriceUsd);
     const totalValUsd = finalQty * currentPriceUsd;
 
+    const finalInst =
+      existing?.institution && existing.institution.toLowerCase().includes('revolut')
+        ? existing.institution
+        : 'Binance';
+
     const payload: Partial<Investment> = {
       ...(existing?.id ? { id: existing.id } : {}),
-      name: coin,
+      name: existing?.name || coin,
       code_ticker: coin,
       asset_type: 'CRYPTO',
-      institution: 'Binance',
+      institution: finalInst,
       quantity: finalQty,
       average_price: avgPriceUsd,
       current_price: currentPriceUsd,
       total_value: totalValUsd,
       currency: 'USD',
-      sync_source: finalQty === 0 ? 'MANUAL_CLOSED' : 'BINANCE_REPORT',
+      sync_source: finalQty === 0 ? 'MANUAL_CLOSED' : (`BINANCE_REPORT#${avgPriceUsd}#${currentPriceUsd}` as any),
       last_synced_at: new Date().toISOString(),
     };
 
@@ -449,9 +454,11 @@ export async function syncBinanceExcelReport(filePath: string): Promise<Investme
     updatedInvestments.push(saved);
   }
 
-  // Fechar moedas antigas que foram completamente liquidadas se existirem
+  // Fechar moedas antigas exclusivas da Binance que foram completamente liquidadas
   for (const [ticker, inv] of existingMap.entries()) {
-    if (!portfolio[ticker]) {
+    const instLower = (inv.institution || '').toLowerCase();
+    const isNonBinance = instLower.includes('revolut') || inv.sync_source?.startsWith('MANUAL');
+    if (!portfolio[ticker] && !isNonBinance) {
       await upsertInvestment({
         id: inv.id,
         quantity: 0,

@@ -112,13 +112,16 @@ async function buildFinancialContext(): Promise<string> {
 
     for (const inv of activeInvs) {
       const ticker = (inv.code_ticker || inv.name || '').toUpperCase();
+      const instUpper = (inv.institution || '').toUpperCase();
       const isUsd =
         inv.currency === 'USD' ||
         inv.currency === 'USDT' ||
         inv.asset_type === 'CRYPTO' ||
-        inv.institution?.toUpperCase() === 'BINANCE' ||
-        ticker.includes('WISE_USD');
-      const isEur = inv.currency === 'EUR' || ticker.includes('WISE_EUR');
+        instUpper.includes('BINANCE') ||
+        instUpper.includes('REVOLUT X') ||
+        ticker.includes('WISE_USD') ||
+        ticker.includes('REVOLUT_USD');
+      const isEur = inv.currency === 'EUR' || ticker.includes('WISE_EUR') || ticker.includes('REVOLUT_EUR');
       const mult = isUsd ? usdBrl : isEur ? eurBrl : 1.0;
 
       const rawVal =

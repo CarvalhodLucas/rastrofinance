@@ -13,6 +13,7 @@ import { useAccounts } from '@/hooks/usePluggy';
 import { api, getDefaultAccountId, setDefaultAccountId } from '@/services/api';
 import { timeAgo } from '@/lib/format';
 import { useFmt, useFmtRaw, useCurrency } from '@/contexts/CurrencyContext';
+import { getBankLogo } from '@/utils/assetLogos';
 import { cn } from '@/lib/utils';
 import type { ConnectedAccount } from '@/types/finance';
 
@@ -244,17 +245,24 @@ export function Connect() {
             ) : (
               <>
                 <div className="space-y-3">
-                  {accounts.map((acc) => (
+                  {accounts.map((acc) => {
+                    const bankLogo = getBankLogo(acc.institution_name || acc.account_name, acc.institution_logo);
+                    const isCash =
+                      acc.institution_name.toLowerCase().includes('dinheiro') ||
+                      acc.account_name.toLowerCase().includes('dinheiro');
+                    return (
                     <Card key={acc.id}>
                       <CardContent className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4">
                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-bg-elevated font-bold text-accent-gold">
-                            {acc.institution_logo ? (
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-bg-elevated p-1.5 font-bold text-accent-gold border border-border/60">
+                            {bankLogo ? (
                               <img
-                                src={acc.institution_logo}
+                                src={bankLogo}
                                 alt={acc.institution_name}
-                                className="h-full w-full object-contain"
+                                className="h-full w-full rounded-md object-contain"
                               />
+                            ) : isCash ? (
+                              <Wallet className="h-5 w-5 text-emerald-400" />
                             ) : acc.account_type === 'CREDIT' ? (
                               <CreditCard className="h-5 w-5 text-purple-400" />
                             ) : (
@@ -390,7 +398,8 @@ export function Connect() {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
                 {connectionOptions}
               </>

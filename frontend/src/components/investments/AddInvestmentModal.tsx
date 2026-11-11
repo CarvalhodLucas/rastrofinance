@@ -8,6 +8,9 @@ import rastroAssets from '@/data/assetsDatabase.json';
 import { useCurrency, convertAmount, type Currency } from '@/contexts/CurrencyContext';
 
 export const POPULAR_INSTITUTIONS = [
+  'Revolut X',
+  'Revolut',
+  'Binance',
   'XP Investimentos',
   'NuInvest',
   'Nubank',
@@ -22,7 +25,6 @@ export const POPULAR_INSTITUTIONS = [
   'Bradesco',
   'Banco do Brasil',
   'Genial Investimentos',
-  'Binance',
   'Wise',
   'Nomad',
   'Avenue',
@@ -81,7 +83,7 @@ export function AddInvestmentModal({
   const [name, setName] = useState('');
   const [ticker, setTicker] = useState('');
   const [assetType, setAssetType] = useState<AssetType>(initialAssetType);
-  const [institution, setInstitution] = useState(initialAssetType === 'CRYPTO' ? 'Binance' : 'XP Investimentos');
+  const [institution, setInstitution] = useState(initialAssetType === 'CRYPTO' ? 'Revolut X' : 'XP Investimentos');
   const [quantity, setQuantity] = useState('');
   const [investedAmount, setInvestedAmount] = useState('');
   const [averagePrice, setAveragePrice] = useState('');
@@ -110,9 +112,16 @@ export function AddInvestmentModal({
   }, []);
 
   const allInstitutionOptions = Array.from(new Set([...connectedBanks, ...POPULAR_INSTITUTIONS]));
-  const topQuickInstitutions = Array.from(
-    new Set([...connectedBanks, 'Binance', 'XP Investimentos', 'NuInvest', 'Nubank', 'Santander', 'BTG Pactual', 'Inter', 'Wise'])
-  ).slice(0, 8);
+  const topQuickInstitutions = useMemo(() => {
+    if (assetType === 'CRYPTO') {
+      return Array.from(
+        new Set(['Revolut X', 'Binance', 'Revolut', ...connectedBanks, 'Wise', 'Nubank'])
+      ).slice(0, 8);
+    }
+    return Array.from(
+      new Set(['Revolut X', 'Revolut', 'Binance', ...connectedBanks, 'XP Investimentos', 'NuInvest', 'Nubank', 'Santander', 'Wise'])
+    ).slice(0, 8);
+  }, [assetType, connectedBanks]);
 
   const defaultBank = connectedBanks[0] || 'XP Investimentos';
 
@@ -298,14 +307,16 @@ export function AddInvestmentModal({
         if (exact.type === 'FIIs' || exact.ticker.endsWith('11')) {
           setAssetType('FII');
           setCurrency('BRL');
-          if (!institution || institution === 'B3' || institution === 'Binance') setInstitution(defaultBank);
+          if (!institution || institution === 'B3' || institution === 'Binance' || institution === 'Revolut X') setInstitution(defaultBank);
         } else if (exact.type === 'Ações') {
           setAssetType('STOCK');
           setCurrency('BRL');
-          if (!institution || institution === 'B3' || institution === 'Binance') setInstitution(defaultBank);
+          if (!institution || institution === 'B3' || institution === 'Binance' || institution === 'Revolut X') setInstitution(defaultBank);
         } else if (exact.type === 'Cripto' || exact.exchange === 'Crypto' || KNOWN_CRYPTO_TICKERS.has(clean.trim())) {
           setAssetType('CRYPTO');
-          setInstitution('Binance');
+          if (!institution || !['Revolut X', 'Revolut', 'Binance'].includes(institution)) {
+            setInstitution('Revolut X');
+          }
           setCurrency('USD');
         }
       }
@@ -328,16 +339,18 @@ export function AddInvestmentModal({
       setAssetType('FII');
       nextCurr = 'BRL';
       setCurrency('BRL');
-      if (!institution || institution === 'B3' || institution === 'Binance') setInstitution(defaultBank);
+      if (!institution || institution === 'B3' || institution === 'Binance' || institution === 'Revolut X') setInstitution(defaultBank);
     } else if (item.type === 'Ações') {
       setAssetType('STOCK');
       nextCurr = 'BRL';
       setCurrency('BRL');
-      if (!institution || institution === 'B3' || institution === 'Binance') setInstitution(defaultBank);
+      if (!institution || institution === 'B3' || institution === 'Binance' || institution === 'Revolut X') setInstitution(defaultBank);
     } else if (item.type === 'Cripto' || item.exchange === 'Crypto' || KNOWN_CRYPTO_TICKERS.has(cleanTicker)) {
       isCryptoAsset = true;
       setAssetType('CRYPTO');
-      setInstitution('Binance');
+      if (!institution || !['Revolut X', 'Revolut', 'Binance'].includes(institution)) {
+        setInstitution('Revolut X');
+      }
       nextCurr = 'USD';
       setCurrency('USD');
     }
@@ -370,24 +383,28 @@ export function AddInvestmentModal({
         setAssetType('FII');
         nextCurr = 'BRL';
         setCurrency('BRL');
-        if (!institution || institution === 'B3' || institution === 'Binance') setInstitution(defaultBank);
+        if (!institution || institution === 'B3' || institution === 'Binance' || institution === 'Revolut X') setInstitution(defaultBank);
       } else if (localMatch.type === 'Ações') {
         isCryptoAsset = false;
         setAssetType('STOCK');
         nextCurr = 'BRL';
         setCurrency('BRL');
-        if (!institution || institution === 'B3' || institution === 'Binance') setInstitution(defaultBank);
+        if (!institution || institution === 'B3' || institution === 'Binance' || institution === 'Revolut X') setInstitution(defaultBank);
       } else if (localMatch.type === 'Cripto' || localMatch.exchange === 'Crypto' || KNOWN_CRYPTO_TICKERS.has(clean)) {
         isCryptoAsset = true;
         setAssetType('CRYPTO');
-        setInstitution('Binance');
+        if (!institution || !['Revolut X', 'Revolut', 'Binance'].includes(institution)) {
+          setInstitution('Revolut X');
+        }
         nextCurr = 'USD';
         setCurrency('USD');
       }
     } else if (!clean.endsWith('11') && !/[0-9]$/.test(clean)) {
       isCryptoAsset = true;
       setAssetType('CRYPTO');
-      setInstitution('Binance');
+      if (!institution || !['Revolut X', 'Revolut', 'Binance'].includes(institution)) {
+        setInstitution('Revolut X');
+      }
       nextCurr = 'USD';
       setCurrency('USD');
     }
@@ -439,8 +456,10 @@ export function AddInvestmentModal({
 
       const isCaixinhaAsset =
         (investmentToEdit.code_ticker || '').toUpperCase().includes('WISE') ||
+        (investmentToEdit.code_ticker || '').toUpperCase().includes('REVOLUT_') ||
         (investmentToEdit.institution || '').toUpperCase().includes('WISE') ||
         (investmentToEdit.name || '').toUpperCase().includes('CAIXINHA') ||
+        (investmentToEdit.name || '').toUpperCase().includes('COFRE') ||
         (investmentToEdit.name || '').toUpperCase().includes('WISE') ||
         (investmentToEdit.name || '').toUpperCase().includes('RESERVA');
 
@@ -450,6 +469,7 @@ export function AddInvestmentModal({
         !isCaixinhaAsset &&
         (investmentToEdit.asset_type === 'CRYPTO' ||
           (investmentToEdit.institution || '').toUpperCase().includes('BINANCE') ||
+          (investmentToEdit.institution || '').toUpperCase().includes('REVOLUT X') ||
           KNOWN_CRYPTO_TICKERS.has((investmentToEdit.code_ticker || '').toUpperCase()));
 
       let avgP = investmentToEdit.average_price || 0;
@@ -477,32 +497,44 @@ export function AddInvestmentModal({
       setTransactionDate(initialDate);
       setExistingPositionMode('REPLACE');
     } else if (prefillAssetForBuy) {
+      const isCaixinhaAsset =
+        (prefillAssetForBuy.code_ticker || '').toUpperCase().includes('WISE') ||
+        (prefillAssetForBuy.code_ticker || '').toUpperCase().includes('REVOLUT_') ||
+        (prefillAssetForBuy.code_ticker || '').toUpperCase().includes('CAIXINHA') ||
+        (prefillAssetForBuy.institution || '').toUpperCase().includes('WISE') ||
+        (prefillAssetForBuy.name || '').toUpperCase().includes('CAIXINHA') ||
+        (prefillAssetForBuy.name || '').toUpperCase().includes('COFRE') ||
+        (prefillAssetForBuy.name || '').toUpperCase().includes('WISE') ||
+        (prefillAssetForBuy.name || '').toUpperCase().includes('RESERVA');
+
       const isCrypto =
-        prefillAssetForBuy.asset_type === 'CRYPTO' ||
-        (prefillAssetForBuy.institution || '').toUpperCase().includes('BINANCE') ||
-        KNOWN_CRYPTO_TICKERS.has((prefillAssetForBuy.code_ticker || '').toUpperCase());
+        !isCaixinhaAsset &&
+        (prefillAssetForBuy.asset_type === 'CRYPTO' ||
+          (prefillAssetForBuy.institution || '').toUpperCase().includes('BINANCE') ||
+          (prefillAssetForBuy.institution || '').toUpperCase().includes('REVOLUT X') ||
+          KNOWN_CRYPTO_TICKERS.has((prefillAssetForBuy.code_ticker || '').toUpperCase()));
 
       setName(prefillAssetForBuy.name);
       setTicker(prefillAssetForBuy.code_ticker);
-      setAssetType(isCrypto ? 'CRYPTO' : prefillAssetForBuy.asset_type);
-      setInstitution(prefillAssetForBuy.institution || (isCrypto ? 'Binance' : defaultBank));
+      setAssetType(isCaixinhaAsset ? 'FIXED_INCOME' : isCrypto ? 'CRYPTO' : prefillAssetForBuy.asset_type);
+      setInstitution(prefillAssetForBuy.institution || (isCrypto ? 'Revolut X' : defaultBank));
       setQuantity('');
       setInvestedAmount('');
-      const curP = prefillAssetForBuy.current_price || prefillAssetForBuy.average_price || 0;
+      const curP = isCaixinhaAsset ? 1 : (prefillAssetForBuy.current_price || prefillAssetForBuy.average_price || 0);
       setCurrentPrice(curP > 0 ? String(curP) : '');
       setAveragePrice(curP > 0 ? String(curP) : '');
       setCurrency(isCrypto ? 'USD' : prefillAssetForBuy.currency || 'BRL');
-      setYieldRate('');
-      setYieldFrequency('MONTHLY');
+      setYieldRate(prefillAssetForBuy.yield_rate !== undefined && prefillAssetForBuy.yield_rate > 0 ? String(prefillAssetForBuy.yield_rate) : '');
+      setYieldFrequency(prefillAssetForBuy.yield_frequency || 'MONTHLY');
       setTransactionDate(new Date().toISOString().substring(0, 10));
-      setIsCaixinha(false);
+      setIsCaixinha(isCaixinhaAsset);
       setExistingPositionMode('ADD');
     } else {
       const defaultType = initialAssetType || 'STOCK';
       setName('');
       setTicker('');
       setAssetType(defaultType);
-      setInstitution(defaultType === 'CRYPTO' ? 'Binance' : defaultBank);
+      setInstitution(defaultType === 'CRYPTO' ? 'Revolut X' : defaultBank);
       setQuantity('');
       setInvestedAmount('');
       setAveragePrice('');
@@ -554,6 +586,54 @@ export function AddInvestmentModal({
       ? Number((((existingQty * existingAvg) + (parsedQty * buyPriceInNative)) / previewNewTotalQty).toFixed(isCrypto ? 2 : 4))
       : existingAvg;
 
+  const syncCaixinhaFields = (nextCurr: string, nextInst: string, curName: string, curTicker: string) => {
+    const currLabels: Record<string, string> = {
+      USD: 'Dólar (USD)',
+      EUR: 'Euro (EUR)',
+      BRL: 'Real (BRL)',
+      CLP: 'Peso (CLP)',
+    };
+    const targetLabel = currLabels[nextCurr] || nextCurr;
+    let updatedName = curName;
+    const currencyPatterns = [
+      /D[óo]lar\s*\(USD\)/i,
+      /Euro\s*\(EUR\)/i,
+      /Real\s*\(BRL\)/i,
+      /Peso\s*\(CLP\)/i,
+      /\(USD\)/i,
+      /\(EUR\)/i,
+      /\(BRL\)/i,
+      /\(CLP\)/i,
+      /\bD[óo]lar\b/i,
+      /\bEuro\b/i,
+    ];
+    for (const pat of currencyPatterns) {
+      if (pat.test(updatedName)) {
+        updatedName = updatedName.replace(pat, targetLabel);
+        break;
+      }
+    }
+
+    const instUpper = nextInst.trim().toUpperCase();
+    let updatedTicker = curTicker.trim().toUpperCase();
+    if (instUpper.includes('WISE')) {
+      updatedTicker = `WISE_${nextCurr}`;
+    } else if (instUpper.includes('REVOLUT')) {
+      updatedTicker = `REVOLUT_${nextCurr}`;
+    } else if (
+      !updatedTicker ||
+      updatedTicker.startsWith('WISE_') ||
+      updatedTicker.startsWith('REVOLUT_') ||
+      updatedTicker.startsWith('CAIXINHA_') ||
+      /_(USD|EUR|BRL|CLP)$/.test(updatedTicker)
+    ) {
+      const base = updatedTicker ? updatedTicker.replace(/_(USD|EUR|BRL|CLP)$/, '') : `CAIXINHA_${instUpper.replace(/[^A-Z0-9]/g, '') || 'RESERVA'}`;
+      updatedTicker = `${base}_${nextCurr}`;
+    }
+
+    return { updatedName, updatedTicker };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -568,22 +648,16 @@ export function AddInvestmentModal({
         return;
       }
 
-      let autoTicker = ticker.trim().toUpperCase();
-      if (!autoTicker) {
-        const instUpper = institution.toUpperCase();
-        if (instUpper.includes('WISE')) {
-          autoTicker = currency === 'EUR' ? 'WISE_EUR' : currency === 'CLP' ? 'WISE_CLP' : 'WISE_USD';
-        } else {
-          autoTicker = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 15) || `CAIXINHA_${currency}`;
-        }
-      }
+      const { updatedTicker } = syncCaixinhaFields(currency, institution, name, ticker);
+      const autoTicker = updatedTicker || `CAIXINHA_${currency}`;
 
       const parsedYield = yieldRate.trim() ? parseFloat(yieldRate.replace(',', '.')) : 0;
       setLoading(true);
       try {
-        if (investmentToEdit?.id) {
-          const srcPrefix = (investmentToEdit.sync_source || 'MANUAL').split('#')[0];
-          await api.updateInvestment(investmentToEdit.id, {
+        const targetEdit = investmentToEdit || (prefillAssetForBuy && existingPositionMode === 'REPLACE' ? prefillAssetForBuy : null);
+        if (targetEdit?.id) {
+          const srcPrefix = (targetEdit.sync_source || 'MANUAL').split('#')[0];
+          await api.updateInvestment(targetEdit.id, {
             name: name.trim(),
             code_ticker: autoTicker,
             asset_type: 'FIXED_INCOME',
@@ -597,7 +671,7 @@ export function AddInvestmentModal({
             yield_frequency: yieldFrequency,
             date: transactionDate,
           });
-          notify('Caixinha atualizada com sucesso!', 'success');
+          notify(`Caixinha atualizada em ${currency} com sucesso!`, 'success');
         } else {
           await api.createInvestment({
             name: name.trim(),
@@ -612,7 +686,12 @@ export function AddInvestmentModal({
             yield_frequency: yieldFrequency,
             date: transactionDate,
           });
-          notify('Caixinha cadastrada com sucesso!', 'success');
+          notify(
+            prefillAssetForBuy
+              ? `Depósito de +${qty} ${currency} adicionado à caixinha!`
+              : 'Caixinha cadastrada com sucesso!',
+            'success',
+          );
         }
         onSuccess();
         onClose();
@@ -772,6 +851,46 @@ export function AddInvestmentModal({
             /* MODO CAIXINHA / RESERVA (WISE, NUBANK, ETC.)             */
             /* ======================================================== */
             <div className="space-y-4 animate-fade-in">
+              {prefillAssetForBuy && !investmentToEdit && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-emerald-300">
+                      Caixinha atual: {prefillAssetForBuy.name} ({prefillAssetForBuy.quantity.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} {prefillAssetForBuy.currency || currency})
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExistingPositionMode('ADD');
+                        setQuantity('');
+                      }}
+                      className={`py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all border ${
+                        existingPositionMode === 'ADD'
+                          ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-xs'
+                          : 'bg-bg-primary/60 text-text-secondary border-border hover:text-text-primary'
+                      }`}
+                    >
+                      + Guardar / Somar ao Saldo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExistingPositionMode('REPLACE');
+                        setQuantity(String(prefillAssetForBuy.quantity));
+                      }}
+                      className={`py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all border ${
+                        existingPositionMode === 'REPLACE'
+                          ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-xs'
+                          : 'bg-bg-primary/60 text-text-secondary border-border hover:text-text-primary'
+                      }`}
+                    >
+                      ✏️ Editar Saldo Total / Moeda
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-semibold text-text-primary mb-1.5">
                   Nome da Caixinha / Reserva *
@@ -780,14 +899,16 @@ export function AddInvestmentModal({
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Wise Dólar (USD), Caixinha Nubank, Reserva Euro"
+                  placeholder="Ex: Wise Euro (EUR), Revolut Euro, Caixinha Nubank"
                   className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:border-accent-gold focus:outline-none"
                 />
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {[
-                    { label: '🇺🇸 Wise Dólar (USD)', name: 'Wise Dólar (USD)', inst: 'Wise', curr: 'USD', ticker: 'WISE_USD' },
                     { label: '🇪🇺 Wise Euro (EUR)', name: 'Wise Euro (EUR)', inst: 'Wise', curr: 'EUR', ticker: 'WISE_EUR' },
-                    { label: '🇧🇷 Caixinha Nubank (R$)', name: 'Caixinha Nubank', inst: 'Nubank', curr: 'BRL', ticker: 'CAIXINHA_NUBANK' },
+                    { label: '🇺🇸 Wise Dólar (USD)', name: 'Wise Dólar (USD)', inst: 'Wise', curr: 'USD', ticker: 'WISE_USD' },
+                    { label: '🇪🇺 Revolut Euro (EUR)', name: 'Revolut Euro (EUR)', inst: 'Revolut', curr: 'EUR', ticker: 'REVOLUT_EUR' },
+                    { label: '🇺🇸 Revolut Dólar (USD)', name: 'Revolut Dólar (USD)', inst: 'Revolut', curr: 'USD', ticker: 'REVOLUT_USD' },
+                    { label: '🇧🇷 Caixinha Nubank (R$)', name: 'Caixinha Nubank (BRL)', inst: 'Nubank', curr: 'BRL', ticker: 'CAIXINHA_NUBANK_BRL' },
                   ].map((preset) => (
                     <button
                       key={preset.ticker}
@@ -806,7 +927,7 @@ export function AddInvestmentModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-semibold text-text-primary mb-1.5">
                     Instituição / Banco *
@@ -815,16 +936,25 @@ export function AddInvestmentModal({
                     type="text"
                     list="institution-options"
                     value={institution}
-                    onChange={(e) => setInstitution(e.target.value)}
-                    placeholder="Ex: Wise, Nubank"
+                    onChange={(e) => {
+                      const nextInst = e.target.value;
+                      setInstitution(nextInst);
+                      const { updatedTicker } = syncCaixinhaFields(currency, nextInst, name, ticker);
+                      setTicker(updatedTicker);
+                    }}
+                    placeholder="Ex: Wise, Revolut, Nubank"
                     className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base text-text-primary focus:border-accent-gold focus:outline-none"
                   />
                   <div className="flex flex-wrap gap-1.5 mt-2">
-                    {['Wise', 'Nubank', 'Inter', 'Santander', 'BTG Pactual', 'Nomad'].map((inst) => (
+                    {['Wise', 'Revolut', 'Nubank', 'Inter', 'Santander', 'BTG Pactual', 'Nomad'].map((inst) => (
                       <button
                         key={inst}
                         type="button"
-                        onClick={() => setInstitution(inst)}
+                        onClick={() => {
+                          setInstitution(inst);
+                          const { updatedTicker } = syncCaixinhaFields(currency, inst, name, ticker);
+                          setTicker(updatedTicker);
+                        }}
                         className={`px-2 py-0.5 text-xs rounded-md border transition-all ${
                           institution === inst
                             ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300 font-bold'
@@ -839,25 +969,59 @@ export function AddInvestmentModal({
 
                 <div>
                   <label className="block text-sm font-semibold text-text-primary mb-1.5">
-                    Moeda do Saldo *
+                    Moeda da Caixinha *
                   </label>
                   <select
                     value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
+                    onChange={(e) => {
+                      const nextCurr = e.target.value;
+                      setCurrency(nextCurr);
+                      const { updatedName, updatedTicker } = syncCaixinhaFields(nextCurr, institution, name, ticker);
+                      setName(updatedName);
+                      setTicker(updatedTicker);
+                    }}
                     className="w-full rounded-xl border border-border bg-bg-primary px-3.5 py-2.5 text-sm sm:text-base text-text-primary focus:border-accent-gold focus:outline-none font-semibold"
                   >
-                    <option value="USD">🇺🇸 Dólar (USD - $)</option>
                     <option value="EUR">🇪🇺 Euro (EUR - €)</option>
+                    <option value="USD">🇺🇸 Dólar (USD - $)</option>
                     <option value="BRL">🇧🇷 Real (BRL - R$)</option>
-                    <option value="CLP">🇨🇱 Peso Chileno (CLP)</option>
+                    <option value="CLP">🇨🇱 Peso Chileno (CLP - $)</option>
                   </select>
+                  <div className="grid grid-cols-4 gap-1.5 mt-2">
+                    {[
+                      { code: 'EUR', label: '🇪🇺 EUR €' },
+                      { code: 'USD', label: '🇺🇸 USD $' },
+                      { code: 'BRL', label: '🇧🇷 BRL R$' },
+                      { code: 'CLP', label: '🇨🇱 CLP $' },
+                    ].map((c) => (
+                      <button
+                        key={c.code}
+                        type="button"
+                        onClick={() => {
+                          setCurrency(c.code);
+                          const { updatedName, updatedTicker } = syncCaixinhaFields(c.code, institution, name, ticker);
+                          setName(updatedName);
+                          setTicker(updatedTicker);
+                        }}
+                        className={`py-1 px-1.5 text-[11px] rounded-md border transition-all text-center ${
+                          currency === c.code
+                            ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300 font-bold'
+                            : 'border-border/60 bg-bg-elevated/40 text-text-secondary hover:text-text-primary'
+                        }`}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-semibold text-text-primary mb-1.5">
-                    Saldo Atual na Conta ({currSym}) *
+                    {prefillAssetForBuy && !investmentToEdit && existingPositionMode === 'ADD'
+                      ? `Valor a Depositar (${currSym}) *`
+                      : `Saldo Atual na Conta (${currSym}) *`}
                   </label>
                   <input
                     type="number"
@@ -872,7 +1036,7 @@ export function AddInvestmentModal({
                 <div>
                   <label className="block text-sm font-semibold text-text-primary mb-1.5 flex items-center gap-1.5">
                     <Calendar className="h-4 w-4 text-emerald-400" />
-                    <span>Data do Aporte *</span>
+                    <span>Data *</span>
                   </label>
                   <input
                     type="date"
@@ -976,7 +1140,9 @@ export function AddInvestmentModal({
                       const val = e.target.value as AssetType;
                       setAssetType(val);
                       if (val === 'CRYPTO') {
-                        setInstitution('Binance');
+                        if (!institution || !['Revolut X', 'Revolut', 'Binance'].includes(institution)) {
+                          setInstitution('Revolut X');
+                        }
                         handleCurrencyChange('USD');
                       } else if (currency === 'USD' && val !== 'OTHER') {
                         handleCurrencyChange('BRL');

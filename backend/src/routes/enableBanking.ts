@@ -73,6 +73,7 @@ enableBankingRouter.get('/callback', async (req, res) => {
         pluggy_item_id: sessionId, // Reutilizando coluna apenas para manter NOT NULL se houver, ou criando dummy
         pluggy_account_id: acc.account_id, // Dummy
         institution_name: 'Banco Santander',
+        institution_logo: 'https://www.google.com/s2/favicons?domain=bancosantander.es&sz=128',
         account_type: 'CHECKING',
         account_name: `Santander ${acc.currency}`,
         currency: acc.currency,

@@ -8,6 +8,7 @@ import {
   deactivateAccount,
   getAllAccounts,
   upsertAccount,
+  resolveInstitutionLogo,
   supabase,
 } from '../services/supabaseService.js';
 import { runSync } from '../jobs/syncTransactions.js';
@@ -142,6 +143,7 @@ pluggyRouter.post('/manual-account', async (req, res) => {
     // 1. Tenta atualizar conta existente por UUID 'id' ou 'pluggy_account_id'
     if (id) {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      const autoLogo = resolveInstitutionLogo(cleanInstitutionName);
       const updatePayload: any = {
         account_name: cleanAccountName,
         institution_name: cleanInstitutionName,
@@ -150,6 +152,9 @@ pluggyRouter.post('/manual-account', async (req, res) => {
         currency: (currency || 'BRL').toUpperCase(),
         last_synced_at: new Date().toISOString(),
       };
+      if (autoLogo) {
+        updatePayload.institution_logo = autoLogo;
+      }
       if (accNumVal !== undefined) {
         updatePayload.account_number = accNumVal;
       }
@@ -178,7 +183,7 @@ pluggyRouter.post('/manual-account', async (req, res) => {
       pluggy_item_id: scopedItemId,
       pluggy_account_id: pluggyAccountId,
       institution_name: cleanInstitutionName,
-      institution_logo: null,
+      institution_logo: resolveInstitutionLogo(cleanInstitutionName),
       account_type: (accountType as any) || 'CHECKING',
       account_name: cleanAccountName,
       account_number: accNumVal ?? null,

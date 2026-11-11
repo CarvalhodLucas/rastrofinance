@@ -11,6 +11,7 @@ import {
   Trash2,
   Save,
   Zap,
+  History,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
@@ -25,6 +26,7 @@ interface Props {
   initialTab?: 'SELL' | 'EDIT';
   onClose: () => void;
   onSuccess: () => void;
+  onOpenTrades?: (investment: Investment) => void;
 }
 
 export function SellInvestmentModal({
@@ -34,6 +36,7 @@ export function SellInvestmentModal({
   initialTab = 'SELL',
   onClose,
   onSuccess,
+  onOpenTrades,
 }: Props) {
   const { notify } = useToast();
 
@@ -84,6 +87,7 @@ export function SellInvestmentModal({
 
   const isCashOrStable = activeInvestment
     ? (activeInvestment.code_ticker?.toUpperCase().includes('WISE_') ||
+       activeInvestment.code_ticker?.toUpperCase().includes('REVOLUT_') ||
        activeInvestment.name?.toUpperCase().includes('WISE') ||
        activeInvestment.name?.toUpperCase().includes('CAIXINHA') ||
        activeInvestment.name?.toUpperCase().includes('SALDO') ||
@@ -133,6 +137,7 @@ export function SellInvestmentModal({
     if (chosen) {
       const isStable =
         chosen.code_ticker?.toUpperCase().includes('WISE_') ||
+        chosen.code_ticker?.toUpperCase().includes('REVOLUT_') ||
         chosen.name?.toUpperCase().includes('WISE') ||
         chosen.name?.toUpperCase().includes('CAIXINHA') ||
         chosen.name?.toUpperCase().includes('SALDO') ||
@@ -149,40 +154,51 @@ export function SellInvestmentModal({
 
   if (!open) return null;
 
-  // Determinar a moeda do ativo
+  // Determinar a moeda do ativo (sempre respeitando o campo currency explícito primeiro!)
   const getAssetCurrency = () => {
     if (!activeInvestment) return { code: 'BRL' as Currency, symbol: 'R$' };
+    const explicitCurr = (activeInvestment.currency || '').toUpperCase();
     const inst = (activeInvestment.institution || '').toUpperCase();
     const name = (activeInvestment.name || '').toUpperCase();
     const ticker = (activeInvestment.code_ticker || '').toUpperCase();
 
-    if (
-      activeInvestment.currency === 'USD' ||
-      activeInvestment.currency === 'USDT' ||
-      ticker.includes('WISE_USD') ||
-      name.includes('WISE DÓLAR') ||
-      name.includes('WISE DOLAR')
-    ) {
-      return { code: 'USD' as Currency, symbol: '$' };
-    } else if (
-      activeInvestment.currency === 'EUR' ||
-      ticker.includes('WISE_EUR') ||
-      name.includes('WISE EURO')
-    ) {
-      return { code: 'EUR' as Currency, symbol: '€' };
-    } else if (activeInvestment.currency === 'CLP' || ticker.includes('WISE_CLP')) {
-      return { code: 'CLP' as Currency, symbol: '$' };
-    }
+    if (explicitCurr === 'EUR') return { code: 'EUR' as Currency, symbol: '€' };
+    if (explicitCurr === 'USD' || explicitCurr === 'USDT') return { code: 'USD' as Currency, symbol: '$' };
+    if (explicitCurr === 'CLP') return { code: 'CLP' as Currency, symbol: '$' };
 
     const isCrypto =
       activeInvestment.asset_type === 'CRYPTO' ||
       inst.includes('BINANCE') ||
+      inst.includes('REVOLUT X') ||
       ['BTC', 'ETH', 'SOL', 'ONDO', 'SXT', 'LINK', 'RENDER', 'ROSE', 'VIRTUAL', 'XRP'].includes(ticker);
 
     if (isCrypto) {
       return { code: 'USD' as Currency, symbol: '$' };
     }
-    
+    if (explicitCurr === 'BRL') {
+      return { code: 'BRL' as Currency, symbol: 'R$' };
+    }
+
+    if (
+      ticker.includes('WISE_EUR') ||
+      ticker.includes('REVOLUT_EUR') ||
+      name.includes('WISE EURO') ||
+      name.includes('REVOLUT EURO')
+    ) {
+      return { code: 'EUR' as Currency, symbol: '€' };
+    }
+    if (
+      ticker.includes('WISE_USD') ||
+      ticker.includes('REVOLUT_USD') ||
+      name.includes('WISE DÓLAR') ||
+      name.includes('WISE DOLAR')
+    ) {
+      return { code: 'USD' as Currency, symbol: '$' };
+    }
+    if (ticker.includes('WISE_CLP')) {
+      return { code: 'CLP' as Currency, symbol: '$' };
+    }
+
     return { code: 'BRL' as Currency, symbol: 'R$' };
   };
 
@@ -305,6 +321,54 @@ export function SellInvestmentModal({
     }
   };
 
+  const syncCaixinhaEditFields = (nextCurr: string, nextInst: string, curName: string, curTicker: string) => {
+    const currLabels: Record<string, string> = {
+      USD: 'Dólar (USD)',
+      EUR: 'Euro (EUR)',
+      BRL: 'Real (BRL)',
+      CLP: 'Peso (CLP)',
+    };
+    const targetLabel = currLabels[nextCurr] || nextCurr;
+    let updatedName = curName;
+    const currencyPatterns = [
+      /D[óo]lar\s*\(USD\)/i,
+      /Euro\s*\(EUR\)/i,
+      /Real\s*\(BRL\)/i,
+      /Peso\s*\(CLP\)/i,
+      /\(USD\)/i,
+      /\(EUR\)/i,
+      /\(BRL\)/i,
+      /\(CLP\)/i,
+      /\bD[óo]lar\b/i,
+      /\bEuro\b/i,
+    ];
+    for (const pat of currencyPatterns) {
+      if (pat.test(updatedName)) {
+        updatedName = updatedName.replace(pat, targetLabel);
+        break;
+      }
+    }
+
+    const instUpper = nextInst.trim().toUpperCase();
+    let updatedTicker = curTicker.trim().toUpperCase();
+    if (instUpper.includes('WISE')) {
+      updatedTicker = `WISE_${nextCurr}`;
+    } else if (instUpper.includes('REVOLUT')) {
+      updatedTicker = `REVOLUT_${nextCurr}`;
+    } else if (
+      !updatedTicker ||
+      updatedTicker.startsWith('WISE_') ||
+      updatedTicker.startsWith('REVOLUT_') ||
+      updatedTicker.startsWith('CAIXINHA_') ||
+      /_(USD|EUR|BRL|CLP)$/.test(updatedTicker)
+    ) {
+      const base = updatedTicker ? updatedTicker.replace(/_(USD|EUR|BRL|CLP)$/, '') : `CAIXINHA_${instUpper.replace(/[^A-Z0-9]/g, '') || 'RESERVA'}`;
+      updatedTicker = `${base}_${nextCurr}`;
+    }
+
+    return { updatedName, updatedTicker };
+  };
+
   // 2. Submit de Edição do Ativo
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -328,9 +392,13 @@ export function SellInvestmentModal({
       const parsedYield = isCashOrStable && editYieldRate.trim() ? parseFloat(editYieldRate.replace(',', '.')) : 0;
       const srcPrefix = (activeInvestment.sync_source || 'MANUAL').split('#')[0];
 
+      const finalTicker = isCashOrStable
+        ? syncCaixinhaEditFields(editCurrency, editInstitution, editName, editTicker || activeInvestment.code_ticker).updatedTicker
+        : (editTicker.trim().toUpperCase() || activeInvestment.code_ticker);
+
       await api.updateInvestment(activeInvestment.id, {
         name: editName.trim(),
-        code_ticker: editTicker.trim().toUpperCase() || activeInvestment.code_ticker,
+        code_ticker: finalTicker,
         asset_type: editAssetType,
         institution: editInstitution.trim() || 'Manual',
         quantity: qty,
@@ -343,7 +411,7 @@ export function SellInvestmentModal({
         date: editDate,
       });
 
-      notify('Ativo atualizado com sucesso!', 'success');
+      notify(isCashOrStable ? `Caixinha atualizada em ${editCurrency} com sucesso!` : 'Ativo atualizado com sucesso!', 'success');
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -437,6 +505,19 @@ export function SellInvestmentModal({
             <Pencil className="h-4 w-4" />
             <span>Editar Ativo</span>
           </button>
+          {onOpenTrades && activeInvestment && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenTrades(activeInvestment);
+              }}
+              className="py-3 px-4 text-xs sm:text-sm font-semibold transition-all border-b-2 border-transparent text-amber-400 hover:text-amber-300 hover:bg-amber-500/5 flex items-center gap-2 ml-auto cursor-pointer"
+            >
+              <History className="h-4 w-4 text-amber-500" />
+              <span>Ver Lançamentos ({activeInvestment.code_ticker})</span>
+            </button>
+          )}
         </div>
 
         {activeTab === 'SELL' ? (
@@ -685,12 +766,35 @@ export function SellInvestmentModal({
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    placeholder="Ex: Wise Dólar, Wise Euro, Caixinha Nubank"
+                    placeholder="Ex: Wise Euro (EUR), Wise Dólar, Caixinha Nubank"
                     className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-white focus:border-accent-gold focus:outline-none"
                   />
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {[
+                      { label: '🇪🇺 Wise Euro (EUR)', name: 'Wise Euro (EUR)', inst: 'Wise', curr: 'EUR', ticker: 'WISE_EUR' },
+                      { label: '🇺🇸 Wise Dólar (USD)', name: 'Wise Dólar (USD)', inst: 'Wise', curr: 'USD', ticker: 'WISE_USD' },
+                      { label: '🇪🇺 Revolut Euro (EUR)', name: 'Revolut Euro (EUR)', inst: 'Revolut', curr: 'EUR', ticker: 'REVOLUT_EUR' },
+                      { label: '🇺🇸 Revolut Dólar (USD)', name: 'Revolut Dólar (USD)', inst: 'Revolut', curr: 'USD', ticker: 'REVOLUT_USD' },
+                      { label: '🇧🇷 Caixinha Nubank (R$)', name: 'Caixinha Nubank (BRL)', inst: 'Nubank', curr: 'BRL', ticker: 'CAIXINHA_NUBANK_BRL' },
+                    ].map((preset) => (
+                      <button
+                        key={preset.ticker}
+                        type="button"
+                        onClick={() => {
+                          setEditName(preset.name);
+                          setEditInstitution(preset.inst);
+                          setEditCurrency(preset.curr);
+                          setEditTicker(preset.ticker);
+                        }}
+                        className="px-2 py-1 text-[11px] rounded-lg border border-slate-700 bg-slate-800/70 text-slate-300 hover:text-white hover:border-emerald-500/50 transition-all"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                       Instituição / Banco *
@@ -698,10 +802,35 @@ export function SellInvestmentModal({
                     <input
                       type="text"
                       value={editInstitution}
-                      onChange={(e) => setEditInstitution(e.target.value)}
-                      placeholder="Wise, Nubank, etc."
+                      onChange={(e) => {
+                        const nextInst = e.target.value;
+                        setEditInstitution(nextInst);
+                        const { updatedTicker } = syncCaixinhaEditFields(editCurrency, nextInst, editName, editTicker);
+                        setEditTicker(updatedTicker);
+                      }}
+                      placeholder="Wise, Revolut, Nubank, etc."
                       className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-white focus:border-accent-gold focus:outline-none"
                     />
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {['Wise', 'Revolut', 'Nubank', 'Inter', 'Santander', 'BTG Pactual', 'Nomad'].map((inst) => (
+                        <button
+                          key={inst}
+                          type="button"
+                          onClick={() => {
+                            setEditInstitution(inst);
+                            const { updatedTicker } = syncCaixinhaEditFields(editCurrency, inst, editName, editTicker);
+                            setEditTicker(updatedTicker);
+                          }}
+                          className={`px-2 py-0.5 text-[11px] rounded-md border transition-all ${
+                            editInstitution === inst
+                              ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300 font-bold'
+                              : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {inst}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1.5">
@@ -709,21 +838,53 @@ export function SellInvestmentModal({
                     </label>
                     <select
                       value={editCurrency}
-                      onChange={(e) => setEditCurrency(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-white focus:border-accent-gold focus:outline-none"
+                      onChange={(e) => {
+                        const nextCurr = e.target.value;
+                        setEditCurrency(nextCurr);
+                        const { updatedName, updatedTicker } = syncCaixinhaEditFields(nextCurr, editInstitution, editName, editTicker);
+                        setEditName(updatedName);
+                        setEditTicker(updatedTicker);
+                      }}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 text-xs sm:text-sm text-white focus:border-accent-gold focus:outline-none font-semibold"
                     >
-                      <option value="USD">🇺🇸 Dólar (USD $)</option>
                       <option value="EUR">🇪🇺 Euro (EUR €)</option>
+                      <option value="USD">🇺🇸 Dólar (USD $)</option>
                       <option value="BRL">🇧🇷 Real (BRL R$)</option>
                       <option value="CLP">🇨🇱 Peso Chileno (CLP $)</option>
                     </select>
+                    <div className="grid grid-cols-4 gap-1 mt-1.5">
+                      {[
+                        { code: 'EUR', label: '🇪🇺 EUR €' },
+                        { code: 'USD', label: '🇺🇸 USD $' },
+                        { code: 'BRL', label: '🇧🇷 BRL R$' },
+                        { code: 'CLP', label: '🇨🇱 CLP $' },
+                      ].map((c) => (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={() => {
+                            setEditCurrency(c.code);
+                            const { updatedName, updatedTicker } = syncCaixinhaEditFields(c.code, editInstitution, editName, editTicker);
+                            setEditName(updatedName);
+                            setEditTicker(updatedTicker);
+                          }}
+                          className={`py-1 px-1 text-[11px] rounded-md border transition-all text-center ${
+                            editCurrency === c.code
+                              ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300 font-bold'
+                              : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                      Saldo Atual *
+                      Saldo Atual ({editCurrency === 'EUR' ? '€' : editCurrency === 'USD' ? '$' : editCurrency === 'CLP' ? 'CLP$' : 'R$'}) *
                     </label>
                     <div className="relative">
                       <input
@@ -732,14 +893,14 @@ export function SellInvestmentModal({
                         value={editQuantity}
                         onChange={(e) => setEditQuantity(e.target.value)}
                         placeholder="0.00"
-                        className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 text-xs sm:text-sm font-bold text-white focus:border-accent-gold focus:outline-none pr-12 font-mono"
+                        className="w-full rounded-xl border border-emerald-500/40 bg-slate-900/90 px-3.5 py-2.5 text-xs sm:text-sm font-bold text-emerald-400 focus:border-emerald-400 focus:outline-none pr-12 font-mono"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
                         {editCurrency}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      Preço fixado em 1,00 (saldo puro).
+                      Preço fixado em 1,00 ({editCurrency}).
                     </p>
                   </div>
                   <div>

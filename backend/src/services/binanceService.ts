@@ -248,6 +248,9 @@ export async function syncBinancePortfolio(
     const existing = existingMap.get(coin);
     const convertPrice = convertAvgPrices.get(coin);
 
+    const finalQty = existing && existing.quantity > quantity ? existing.quantity : quantity;
+    const totalValUsd = finalQty * priceInUsd;
+
     let avgPriceUsd = priceInUsd;
     if (existing?.average_price && existing.average_price > 0) {
       let originalAvgPrice = existing.average_price;
@@ -266,18 +269,23 @@ export async function syncBinancePortfolio(
       avgPriceUsd = convertPrice;
     }
 
+    const finalInst =
+      existing?.institution && existing.institution.toLowerCase().includes('revolut')
+        ? existing.institution
+        : 'Binance';
+
     const investmentData: Partial<Investment> = {
       ...(existing?.id ? { id: existing.id } : {}),
-      name: coin,
+      name: existing?.name || coin,
       code_ticker: coin,
       asset_type: 'CRYPTO',
-      institution: 'Binance',
-      quantity,
+      institution: finalInst,
+      quantity: finalQty,
       average_price: avgPriceUsd,
       current_price: priceInUsd,
-      total_value: totalValueUsd,
+      total_value: totalValUsd,
       currency: 'USD',
-      sync_source: 'BINANCE_API',
+      sync_source: `BINANCE_API#${avgPriceUsd}#${priceInUsd}` as any,
       last_synced_at: new Date().toISOString(),
     };
 
@@ -286,9 +294,11 @@ export async function syncBinancePortfolio(
     syncedTickers.add(coin);
   }
 
-  // Limpar ativos da Binance que zeraram o saldo
+  // Limpar ativos exclusivos da Binance que zeraram o saldo (preservando ativos de Revolut X / Manual)
   for (const [existingTicker, existingInv] of existingMap.entries()) {
-    if (!syncedTickers.has(existingTicker)) {
+    const instLower = (existingInv.institution || '').toLowerCase();
+    const isNonBinance = instLower.includes('revolut') || existingInv.sync_source?.startsWith('MANUAL');
+    if (!syncedTickers.has(existingTicker) && !isNonBinance) {
       await upsertInvestment({
         id: existingInv.id,
         quantity: 0,

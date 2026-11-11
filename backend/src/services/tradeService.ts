@@ -83,7 +83,110 @@ export async function recordInvestmentTrade(
 }
 
 /**
- * Atualiza uma transação existente no histórico unificado.
+ * Recalcula a posição ativa do ativo na tabela `investments` quando um lançamento (trade)
+ * é editado ou excluído pelo usuário.
+ */
+async function reconcilePositionAfterTradeChange(
+  oldTrade: InvestmentTrade,
+  newTrade: InvestmentTrade | null,
+  remainingTrades: InvestmentTrade[],
+  user?: UserSessionPayload | null,
+): Promise<void> {
+  try {
+    const cleanTicker = (oldTrade.ticker || '').trim().toUpperCase();
+    if (!cleanTicker) return;
+
+    const allInvestments = await getAllInvestments(user);
+    const activeInv = allInvestments.find(
+      (i) =>
+        (i.code_ticker || '').trim().toUpperCase() === cleanTicker &&
+        i.quantity > 0 &&
+        i.sync_source !== 'GORILA_CLOSED' &&
+        i.sync_source !== 'MANUAL_CLOSED',
+    );
+
+    if (!activeInv) return;
+
+    let curQty = Number(activeInv.quantity) || 0;
+    const curAvg = Number(activeInv.average_price) || Number(activeInv.current_price) || 0;
+    const curPrice = Number(activeInv.current_price) || curAvg;
+    let curTotalCost = curQty * curAvg;
+
+    const isPositiveType = (t: TradeType) =>
+      t === 'BUY' || t === 'DEPOSIT' || t === 'AIRDROP' || t === 'SWAP';
+
+    // 1. Reverter o efeito do lançamento antigo
+    if (isPositiveType(oldTrade.trade_type)) {
+      const oldQty = Number(oldTrade.quantity) || 0;
+      const oldUnit = Number(oldTrade.unit_price) || 0;
+      const oldCost = Number(oldTrade.total_value) || oldQty * oldUnit;
+      curQty = Math.max(0, Number((curQty - oldQty).toFixed(8)));
+      curTotalCost = Math.max(0, curTotalCost - oldCost);
+    } else if (oldTrade.trade_type === 'SELL') {
+      const oldQty = Number(oldTrade.quantity) || 0;
+      curQty = Number((curQty + oldQty).toFixed(8));
+      curTotalCost = curQty * curAvg;
+    }
+
+    // 2. Aplicar o efeito do lançamento atualizado (se não foi exclusão)
+    if (newTrade) {
+      if (isPositiveType(newTrade.trade_type)) {
+        const newQty = Number(newTrade.quantity) || 0;
+        const newUnit = Number(newTrade.unit_price) || 0;
+        const newCost = Number(newTrade.total_value) || newQty * newUnit;
+        curQty = Number((curQty + newQty).toFixed(8));
+        curTotalCost = curTotalCost + newCost;
+      } else if (newTrade.trade_type === 'SELL') {
+        const newQty = Number(newTrade.quantity) || 0;
+        const tempAvg = curQty > 0 ? curTotalCost / curQty : curAvg;
+        curQty = Math.max(0, Number((curQty - newQty).toFixed(8)));
+        curTotalCost = curQty * tempAvg;
+      }
+    }
+
+    const finalAvg = curQty > 0 ? Number((curTotalCost / curQty).toFixed(8)) : curAvg;
+    const finalTotalVal = curQty * curPrice;
+    const srcPrefix = (activeInv.sync_source || 'MANUAL').split('#')[0];
+    const updatedSyncSource = `${srcPrefix}#${finalAvg}#${curPrice}`;
+
+    // Atualizar instituições vinculadas com base nos lançamentos ativos deste ticker
+    const tickerTrades = remainingTrades.filter(
+      (t) =>
+        (t.ticker || '').trim().toUpperCase() === cleanTicker &&
+        isPositiveType(t.trade_type) &&
+        t.institution &&
+        !t.institution.toLowerCase().includes('earn'),
+    );
+    const uniqueInsts: string[] = [];
+    for (const t of tickerTrades) {
+      const instClean = t.institution.trim();
+      if (instClean && !uniqueInsts.some((u) => u.toLowerCase() === instClean.toLowerCase())) {
+        uniqueInsts.push(instClean);
+      }
+    }
+    const finalInstitution =
+      uniqueInsts.length > 0 ? uniqueInsts.join(', ') : activeInv.institution || 'Manual';
+
+    await upsertInvestment(
+      {
+        id: activeInv.id,
+        quantity: curQty,
+        average_price: finalAvg,
+        current_price: curPrice,
+        total_value: finalTotalVal,
+        institution: finalInstitution,
+        sync_source: updatedSyncSource as any,
+        last_synced_at: new Date().toISOString(),
+      },
+      user,
+    );
+  } catch (err) {
+    console.error('[tradeService] Erro ao reconciliar posição após alteração de trade:', err);
+  }
+}
+
+/**
+ * Atualiza uma transação existente no histórico unificado e recalcula a posição do ativo.
  */
 export async function updateInvestmentTrade(
   id: string,
@@ -104,6 +207,7 @@ export async function updateInvestmentTrade(
 
   currentTrades[idx] = updatedTrade;
   await updateSetting(tradesKey, currentTrades);
+  await reconcilePositionAfterTradeChange(existing, updatedTrade, currentTrades, user);
   return updatedTrade;
 }
 
@@ -164,15 +268,17 @@ export async function syncManualTradeDate(
 }
 
 /**
- * Exclui uma transação do histórico unificado.
+ * Exclui uma transação do histórico unificado e recalcula a posição do ativo.
  */
 export async function deleteInvestmentTrade(id: string, user?: UserSessionPayload | null): Promise<boolean> {
   const tradesKey = getUserSettingKey(TRADES_STORAGE_KEY, user);
   const currentTrades = await getAllInvestmentTrades(user);
-  const filtered = currentTrades.filter((t) => t.id !== id);
-  if (filtered.length === currentTrades.length) return false;
+  const targetTrade = currentTrades.find((t) => t.id === id);
+  if (!targetTrade) return false;
 
+  const filtered = currentTrades.filter((t) => t.id !== id);
   await updateSetting(tradesKey, filtered);
+  await reconcilePositionAfterTradeChange(targetTrade, null, filtered, user);
   return true;
 }
 

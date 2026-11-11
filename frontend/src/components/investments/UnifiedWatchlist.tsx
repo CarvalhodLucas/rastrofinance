@@ -25,6 +25,7 @@ import {
 import { AssetLogo } from '@/components/investments/AssetLogo';
 import { WatchlistSparkline } from '@/components/investments/WatchlistSparkline';
 import { SellInvestmentModal } from '@/components/investments/SellInvestmentModal';
+import { AssetTradesModal } from '@/components/investments/AssetTradesModal';
 import { api } from '@/services/api';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -176,6 +177,7 @@ export function UnifiedWatchlist() {
   const [tickerToDelete, setTickerToDelete] = useState<string | null>(null);
   const [deletingTicker, setDeletingTicker] = useState(false);
   const [sellingInvestment, setSellingInvestment] = useState<Investment | null>(null);
+  const [viewingAssetTrades, setViewingAssetTrades] = useState<Investment | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
@@ -2765,7 +2767,28 @@ export function UnifiedWatchlist() {
         investment={sellingInvestment}
         availableInvestments={investments}
         onClose={() => setSellingInvestment(null)}
+        onOpenTrades={(inv) => {
+          setSellingInvestment(null);
+          setViewingAssetTrades(inv);
+        }}
         onSuccess={() => {
+          void loadPortfolio();
+          void loadWatchlist(true);
+        }}
+      />
+
+      <AssetTradesModal
+        open={!!viewingAssetTrades}
+        investment={viewingAssetTrades}
+        trades={[]}
+        onClose={() => setViewingAssetTrades(null)}
+        onAddBuy={() => {
+          setViewingAssetTrades(null);
+        }}
+        onEditPositionDirect={() => {
+          setViewingAssetTrades(null);
+        }}
+        onRefresh={() => {
           void loadPortfolio();
           void loadWatchlist(true);
         }}

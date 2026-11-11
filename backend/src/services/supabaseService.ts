@@ -110,7 +110,10 @@ export async function getAllAccounts(user?: UserSessionPayload | null): Promise<
       }
     }
 
-    return userAccounts;
+    return userAccounts.map((acc) => ({
+      ...acc,
+      institution_logo: acc.institution_logo || resolveInstitutionLogo(acc.institution_name || acc.account_name),
+    }));
   }
 
   // Para o Lucas, retorna apenas as contas ATIVAS legadas da plataforma
@@ -167,7 +170,7 @@ export async function getAllAccounts(user?: UserSessionPayload | null): Promise<
             pluggy_item_id: pluggyItemId,
             pluggy_account_id: pluggyAccountId,
             institution_name: inst,
-            institution_logo: null,
+            institution_logo: resolveInstitutionLogo(inst),
             account_type: 'CHECKING',
             account_name: `Saldo ${inst}`,
             account_number: null,
@@ -186,14 +189,62 @@ export async function getAllAccounts(user?: UserSessionPayload | null): Promise<
           .select('*')
           .neq('is_active', false)
           .order('created_at', { ascending: false });
-        return (updatedData ?? []) as ConnectedAccount[];
+        return ((updatedData ?? []) as ConnectedAccount[]).map((acc) => ({
+          ...acc,
+          institution_logo: acc.institution_logo || resolveInstitutionLogo(acc.institution_name || acc.account_name),
+        }));
       }
     }
   } catch (err) {
     console.error('[supabaseService] error auto-syncing institution accounts:', err);
   }
 
-  return accounts;
+  return accounts.map((acc) => ({
+    ...acc,
+    institution_logo: acc.institution_logo || resolveInstitutionLogo(acc.institution_name || acc.account_name),
+  }));
+}
+
+export function resolveInstitutionLogo(institutionName?: string | null): string | null {
+  if (!institutionName) return null;
+  const lower = institutionName.trim().toLowerCase();
+  if (!lower || lower.includes('dinheiro')) return null;
+
+  if (lower.includes('revolut')) return 'https://www.google.com/s2/favicons?domain=revolut.com&sz=128';
+  if (lower.includes('wise')) return 'https://www.google.com/s2/favicons?domain=wise.com&sz=128';
+  if (lower.includes('santander')) return 'https://www.google.com/s2/favicons?domain=bancosantander.es&sz=128';
+  if (lower.includes('nubank') || lower.includes('nuinvest') || lower === 'nu') return 'https://www.google.com/s2/favicons?domain=nubank.com.br&sz=128';
+  if (lower.includes('binance')) return 'https://www.google.com/s2/favicons?domain=binance.com&sz=128';
+  if (lower.includes('xp')) return 'https://www.google.com/s2/favicons?domain=xpi.com.br&sz=128';
+  if (lower.includes('itaú') || lower.includes('itau')) return 'https://www.google.com/s2/favicons?domain=itau.com.br&sz=128';
+  if (lower.includes('inter')) return 'https://www.google.com/s2/favicons?domain=inter.co&sz=128';
+  if (lower.includes('bradesco')) return 'https://www.google.com/s2/favicons?domain=bradesco.com.br&sz=128';
+  if (lower.includes('c6')) return 'https://www.google.com/s2/favicons?domain=c6bank.com.br&sz=128';
+  if (lower.includes('btg')) return 'https://www.google.com/s2/favicons?domain=btgpactual.com&sz=128';
+  if (lower.includes('banco do brasil') || lower === 'bb') return 'https://www.google.com/s2/favicons?domain=bb.com.br&sz=128';
+  if (lower.includes('caixabank')) return 'https://www.google.com/s2/favicons?domain=caixabank.es&sz=128';
+  if (lower.includes('caixa')) return 'https://www.google.com/s2/favicons?domain=caixa.gov.br&sz=128';
+  if (lower.includes('bbva')) return 'https://www.google.com/s2/favicons?domain=bbva.es&sz=128';
+  if (lower.includes('n26')) return 'https://www.google.com/s2/favicons?domain=n26.com&sz=128';
+  if (lower.includes('nomad')) return 'https://www.google.com/s2/favicons?domain=nomadglobal.com&sz=128';
+  if (lower.includes('avenue')) return 'https://www.google.com/s2/favicons?domain=avenue.us&sz=128';
+  if (lower.includes('rico')) return 'https://www.google.com/s2/favicons?domain=rico.com.vc&sz=128';
+  if (lower.includes('clear')) return 'https://www.google.com/s2/favicons?domain=clear.com.br&sz=128';
+  if (lower.includes('b3') || lower.includes('tesouro')) return 'https://www.google.com/s2/favicons?domain=b3.com.br&sz=128';
+  if (lower.includes('coinbase')) return 'https://www.google.com/s2/favicons?domain=coinbase.com&sz=128';
+  if (lower.includes('bybit')) return 'https://www.google.com/s2/favicons?domain=bybit.com&sz=128';
+  if (lower.includes('kraken')) return 'https://www.google.com/s2/favicons?domain=kraken.com&sz=128';
+  if (lower.includes('mercado pago') || lower.includes('mercadopago')) return 'https://www.google.com/s2/favicons?domain=mercadopago.com.br&sz=128';
+  if (lower.includes('picpay')) return 'https://www.google.com/s2/favicons?domain=picpay.com&sz=128';
+  if (lower.includes('neon')) return 'https://www.google.com/s2/favicons?domain=neon.com.br&sz=128';
+  if (lower.includes('pagbank') || lower.includes('pagseguro')) return 'https://www.google.com/s2/favicons?domain=pagbank.com.br&sz=128';
+  if (lower.includes('millennium') || lower.includes('millenium')) return 'https://www.google.com/s2/favicons?domain=millenniumbcp.pt&sz=128';
+  if (lower.includes('activo')) return 'https://www.google.com/s2/favicons?domain=activobank.pt&sz=128';
+  if (lower.includes('sabadell')) return 'https://www.google.com/s2/favicons?domain=bancsabadell.com&sz=128';
+  if (lower.includes('openbank')) return 'https://www.google.com/s2/favicons?domain=openbank.es&sz=128';
+  if (lower === 'ing' || lower.includes('banco ing')) return 'https://www.google.com/s2/favicons?domain=ing.es&sz=128';
+
+  return null;
 }
 
 export async function ensureAccountForInstitution(
@@ -218,7 +269,7 @@ export async function ensureAccountForInstitution(
     pluggy_item_id: pluggyItemId,
     pluggy_account_id: pluggyAccountId,
     institution_name: institutionName,
-    institution_logo: null,
+    institution_logo: resolveInstitutionLogo(institutionName),
     account_type: 'CHECKING',
     account_name: `Saldo ${institutionName}`,
     account_number: null,

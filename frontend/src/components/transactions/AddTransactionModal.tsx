@@ -129,10 +129,50 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
       if (divSearchRef.current && !divSearchRef.current.contains(e.target as Node)) {
         setShowDivSuggestions(false);
       }
+      if (descWrapperRef.current && !descWrapperRef.current.contains(e.target as Node)) {
+        setShowDescSuggestions(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    api
+      .getTransactions({})
+      .then((res) => {
+        if (!active) return;
+        const map = new Map<string, DescriptionSuggestion>();
+        for (const tx of res.transactions || []) {
+          const raw = (tx.description || '').trim();
+          if (!raw) continue;
+          const key = raw.toLowerCase();
+          const existing = map.get(key);
+          if (existing) {
+            existing.count += 1;
+            if (!existing.category && tx.category) {
+              existing.category = tx.category;
+            }
+          } else {
+            map.set(key, {
+              description: raw,
+              category: tx.category || null,
+              count: 1,
+            });
+          }
+        }
+        const sorted = Array.from(map.values()).sort((a, b) => b.count - a.count);
+        setPastSuggestions(sorted);
+      })
+      .catch(() => {
+        // Silencioso: autocomplete é auxiliar
+      });
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   const handleDivTickerChange = (val: string) => {
     const clean = val.toUpperCase();
@@ -208,12 +248,63 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
   const [isExpense, setIsExpense] = useState(true);
   const [date, setDate] = useState(todayISO);
   const [amount, setAmount] = useState('');
+
+  // Autocomplete de Descrição baseado em lançamentos antigos
+  type DescriptionSuggestion = {
+    description: string;
+    category?: string | null;
+    count: number;
+  };
+  const [pastSuggestions, setPastSuggestions] = useState<DescriptionSuggestion[]>([]);
+  const [showDescSuggestions, setShowDescSuggestions] = useState(false);
+  const [highlightedSuggestionIdx, setHighlightedSuggestionIdx] = useState(-1);
+  const [activeBatchDescId, setActiveBatchDescId] = useState<string | null>(null);
+  const [batchHighlightIdx, setBatchHighlightIdx] = useState(-1);
+  const descWrapperRef = useRef<HTMLDivElement>(null);
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [txType, setTxType] = useState<string>('DEBIT');
   const [accountId, setAccountId] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [manageCatOpen, setManageCatOpen] = useState(false);
+
+  const normalizeSearchText = (val: string) =>
+    val
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+  const filterDescSuggestions = (query: string) => {
+    const q = normalizeSearchText(query);
+    if (!q) return [];
+    const starts: DescriptionSuggestion[] = [];
+    const includes: DescriptionSuggestion[] = [];
+    for (const item of pastSuggestions) {
+      const normItem = normalizeSearchText(item.description);
+      if (normItem === q) continue; // Já digitou exatamente igual
+      if (normItem.startsWith(q)) {
+        starts.push(item);
+      } else if (normItem.includes(q)) {
+        includes.push(item);
+      }
+    }
+    return [...starts, ...includes].slice(0, 7);
+  };
+
+  const filteredDescSuggestions = useMemo(
+    () => filterDescSuggestions(description),
+    [description, pastSuggestions],
+  );
+
+  const handleSelectDescSuggestion = (item: DescriptionSuggestion) => {
+    setDescription(item.description);
+    if (!category && item.category) {
+      setCategory(item.category);
+    }
+    setShowDescSuggestions(false);
+    setHighlightedSuggestionIdx(-1);
+  };
 
   const { categoryNames } = useCategories();
 
@@ -239,13 +330,13 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
   };
 
   // Lista de itens para o modo Em Lote
-  const createEmptyBatchItem = (defAcc = ''): BatchItem => ({
+  const createEmptyBatchItem = (defAcc = '', defDate = todayISO()): BatchItem => ({
     id: Math.random().toString(36).substring(2, 9),
     isExpense: true,
     amount: '',
     description: '',
     category: '',
-    date: todayISO(),
+    date: defDate,
     accountId: defAcc,
   });
 
@@ -842,6 +933,21 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
         notify('Transação atualizada com sucesso!', 'success');
       } else {
         await api.createTransaction(payload);
+        setPastSuggestions((prev) => {
+          const cleanDesc = payload.description.trim();
+          const key = cleanDesc.toLowerCase();
+          const idx = prev.findIndex((p) => p.description.toLowerCase() === key);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = {
+              ...updated[idx],
+              count: updated[idx].count + 1,
+              category: updated[idx].category || payload.category || null,
+            };
+            return updated.sort((a, b) => b.count - a.count);
+          }
+          return [{ description: cleanDesc, category: payload.category || null, count: 1 }, ...prev];
+        });
         const newCount = sessionSavedCount + 1;
         setSessionSavedCount(newCount);
         setSessionTotalAmount((prev) => prev + num);
@@ -1177,7 +1283,7 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
 
   // Funções do Modo Em Lote (Batch)
   const addBatchRow = () => {
-    setBatchItems((prev) => [...prev, createEmptyBatchItem(accountId)]);
+    setBatchItems((prev) => [...prev, createEmptyBatchItem(accountId, date)]);
   };
 
   const removeBatchRow = (id: string) => {
@@ -1298,7 +1404,7 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
         </div>
 
         {/* Abas de Modo: Individual vs Cartão de Crédito vs Transferência vs Em Lote */}
-        <div className="flex border-b border-border/80 bg-bg-elevated/60 p-1.5 gap-1.5 select-none overflow-x-auto no-scrollbar">
+        <div className="flex flex-wrap border-b border-border/80 bg-bg-elevated/60 p-1.5 gap-1.5 select-none">
           <button
             type="button"
             onClick={() => setActiveTab('SINGLE')}
@@ -1533,7 +1639,7 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
               )}
 
               {/* Descrição */}
-              <div>
+              <div ref={descWrapperRef} className="relative">
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-text-secondary">
                   Descrição
                 </label>
@@ -1541,11 +1647,70 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                   type="text"
                   required
                   maxLength={200}
+                  autoComplete="off"
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onFocus={() => {
+                    if (description.trim().length > 0) setShowDescSuggestions(true);
+                  }}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    setShowDescSuggestions(true);
+                    setHighlightedSuggestionIdx(-1);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!showDescSuggestions || filteredDescSuggestions.length === 0) return;
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setHighlightedSuggestionIdx((prev) =>
+                        prev < filteredDescSuggestions.length - 1 ? prev + 1 : 0,
+                      );
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setHighlightedSuggestionIdx((prev) =>
+                        prev > 0 ? prev - 1 : filteredDescSuggestions.length - 1,
+                      );
+                    } else if (e.key === 'Enter' && highlightedSuggestionIdx >= 0) {
+                      e.preventDefault();
+                      handleSelectDescSuggestion(filteredDescSuggestions[highlightedSuggestionIdx]);
+                    } else if (e.key === 'Escape') {
+                      setShowDescSuggestions(false);
+                      setHighlightedSuggestionIdx(-1);
+                    }
+                  }}
                   placeholder="Ex: Mercado, Salário, Farmácia, Combustível…"
                   className="input"
                 />
+
+                {showDescSuggestions && filteredDescSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-52 overflow-y-auto overscroll-contain rounded-xl border border-border bg-bg-card shadow-2xl p-1 space-y-0.5">
+                    {filteredDescSuggestions.map((item, idx) => (
+                      <button
+                        key={item.description}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleSelectDescSuggestion(item);
+                        }}
+                        className={cn(
+                          'w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors cursor-pointer',
+                          idx === highlightedSuggestionIdx
+                            ? 'bg-accent-gold/15 text-accent-gold'
+                            : 'text-text-primary hover:bg-bg-elevated',
+                        )}
+                      >
+                        <span className="truncate font-medium">{item.description}</span>
+                        <span className="flex items-center gap-1.5 shrink-0 text-[10px] text-text-muted">
+                          {item.category && (
+                            <span className="rounded-md bg-bg-elevated px-1.5 py-0.5 border border-border/60">
+                              {item.category}
+                            </span>
+                          )}
+                          <span className="font-mono opacity-75">{item.count}x</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Data */}
@@ -2801,7 +2966,7 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                           const newAcc = e.target.value;
                           setAccountId(newAcc);
                           setBatchItems((prev) =>
-                            prev.map((it) => ({ ...it, accountId: it.accountId || newAcc })),
+                            prev.map((it) => ({ ...it, accountId: newAcc })),
                           );
                         }}
                         className="input py-1.5 text-xs cursor-pointer"
@@ -2829,7 +2994,7 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                           const newDate = e.target.value;
                           setDate(newDate);
                           setBatchItems((prev) =>
-                            prev.map((it) => ({ ...it, date: it.date || newDate })),
+                            prev.map((it) => ({ ...it, date: newDate })),
                           );
                         }}
                         className="input py-1.5 text-xs cursor-pointer"
@@ -2924,14 +3089,98 @@ export function AddTransactionModal({ open, onClose, onCreated, accounts, autoTr
                   {/* Campos da linha */}
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                     {/* Descrição */}
-                    <div className="sm:col-span-5">
+                    <div className="sm:col-span-5 relative">
                       <input
                         type="text"
+                        autoComplete="off"
                         value={item.description}
-                        onChange={(e) => updateBatchItem(item.id, { description: e.target.value })}
+                        onFocus={() => {
+                          if (item.description.trim().length > 0) {
+                            setActiveBatchDescId(item.id);
+                            setBatchHighlightIdx(-1);
+                          }
+                        }}
+                        onBlur={() => {
+                          setTimeout(() => {
+                            setActiveBatchDescId((curr) => (curr === item.id ? null : curr));
+                          }, 120);
+                        }}
+                        onChange={(e) => {
+                          updateBatchItem(item.id, { description: e.target.value });
+                          setActiveBatchDescId(item.id);
+                          setBatchHighlightIdx(-1);
+                        }}
+                        onKeyDown={(e) => {
+                          if (activeBatchDescId !== item.id) return;
+                          const batchSuggestions = filterDescSuggestions(item.description);
+                          if (batchSuggestions.length === 0) return;
+                          if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            setBatchHighlightIdx((prev) =>
+                              prev < batchSuggestions.length - 1 ? prev + 1 : 0,
+                            );
+                          } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            setBatchHighlightIdx((prev) =>
+                              prev > 0 ? prev - 1 : batchSuggestions.length - 1,
+                            );
+                          } else if (e.key === 'Enter' && batchHighlightIdx >= 0) {
+                            e.preventDefault();
+                            const chosen = batchSuggestions[batchHighlightIdx];
+                            updateBatchItem(item.id, {
+                              description: chosen.description,
+                              ...(!item.category && chosen.category ? { category: chosen.category } : {}),
+                            });
+                            setActiveBatchDescId(null);
+                            setBatchHighlightIdx(-1);
+                          } else if (e.key === 'Escape') {
+                            setActiveBatchDescId(null);
+                            setBatchHighlightIdx(-1);
+                          }
+                        }}
                         placeholder="Descrição (ex: Almoço, Uber)"
                         className="input py-1.5 sm:py-2 text-xs"
                       />
+
+                      {activeBatchDescId === item.id && (() => {
+                        const batchSuggestions = filterDescSuggestions(item.description);
+                        if (batchSuggestions.length === 0) return null;
+                        return (
+                          <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-48 overflow-y-auto overscroll-contain rounded-xl border border-border bg-bg-card shadow-2xl p-1 space-y-0.5">
+                            {batchSuggestions.map((sug, sIdx) => (
+                              <button
+                                key={sug.description}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  updateBatchItem(item.id, {
+                                    description: sug.description,
+                                    ...(!item.category && sug.category ? { category: sug.category } : {}),
+                                  });
+                                  setActiveBatchDescId(null);
+                                  setBatchHighlightIdx(-1);
+                                }}
+                                className={cn(
+                                  'w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer',
+                                  sIdx === batchHighlightIdx
+                                    ? 'bg-accent-gold/15 text-accent-gold'
+                                    : 'text-text-primary hover:bg-bg-elevated',
+                                )}
+                              >
+                                <span className="truncate font-medium">{sug.description}</span>
+                                <span className="flex items-center gap-1 shrink-0 text-[10px] text-text-muted">
+                                  {sug.category && (
+                                    <span className="rounded bg-bg-elevated px-1 py-0.5 border border-border/60">
+                                      {sug.category}
+                                    </span>
+                                  )}
+                                  <span className="font-mono opacity-75">{sug.count}x</span>
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="grid grid-cols-2 sm:contents gap-2">

@@ -1003,7 +1003,7 @@ investmentsRouter.post('/:id/sell', async (req, res) => {
   try {
     const user = (req as AuthenticatedRequest).user;
     const { id } = req.params;
-    const { quantity, unit_price, date, notes } = req.body;
+    const { quantity, unit_price, date, notes, target_account_id } = req.body;
 
     if (!quantity || quantity <= 0) {
       res.status(400).json({ error: 'Quantidade de venda inválida.' });
@@ -1019,6 +1019,7 @@ investmentsRouter.post('/:id/sell', async (req, res) => {
       unit_price: parseFloat(unit_price),
       date: date || new Date().toISOString(),
       notes,
+      target_account_id: target_account_id || undefined,
     }, user);
 
     res.json(result);

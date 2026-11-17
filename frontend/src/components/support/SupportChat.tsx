@@ -318,7 +318,6 @@ export function SupportChat() {
           open={isAddTxOpen}
           onClose={() => setIsAddTxOpen(false)}
           onCreated={() => {
-            setIsAddTxOpen(false);
             window.dispatchEvent(new Event('transactions:changed'));
           }}
           accounts={accounts}

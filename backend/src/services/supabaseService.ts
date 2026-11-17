@@ -252,12 +252,17 @@ export async function ensureAccountForInstitution(
   currency: string = 'BRL',
 ): Promise<ConnectedAccount> {
   const accounts = await getAllAccounts();
-  const existing = accounts.find(
-    (a) =>
-      a.is_active !== false &&
-      (a.institution_name.toLowerCase() === institutionName.toLowerCase() ||
-        a.account_name.toLowerCase().includes(institutionName.toLowerCase())),
-  );
+  const instLower = institutionName.toLowerCase();
+  const currUpper = (currency || 'BRL').toUpperCase();
+
+  const matchesInstitution = (a: ConnectedAccount) =>
+    a.is_active !== false &&
+    (a.institution_name.toLowerCase() === instLower ||
+      a.account_name.toLowerCase().includes(instLower));
+
+  const existing =
+    accounts.find((a) => matchesInstitution(a) && (a.currency || 'BRL').toUpperCase() === currUpper) ||
+    accounts.find(matchesInstitution);
 
   if (existing) {
     return existing;

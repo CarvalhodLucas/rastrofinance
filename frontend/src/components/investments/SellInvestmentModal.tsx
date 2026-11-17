@@ -12,11 +12,12 @@ import {
   Save,
   Zap,
   History,
+  Landmark,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { api } from '@/services/api';
-import type { Investment, AssetType } from '@/types/finance';
+import type { Investment, AssetType, ConnectedAccount } from '@/types/finance';
 import type { Currency } from '@/contexts/CurrencyContext';
 
 interface Props {
@@ -50,6 +51,8 @@ export function SellInvestmentModal({
   const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
+  const [targetAccountId, setTargetAccountId] = useState<string>('');
 
   // Estados da Aba de Edição do Ativo
   const [editName, setEditName] = useState('');
@@ -108,6 +111,25 @@ export function SellInvestmentModal({
     setEditDate(inv.created_at ? inv.created_at.substring(0, 10) : new Date().toISOString().split('T')[0]);
   };
 
+  const pickBestAccountForInvestment = (inv: Investment | null, accList: ConnectedAccount[]) => {
+    if (!inv || accList.length === 0) return '';
+    const inst = (inv.institution || '').trim().toLowerCase();
+    const curr = (inv.currency || 'BRL').toUpperCase();
+    const instMatch = (a: ConnectedAccount) =>
+      inst &&
+      (a.institution_name.toLowerCase() === inst ||
+        a.account_name.toLowerCase().includes(inst) ||
+        inst.includes(a.institution_name.toLowerCase()));
+
+    const exact = accList.find((a) => instMatch(a) && (a.currency || 'BRL').toUpperCase() === curr);
+    if (exact) return exact.id;
+    const byInst = accList.find(instMatch);
+    if (byInst) return byInst.id;
+    const byCurr = accList.find((a) => (a.currency || 'BRL').toUpperCase() === curr);
+    if (byCurr) return byCurr.id;
+    return accList[0]?.id || '';
+  };
+
   useEffect(() => {
     if (open) {
       setActiveTab(initialTab);
@@ -128,6 +150,16 @@ export function SellInvestmentModal({
       }
       setSaleDate(new Date().toISOString().split('T')[0]);
       setNotes('');
+
+      api.getAccounts()
+        .then((res) => {
+          const activeAccs = (res.accounts || []).filter((a) => a.is_active !== false);
+          setAccounts(activeAccs);
+          setTargetAccountId(pickBestAccountForInvestment(invToUse || null, activeAccs));
+        })
+        .catch(() => {
+          setAccounts([]);
+        });
     }
   }, [open, investment, initialTab]);
 
@@ -147,6 +179,7 @@ export function SellInvestmentModal({
       setUnitPrice(String(price));
       const total = (chosen.quantity || 0) * price;
       setTotalGrossInput(total > 0 ? total.toFixed(2) : '');
+      setTargetAccountId(pickBestAccountForInvestment(chosen, accounts));
 
       populateEditFields(chosen);
     }
@@ -299,12 +332,17 @@ export function SellInvestmentModal({
         unit_price: numPrice,
         date: saleDate,
         notes: notes || undefined,
+        target_account_id: targetAccountId || undefined,
       });
+
+      const bankLabel = res.credited_account
+        ? ` e somado em ${res.credited_account.account_name} (${res.credited_account.institution_name})`
+        : '';
 
       notify(
         isCashOrStable
-          ? `Resgate de ${formatAssetVal(grossSale)} registrado com sucesso!`
-          : `Venda de ${numQty} ${activeInvestment.code_ticker} registrada com sucesso!`,
+          ? `Resgate de ${formatAssetVal(grossSale)} registrado${bankLabel}!`
+          : `Venda de ${numQty} ${activeInvestment.code_ticker} registrada${bankLabel}!`,
         'success'
       );
 
@@ -312,6 +350,7 @@ export function SellInvestmentModal({
         notify(`Posição em ${activeInvestment.code_ticker} totalmente liquidada e encerrada.`, 'info');
       }
 
+      window.dispatchEvent(new Event('transactions:changed'));
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -653,6 +692,36 @@ export function SellInvestmentModal({
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Banco / Conta de Destino (Crédito Automático) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Landmark className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Banco / Conta de Destino</span>
+                </span>
+                <span className="text-[11px] text-emerald-400/90 font-medium">
+                  Soma automática ao saldo
+                </span>
+              </label>
+              <select
+                value={targetAccountId}
+                onChange={(e) => setTargetAccountId(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-white focus:border-emerald-500 focus:outline-none transition-colors"
+              >
+                {accounts.length === 0 ? (
+                  <option value="">
+                    Criar / usar conta automática ({activeInvestment?.institution || 'Carteira'})
+                  </option>
+                ) : (
+                  accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id} className="bg-slate-900 text-white">
+                      {acc.institution_name} — {acc.account_name} ({acc.currency || 'BRL'}) • Saldo: {(acc.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
 
             {/* Data da Venda */}

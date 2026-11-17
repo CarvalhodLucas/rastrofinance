@@ -293,6 +293,7 @@ export async function sellInvestmentPosition(
     unit_price: number;
     date: string;
     notes?: string;
+    target_account_id?: string;
   },
   user?: UserSessionPayload | null
 ): Promise<{
@@ -301,6 +302,13 @@ export async function sellInvestmentPosition(
   gross_sale: number;
   remaining_qty: number;
   trade: InvestmentTrade;
+  credited_account?: {
+    id: string;
+    account_name: string;
+    institution_name: string;
+    currency: string;
+    new_balance: number;
+  };
 }> {
   const allInvestments = await getAllInvestments(user);
   const investment = allInvestments.find((i) => i.id === investmentId);
@@ -378,13 +386,38 @@ export async function sellInvestmentPosition(
     notes: sellData.notes || `Venda manual (Resultado: ${realizedPnl >= 0 ? '+' : ''}R$ ${realizedPnl.toFixed(2)})`,
   }, user);
 
-  // 3. Creditar o valor recebido na venda (grossSale) no saldo da conta da instituição correspondente
+  // 3. Creditar o valor recebido na venda/resgate (grossSale) no saldo da conta bancária selecionada (ou da instituição correspondente)
+  let creditedAccountInfo:
+    | {
+        id: string;
+        account_name: string;
+        institution_name: string;
+        currency: string;
+        new_balance: number;
+      }
+    | undefined;
+
   if (grossSale > 0) {
     try {
-      const targetAccount = await ensureAccountForInstitution(
-        investment.institution,
-        investment.currency || 'BRL',
-      );
+      let targetAccount: any = null;
+      if (sellData.target_account_id) {
+        const { data: explicitAcc } = await supabase
+          .from('connected_accounts')
+          .select('*')
+          .eq('id', sellData.target_account_id)
+          .maybeSingle();
+        if (explicitAcc) {
+          targetAccount = explicitAcc;
+        }
+      }
+
+      if (!targetAccount) {
+        targetAccount = await ensureAccountForInstitution(
+          investment.institution,
+          investment.currency || 'BRL',
+        );
+      }
+
       const newBalance = (targetAccount.balance || 0) + grossSale;
       await supabase
         .from('connected_accounts')
@@ -393,6 +426,14 @@ export async function sellInvestmentPosition(
           last_synced_at: new Date().toISOString(),
         })
         .eq('id', targetAccount.id);
+
+      creditedAccountInfo = {
+        id: targetAccount.id,
+        account_name: targetAccount.account_name,
+        institution_name: targetAccount.institution_name,
+        currency: targetAccount.currency || investment.currency || 'BRL',
+        new_balance: newBalance,
+      };
     } catch (err) {
       console.error('[tradeService] Erro ao creditar saldo da venda no banco:', err);
     }
@@ -404,6 +445,7 @@ export async function sellInvestmentPosition(
     gross_sale: grossSale,
     remaining_qty: Math.max(0, remainingQty),
     trade,
+    ...(creditedAccountInfo ? { credited_account: creditedAccountInfo } : {}),
   };
 }
 

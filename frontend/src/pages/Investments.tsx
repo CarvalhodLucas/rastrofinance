@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import {
   TrendingUp,
@@ -371,6 +372,33 @@ export function Investments() {
 
   // Menu de opções de cada linha (...)
   const [openOptionMenuId, setOpenOptionMenuId] = useState<string | null>(null);
+  const [optionMenuPos, setOptionMenuPos] = useState<{
+    top: number;
+    bottom: number;
+    right: number;
+    openUpwards: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!openOptionMenuId) return;
+    const closeMenu = () => {
+      setOpenOptionMenuId(null);
+      setOptionMenuPos(null);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeMenu();
+    };
+    window.addEventListener('mousedown', closeMenu);
+    window.addEventListener('scroll', closeMenu, true);
+    window.addEventListener('resize', closeMenu);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('mousedown', closeMenu);
+      window.removeEventListener('scroll', closeMenu, true);
+      window.removeEventListener('resize', closeMenu);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openOptionMenuId]);
 
   // Filtro da aba de Histórico de Transações (multi-selecão)
   const [tradeTypeFilter, setTradeTypeFilter] = useState<Set<TradeTypeFilter>>(new Set());
@@ -2648,7 +2676,25 @@ export function Investments() {
                                         </button>
                                         <button
                                           type="button"
-                                          onClick={() => setOpenOptionMenuId(isOptionOpen ? null : inv.id)}
+                                          onMouseDown={(e) => e.stopPropagation()}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (isOptionOpen) {
+                                              setOpenOptionMenuId(null);
+                                              setOptionMenuPos(null);
+                                            } else {
+                                              const rect = e.currentTarget.getBoundingClientRect();
+                                              const estimatedMenuHeight = 250;
+                                              const openUpwards = rect.bottom + estimatedMenuHeight > window.innerHeight - 16;
+                                              setOptionMenuPos({
+                                                top: rect.bottom + 6,
+                                                bottom: window.innerHeight - rect.top + 6,
+                                                right: Math.max(8, window.innerWidth - rect.right),
+                                                openUpwards,
+                                              });
+                                              setOpenOptionMenuId(inv.id);
+                                            }
+                                          }}
                                           className={`p-1 rounded transition-colors ${
                                             isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'
                                           }`}
@@ -2658,11 +2704,17 @@ export function Investments() {
                                         </button>
                                       </div>
 
-                                      {isOptionOpen && (
+                                      {isOptionOpen && optionMenuPos && createPortal(
                                         <div
                                           onClick={(e) => e.stopPropagation()}
                                           onMouseDown={(e) => e.stopPropagation()}
-                                          className={`absolute right-4 top-8 w-56 rounded-xl border p-1.5 z-50 text-left space-y-0.5 animate-fade-in ${
+                                          style={{
+                                            right: optionMenuPos.right,
+                                            ...(optionMenuPos.openUpwards
+                                              ? { bottom: optionMenuPos.bottom }
+                                              : { top: optionMenuPos.top }),
+                                          }}
+                                          className={`fixed w-60 rounded-xl border p-1.5 z-[120] text-left space-y-0.5 animate-fade-in max-h-[calc(100vh-24px)] overflow-y-auto overscroll-contain ${
                                             isDark ? 'bg-[#1F2937] border-slate-700 text-slate-200 shadow-2xl' : 'bg-white border-slate-100 text-slate-700 shadow-xl'
                                           }`}
                                         >
@@ -2747,7 +2799,7 @@ export function Investments() {
                                             }`}
                                           >
                                             <ArrowUpRight className="h-3.5 w-3.5 text-rose-500" />
-                                            <span>Vender Ativo</span>
+                                            <span>{isCaixinha ? 'Resgatar para Banco' : 'Vender Ativo'}</span>
                                           </button>
                                           <div className={`border-t my-1 ${isDark ? 'border-slate-700' : 'border-slate-100'}`} />
                                           <button
@@ -2764,7 +2816,8 @@ export function Investments() {
                                             <Trash2 className="h-3.5 w-3.5 text-rose-500" />
                                             <span>Excluir Ativo</span>
                                           </button>
-                                        </div>
+                                        </div>,
+                                        document.body,
                                       )}
                                     </td>
                                   </tr>

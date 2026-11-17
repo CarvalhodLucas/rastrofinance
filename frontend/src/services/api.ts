@@ -682,6 +682,7 @@ export const api = {
       unit_price: number;
       date: string;
       notes?: string;
+      target_account_id?: string;
     },
   ) =>
     request<{
@@ -690,6 +691,13 @@ export const api = {
       gross_sale: number;
       remaining_qty: number;
       trade: any;
+      credited_account?: {
+        id: string;
+        account_name: string;
+        institution_name: string;
+        currency: string;
+        new_balance: number;
+      };
     }>(`/api/investments/${id}/sell`, {
       method: 'POST',
       body: JSON.stringify(data),
